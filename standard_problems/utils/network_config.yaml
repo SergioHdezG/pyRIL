@@ -1,0 +1,80 @@
+# Network configuration for standard RL and IL problems
+# All convolutional layers will only be used when image type input is selected in the agent configuration.
+# Keras activation functions available are: 'relu', 'sigmoid', 'tanh', 'softmax', 'softplus', 'softsign', 'selu', 'elu' and 'exponential'.
+# Output layer for the models will be a dense layer automatically calculated depending on the number of actions of the environment.
+# Output layer for the IL discriminator model will be automatically calculated as one dense layer with selected activation.
+
+# Config for DQN, Double DQN and DPG discriminator. These are a simple neural network.
+conv_layers: 2  # Number of convolutional layers
+kernel_num: [32, 64] # Number of convolutional kernels
+kernel_size: [3, 3] # Convolutional kernels size
+kernel_strides: [1, 1] # Convolutional kernels strides
+conv_activation: ['relu', 'relu'] # Convolutional activation functions
+dense_layers: 3 # Number of dense layers
+n_neurons: [256, 256, 128] # Number of neurons of each dense layer
+dense_activation: ['relu', 'relu', 'relu'] # Activation functions for dense layers
+
+
+# config for Dueling DQN discriminator. This network have a special architecture consisting on three different subnetworks.
+# Common network process the input, the output of the common network if fitted as input to the action network and to the value network.
+common_conv_layers: 2 # Number of convolutional layers
+common_kernel_num: [32, 64] # Number of convolutional kernels
+common_kernel_size: [5, 3] # Convolutional kernels size
+common_kernel_strides: [2, 1] # Convolutional kernels strides
+common_conv_activation: ['relu', 'relu'] # Convolutional activation functions
+common_dense_layers: 1 # Number of dense layers. Number or None. If none the last convolutional layer will be connected to action and value sub discriminator
+common_n_neurons: [512] # Number of neurons of each dense layer
+common_dense_activation: ['relu', 'relu'] # Convolutional activation functions
+
+action_dense_layers: 2 # Number of dense layers
+action_n_neurons: [256, 128] # Number of neurons of each dense layer
+action_dense_activation: ['relu', 'relu'] # Activation functions for dense layers
+
+value_dense_layers: 3 # Number of dense layers
+value_n_neurons: [256, 256, 128] # Number of neurons of each dense layer
+value_dense_activation: ['relu', 'relu', 'relu'] # Activation functions for dense layers
+
+
+# Config DDPG, A2C, A3C and PPO discriminator. These are Actor-Critic methods so they use two discriminator, the Actor network and the Critic network.
+actor_conv_layers: 2 # Number of convolutional layers
+actor_kernel_num: [32, 32] # Number of convolutional kernels
+actor_kernel_size: [3, 3] # Convolutional kernels size
+actor_kernel_strides: [2, 2] # Convolutional kernels strides
+actor_conv_activation: ['relu', 'relu'] # Convolutional activation functions
+
+critic_conv_layers: 2 # Number of convolutional layers
+critic_kernel_num: [32, 32] # Number of convolutional kernels
+critic_kernel_size: [3, 3] # Convolutional kernels size
+critic_kernel_strides: [2, 2] # Convolutional kernels strides
+critic_conv_activation: ['relu', 'relu'] # Convolutional activation functions
+
+actor_dense_layers: 3 # Number of dense layers
+actor_n_neurons: [256, 256, 128] # Number of neurons of each dense layer
+actor_dense_activation: ['relu', 'relu', 'relu'] # Activation functions for dense layers
+
+critic_dense_layers: 2 # Number of dense layers
+critic_n_neurons: [256, 256]
+critic_dense_activation: ['relu', 'relu'] # Activation functions for dense layers
+
+
+# Config for discriminator net of GAIL and DeepIRL. The discriminator network is divided into three subnetwork, one for the
+# state input which can have some convolutional layer if the input is an image, other for the action input which is a dense network
+# and the last one is the common network where the information from the state and the action is joined.
+disc_state_conv_layers: 3 # Number of convolutional layers
+disc_state_kernel_num: [32, 32, 64] # Number of convolutional kernels
+disc_state_kernel_size: [7, 5, 3] # Convolutional kernels strides
+disc_state_kernel_strides: [4, 2, 1] # Convolutional kernels strides
+disc_state_conv_activation: ['relu', 'relu', 'relu'] # Convolutional activation functions
+disc_state_dense_lay: 2 # Number of dense layers
+disc_state_n_neurons: [128, 128] # Number of neurons of each dense layer
+disc_state_dense_activation: ['tanh', 'tanh'] # Activation functions for dense layers
+
+disc_action_dense_lay: 1 # Number of dense layers
+disc_action_n_neurons: [128] # Number of neurons of each dense layer
+disc_action_dense_activation: ['tanh'] # Activation functions for dense layers
+
+disc_common_dense_lay: 2 # Number of dense layers
+disc_common_n_neurons: [128, 128] # Number of ne # Activation functions for dense layersurons of each dense layer
+disc_common_dense_activation: ['tanh', 'tanh']
+
+disc_last_layer_activation: sigmoid  # sigmoid or tanh

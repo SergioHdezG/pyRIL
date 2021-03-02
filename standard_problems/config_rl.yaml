@@ -1,0 +1,55 @@
+# Select GYM environment. Environment name (for example <gym_environment: LunarLander-v2>) or False for selecting a custom env or non GYM env (<gym_environment: False>).
+gym_environment: LunarLanderContinuous-v2
+
+# Select a custom environment (non GYM environment).
+# You have to import the environment like in python code (for example <import_custom_env: from environments.sum_env import sumas_env>
+# and run the constructor like in python code (for example <custom_environment: sumas_env()>). If gym_environment is set to a value different to False, the
+# program will use the environment selected in gym_environment else custom_environment will be used.
+import_custom_env: from environments.sum_env import sumas_env
+custom_environment: sumas_env()
+
+# Agent selection. If more than one "yes" then it selects the first one.
+dqn: no
+ddqn: no
+dddqn: no
+dpg: yes
+ddpg: no
+a2c: no
+a2c_queue: no
+a3c: no
+ppo: no
+ppo_parallel: no
+
+# Select a discrete or continuous action space. If more than one "yes" then it selects the first one.
+discrete_actions: yes
+continuous_actions: no
+
+# Training params
+iterations: 400 # Total number of complete episodes to do during the training process.
+render: no # Rendering or not the training process.
+skip_states: 1 # Technique for improve the exploration repeating each action selected n times during training process.
+loading_path: no # no, False or a path to a file for loading a pretrained agent.
+saving_path: standard_agent.json # no, False or a path to a file.
+
+# Test params
+test_iter: 10 # Number of test iteration for checking the learned policy after training.
+test_render: yes
+
+# select agent params
+learning_rate: 1e-4
+batch_size: 128 # Batch size for each training step of the network.
+epsilon: 0.6  # Exploration rate. Only if is supported by the selected agent.
+epsilon_decay: 0.99995 # Exploration rate reduction factor.
+epsilon_min: 0.15 # Minimum exploration rate.
+n_stack: 1 # Number of time steps stacked for the agent input. n_stack: 4 stack the last four states as input.
+img_input: False # Flag for using images as inputs to the agent. For example img_input must be True if you use some Atari env from GYM.
+memory_size: 5000 # Size of the experience replay memory when is supported by the agent or size of the training buffer for PPO.
+step_train_epochs: 1 # Number of epoch for each network train step triggered during the agent training process.
+# For customizing the parameters of the discriminator go to utils/network_config.yaml file.
+
+# History of metrics file. Run RL_Agent/base/utils/live_monitoring_app.py <path to to hist.json file> for watching the metrics during or after the training.
+save_histories: hist.json  # json file path or None.
+
+network_config_file: utils/network_config.yaml
+
+
