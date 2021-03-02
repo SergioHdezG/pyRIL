@@ -50,7 +50,7 @@ class A2CQueueSuper(A2CSuper):
         Load a batch of memories
         :return: Current Observation, Action, Reward, Next Observation, episode finished flag
         """
-        episode_memory = np.array(self.episode_memory)
+        episode_memory = np.array(self.episode_memory, dtype=object)
         obs, action, reward = episode_memory[:, 0], episode_memory[:, 1], episode_memory[:, 2]
         # obs = np.array([x.reshape(self.state_size) for x in obs])
         # action = np.array([x.reshape(self.n_actions) for x in action])
