@@ -458,7 +458,7 @@ MODE = 'train'
 URL = 'http://www.manythings.org/anki/fra-eng.zip'
 FILENAME = '/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/transformers_data/fra-eng.zip'
 NUM_EPOCHS = 25
-num_samples = 15000 # 185584
+num_samples = 50000 # 185584
 
 
 def positional_encoding(pos, model_size):
@@ -726,7 +726,7 @@ NUM_EPOCHS = 100
 
 transformer = Transformer(MODEL_SIZE, NUM_LAYERS, H, vocab_in_size, vocab_out_size, max_length)
 
-transformer.fit(dataset, epochs=100)
+# transformer.fit(dataset, epochs=100)
 
 starttime = time.time()
 for e in range(NUM_EPOCHS):
@@ -739,7 +739,8 @@ for e in range(NUM_EPOCHS):
             starttime = time.time()
 
     try:
-        transformer.predict(raw_data_en[np.random.choice(len(raw_data_en))])
+        aa = raw_data_en[np.random.choice(len(raw_data_en))]
+        transformer.predict(aa)
     except Exception as e:
         print(e)
         continue
