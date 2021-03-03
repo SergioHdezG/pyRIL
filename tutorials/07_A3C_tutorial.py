@@ -141,7 +141,7 @@ problem_cont = rl_problem.Problem(environment_cont, agent_cont)
 # el parametro save_live_histogram permite ver en tiempo real un grafico de la recompensa frente a los peisodios,
 # numero de épocas por episodio frente a iteraciones, valor de epsilon y en caso de realizar Imitatio Learning la
 # pérdida del discriminador.
-problem_cont.solve(250, render=False, max_step_epi=500, skip_states=1, save_live_histogram='/home/serch/TFM/CAPOIRL-TF2/tutorials/hist.txt')
+problem_cont.solve(250, render=False, max_step_epi=500, skip_states=1, save_live_histogram='expert_demonstrations/hist.txt')
 problem_cont.test(render=True, n_iter=10)
 
 # hist = problem_cont.get_histogram_metrics()

@@ -15,4 +15,5 @@ names = {"dqn": "DQN",
          "ppo_continuous": "PPO_continuous",
          "ppo_discrete_parallel": "PPO_discrete_async",
          "ppo_continuous_parallel": "PPO_continuous_async",
-         "ppo_s2s_continuous_parallel": "ppo_s2s_continuous_parallel"}
+         "ppo_s2s_continuous_parallel": "ppo_s2s_continuous_parallel",
+         "ppo_transformer_agent_continuous_parallel": "ppo_transformer_agent_continuous_parallel"}

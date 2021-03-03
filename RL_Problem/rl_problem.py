@@ -44,4 +44,6 @@ def Problem(environment, agent):
         problem = ppo_problem_discrete_parallel.PPOProblem(environment, agent)
     elif agent.agent_name == agent_globals.names["ppo_s2s_continuous_parallel"]:
         problem = ppo_problem_continuous_parallel.PPOProblem(environment, agent)
+    elif agent.name == agent_globals.names["ppo_transformer_agent_continuous_parallel"]:
+        problem = ppo_problem_continuous_parallel.PPOProblem(environment, agent)
     return problem
