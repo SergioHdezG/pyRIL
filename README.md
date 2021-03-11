@@ -4,7 +4,7 @@
 
 List of RL agents implemented
 
-## Value Based Angents (Discrete actions)
+## Value Based (Discrete actions)
 - Deep Q Network (DQN) 
 - Double DQN (DDQN)
 - Dueling Double DQN (DDDQN)
