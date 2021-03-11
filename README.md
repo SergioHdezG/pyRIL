@@ -1,4 +1,4 @@
-# CAPOIRL v0.4
+# CAPOIRL-TF2 v0.5
 
 # Reinforcement Learning Agents
 
