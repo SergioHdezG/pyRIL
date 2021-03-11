@@ -21,6 +21,7 @@ env = gym.make(env_name)
 
 cb = Callbacks()
 
+# Play pacman with WASD
 play.play(env, zoom=3, callback=cb.remember_callback)
 
 cb.save_memories(exp_path)

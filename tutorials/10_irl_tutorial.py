@@ -35,7 +35,7 @@ callback = Callbacks()
 
 # Comentar si ya se dispone de un fichero de experiencias como "Expert_LunarLander.pkl"
 print("Comienzo entrenamiento de un experto")
-expert_problem.solve(1000, render=False, max_step_epi=None, render_after=950, skip_states=3)
+expert_problem.solve(700, render=False, max_step_epi=None, render_after=950, skip_states=3)
 expert_problem.test(render=False, n_iter=200, callback=callback.remember_callback)
 
 callback.save_memories(exp_path)
@@ -53,15 +53,6 @@ net_architecture = networks.actor_critic_net_architecture(use_custom_network=Tru
                                                         )
 # net_architecture = None
 
-# agent = ppo_agent_discrete.Agent(actor_lr=1e-3,
-#                                                critic_lr=1e-3,
-#                                                batch_size=32,
-#                                                epsilon=0.9,
-#                                                epsilon_decay=0.95,
-#                                                epsilon_min=0.15,
-#                                                memory_size=1024,
-#                                                net_architecture=net_architecture,
-#                                                n_stack=3)
 
 agent = ppo_agent_discrete_parallel.Agent(actor_lr=1e-3,
                                           critic_lr=1e-4,
@@ -76,6 +67,8 @@ agent = ppo_agent_discrete_parallel.Agent(actor_lr=1e-3,
 
 # agent = agent_saver.load('agent_ppo.json')
 rl_problem = rl_problem.Problem(environment, agent)
+
+# Esta linea resolvería el problema con RL
 # rl_problem.solve(render=False, episodes=300, skip_states=1, render_after=190)
 
 use_expert_actions = False

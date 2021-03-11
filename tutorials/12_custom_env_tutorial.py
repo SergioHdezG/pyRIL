@@ -122,7 +122,7 @@ agent = dqn_agent.Agent(learning_rate=1e-4,
                         n_stack=3)
 
 problem = rl_problem.Problem(env, agent)
-problem.compile()
+
 # En este caso no se utiliza el parámetro max_step_epi=500 por lo que el máximo de iteraciones será el que viene por
 # defecto (1000).
 problem.solve(2000, render=False)

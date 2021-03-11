@@ -1,5 +1,5 @@
 # Select GYM environment. Environment name (for example <gym_environment: LunarLander-v2>) or False for selecting a custom env or non GYM env (<gym_environment: False>).
-gym_environment: LunarLanderContinuous-v2
+gym_environment: LunarLander-v2
 
 # Select a custom environment (non GYM environment).
 # You have to import the environment like in python code (for example <import_custom_env: from environments.sum_env import sumas_env>
@@ -8,7 +8,9 @@ gym_environment: LunarLanderContinuous-v2
 import_custom_env: from environments.sum_env import sumas_env
 custom_environment: sumas_env()
 
-# Agent selection. If more than one "yes" then it selects the first one.
+# Agent selection. If more than one "yes" then it selects the first one. (Be careful of selecting an agent that allows
+# the kind of actions that the environment need. For example: if you use an environment that need continuous action
+# make sure the agent selected support continuous actions)
 dqn: no
 ddqn: no
 dddqn: no

@@ -11,7 +11,6 @@ import numpy as np
 from RL_Agent.base.utils import agent_saver, history_utils, networks as params
 
 environment_disc = "LunarLander-v2"
-# environment_disc = "SpaceInvaders-v0"
 environment_disc = gym.make(environment_disc)
 environment_cont = "LunarLanderContinuous-v2"
 environment_cont = gym.make(environment_cont)

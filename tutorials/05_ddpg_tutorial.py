@@ -7,7 +7,6 @@ from RL_Agent import ddpg_agent
 import gym
 from RL_Agent.base.utils import agent_saver, history_utils, networks
 
-environment = "MountainCarContinuous-v0"
 environment = "LunarLanderContinuous-v2"
 environment = gym.make(environment)
 

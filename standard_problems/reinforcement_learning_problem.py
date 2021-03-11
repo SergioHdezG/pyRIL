@@ -13,6 +13,7 @@ from standard_problems.utils.auxiliar_def import *
 print('Number of arguments:', len(sys.argv), 'arguments.')
 print('Argument List:', str(sys.argv))
 
+
 # Loading yaml config files
 if len(sys.argv) > 1:
     config_file = sys.argv[1]
@@ -63,7 +64,6 @@ if config['loading_path']:
 
 # Build the RL problem
 problem = rl_problem.Problem(environment, agent)
-problem.compile()
 
 # Solving the RL problem
 problem.solve(config['iterations'], render=config['render'], skip_states=config["skip_states"],
