@@ -467,7 +467,7 @@ class PPOSuper(AgentSuper):
 
         return loss
 
-    def proximal_policy_optimization_loss_discrete(self, advantage, old_prediction, rewards, values, stddev):
+    def proximal_policy_optimization_loss_discrete(self, advantage, old_prediction, rewards, values, stddev=None):
 
         def loss(y_true, y_pred):
             new_prob = K.sum(y_true * y_pred, axis=-1)

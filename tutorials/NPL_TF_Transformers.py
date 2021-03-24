@@ -11,9 +11,9 @@ import time
 # Set to 'infer' will skip the training
 MODE = 'train'
 URL = 'http://www.manythings.org/anki/fra-eng.zip'
-FILENAME = '/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/transformers_data/fra-eng.zip'
+FILENAME = '/home/serch/TFM/IRL3/tutorials/transformers_data/fra-eng.zip'
 NUM_EPOCHS = 25
-num_samples = 50000 # 185584
+num_samples = 25000 # 185584
 
 def maybe_download_and_read_file(url, filename):
     """ Download and unzip training data
@@ -555,6 +555,8 @@ def train_step(source_seq, target_seq_in, target_seq_out):
 
     return loss
 
+
+NUM_EPOCHS = 100
 
 starttime = time.time()
 for e in range(NUM_EPOCHS):

@@ -2,7 +2,6 @@ import threading
 import gym
 # import tensorflow as tf
 import tensorflow.compat.v1 as tf
-tf.disable_v2_behavior()
 import os.path as path
 import multiprocessing
 from _collections import deque
@@ -12,12 +11,12 @@ from RL_Agent.base.ActorCritic_base.A3C_Agent.Networks import a3c_net_continuous
 from RL_Agent.base.utils.parse_utils import *
 from RL_Agent.base.utils import agent_globals
 
-
 class A3CProblem:
     """
     Asynchronous Advantage Actor-Critic.
     This algorithm is the only one whitch does not extend RLProblemSuper because it has a different architecture.
     """
+    tf.disable_v2_behavior()
     def __init__(self, environment, agent):
         """
         Attributes:

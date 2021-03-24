@@ -1,4 +1,4 @@
-# CAPOIRL v0.4
+# CAPOIRL TF2
 ## Install
 
 This library has been tested on Python 3.5, Python 3.7 and TensorFlow 1.14.  

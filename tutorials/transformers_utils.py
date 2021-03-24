@@ -1,3 +1,4 @@
+""" Based on https://trungtran.io/2019/04/29/create-the-transformer-with-tensorflow-2-0/"""
 import tensorflow as tf
 import numpy as np
 import unicodedata
@@ -339,6 +340,8 @@ class Transformer:
                                              beta_2=0.98,
                                              epsilon=1e-9)
 
+        self.max_seq_length = max_seq_length
+
     def predict(self, test_source_text=None):
             """ Predict the output sentence for a given input sentence
             Args:
@@ -353,9 +356,16 @@ class Transformer:
             """
             # if test_source_text is None:
             #     test_source_text = self.raw_data_en[np.random.choice(len(raw_data_en))]
-            print(test_source_text)
-            test_source_seq = en_tokenizer.texts_to_sequences([test_source_text])
-            print(test_source_seq)
+            if isinstance(test_source_text, str):
+                print(test_source_text)
+                test_source_seq = en_tokenizer.texts_to_sequences([test_source_text])
+                print(test_source_seq)
+            else:
+                test_source_seq = [test_source_text]
+                test_source_text = en_tokenizer.sequences_to_texts(test_source_seq)[0]
+
+                print(test_source_text)
+                print(test_source_seq[0])
 
             en_output, en_alignments = self.encoder(tf.constant(test_source_seq), training=False)
 
@@ -380,7 +390,46 @@ class Transformer:
             print(' '.join(out_words))
             return en_alignments, de_bot_alignments, de_mid_alignments, test_source_text.split(' '), out_words
 
+    def validate(self, source_seq, target_seq_in, target_seq_out, batch_size=10):
+        dataset = tf.data.Dataset.from_tensor_slices(
+            (source_seq, target_seq_in, target_seq_out))
+
+        dataset = dataset.shuffle(len(source_seq)).batch(batch_size)
+
+        loss = 0.
+        for batch, (source_seq, target_seq_in, target_seq_out) in enumerate(dataset.take(-1)):
+            loss += self.validate_step(source_seq, target_seq_in, target_seq_out)
+
+        return loss/(batch+1)
+
     @tf.function
+    def validate_step(self, source_seq, target_seq_in, target_seq_out):
+        """ Execute one training step (forward pass + backward pass)
+        Args:
+            source_seq: source sequences
+            target_seq_in: input target sequences (<start> + ...)
+            target_seq_out: output target sequences (... + <end>)
+
+        Returns:
+            The loss value of the current pass
+        """
+        with tf.GradientTape() as tape:
+            encoder_mask = 1 - tf.cast(tf.equal(source_seq, 0), dtype=tf.float32)
+            # encoder_mask has shape (batch_size, source_len)
+            # we need to add two more dimensions in between
+            # to make it broadcastable when computing attention heads
+            encoder_mask = tf.expand_dims(encoder_mask, axis=1)
+            encoder_mask = tf.expand_dims(encoder_mask, axis=1)
+            encoder_output, _ = self.encoder(source_seq, encoder_mask=encoder_mask, training=False)
+
+            decoder_output, _, _ = self.decoder(
+                target_seq_in, encoder_output, encoder_mask=encoder_mask, training=False)
+
+            loss = self.loss_func(target_seq_out, decoder_output)
+
+        return loss
+
+    # @tf.function
     def train_step(self, source_seq, target_seq_in, target_seq_out):
         """ Execute one training step (forward pass + backward pass)
         Args:
@@ -411,6 +460,51 @@ class Transformer:
 
         return loss
 
+    # @tf.function
+    def train_step_2(self, source_seq, target_seq_out):
+        """ Execute one training step (forward pass + backward pass)
+        Args:
+            source_seq: source sequences
+            target_seq_in: input target sequences (<start> + ...)
+            target_seq_out: output target sequences (... + <end>)
+
+        Returns:
+            The loss value of the current pass
+        """
+        de_input = tf.constant([[fr_tokenizer.word_index['<start>']] for i in range(source_seq.shape[0])], dtype=tf.int64)
+        with tf.GradientTape() as tape:
+            encoder_mask = 1 - tf.cast(tf.equal(source_seq, 0), dtype=tf.float32)
+            # encoder_mask has shape (batch_size, source_len)
+            # we need to add two more dimensions in between
+            # to make it broadcastable when computing attention heads
+            encoder_mask = tf.expand_dims(encoder_mask, axis=1)
+            encoder_mask = tf.expand_dims(encoder_mask, axis=1)
+            # encoder_output, _ = self.encoder(source_seq, encoder_mask=encoder_mask)
+            encoder_output, _ = self.encoder(source_seq, encoder_mask=encoder_mask, training=True)
+
+            # de_out = tf.constant([[[1 if j==0 else 0 for j in range(128)]] for i in range(64)], dtype=tf.float64)
+            de_out, _, _ = self.decoder(de_input, encoder_output, encoder_mask=encoder_mask, training=True)
+            new_word = tf.expand_dims(tf.argmax(de_out, -1)[:, -1], axis=1)
+            de_input = tf.concat((de_input, new_word), axis=-1)
+
+            for i in range(self.max_seq_length-1):
+                decoder_output, _, _ = self.decoder(de_input, encoder_output, encoder_mask=encoder_mask, training=True)
+                d = tf.expand_dims(decoder_output[:, -1], axis=1)
+                de_out = tf.concat((de_out, d), axis=1)
+                new_word = tf.expand_dims(tf.argmax(decoder_output, -1)[:, -1], axis=1)
+
+                # Transformer doesn't have sequential mechanism (i.e. states)
+                # so we have to add the last predicted word to create a new input sequence
+                de_input = tf.concat((de_input, new_word), axis=-1)
+
+            loss = self.loss_func(target_seq_out, de_out)
+
+        variables = self.encoder.trainable_variables + self.decoder.trainable_variables
+        gradients = tape.gradient(loss, variables)
+        self.optimizer.apply_gradients(zip(gradients, variables))
+
+        return loss
+
     def loss_func(self, targets, logits):
         mask = tf.math.logical_not(tf.math.equal(targets, 0))
         mask = tf.cast(mask, dtype=tf.int64)
@@ -418,19 +512,54 @@ class Transformer:
 
         return loss
 
-    def fit(self, dataset, epochs=1):
+    def fit(self, input_data, decoder_input_data, target_data, batch_size, epochs=1, validation_split=0.0, shuffle=True, teacher_forcing=True):
+
+        if validation_split > 0.0:
+            validation_split = int(input_data.shape[0] * validation_split)
+            val_idx = np.random.choice(input_data.shape[0], validation_split, replace=False)
+            train_mask = np.array([False if i in val_idx else True for i in range(input_data.shape[0])])
+
+            test_samples = np.int(val_idx.shape[0])
+            train_samples = np.int(train_mask.shape[0] - test_samples)
+
+            val_input_data = input_data[val_idx]
+            val_decoder_input_data = decoder_input_data[val_idx]
+            val_target_data = target_data[val_idx]
+
+            train_input_data = input_data[train_mask]
+            train_decoder_input_data = decoder_input_data[train_mask]
+            train_target_data = target_data[train_mask]
+
+        else:
+            train_input_data = input_data
+            train_decoder_input_data = decoder_input_data
+            train_target_data = target_data
+
+        dataset = tf.data.Dataset.from_tensor_slices(
+            (train_input_data, train_decoder_input_data, train_target_data))
+
+        if shuffle:
+            dataset = dataset.shuffle(len(train_input_data)).batch(batch_size)
+
         starttime = time.time()
         for e in range(epochs):
             for batch, (source_seq, target_seq_in, target_seq_out) in enumerate(dataset.take(-1)):
-                loss = self.train_step(source_seq, target_seq_in,
-                                  target_seq_out)
+                if teacher_forcing:
+                    loss = self.train_step(source_seq, target_seq_in,
+                                      target_seq_out)
+                else:
+                    loss = self.train_step_2(source_seq, target_seq_out)
                 if batch % 100 == 0:
                     print('Epoch {} Batch {} Loss {:.4f} Elapsed time {:.2f}s'.format(
                         e + 1, batch, loss.numpy(), time.time() - starttime))
                     starttime = time.time()
 
             try:
-                self.predict()
+                if validation_split > 0.0:
+                    val_loss = self.validate(val_input_data, val_decoder_input_data, val_target_data, batch_size)
+                    print('Epoch {} val_loss {:.4f}'.format(
+                        e + 1, val_loss.numpy()))
+                    self.predict(val_input_data[np.random.choice(len(val_input_data))])
             except Exception as e:
                 print(e)
                 continue
@@ -456,14 +585,14 @@ class Transformer:
 # Set to 'infer' will skip the training
 MODE = 'train'
 URL = 'http://www.manythings.org/anki/fra-eng.zip'
-FILENAME = '/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/transformers_data/fra-eng.zip'
-NUM_EPOCHS = 25
-num_samples = 50000 # 185584
+FILENAME = '/home/serch/TFM/IRL3/tutorials/transformers_data/spa-eng.zip'
+NUM_EPOCHS = 50
+num_samples = 100 # 185584
 
 
 def positional_encoding(pos, model_size):
     """ Compute positional encoding for a particular position
-    Args:
+    Args:p
         pos: position of a token in the sequence
         model_size: depth size of the model
 
@@ -499,7 +628,7 @@ def maybe_download_and_read_file(url, filename):
 
     zipf = ZipFile(filename)
     filename = zipf.namelist()
-    with zipf.open('fra.txt') as f:
+    with zipf.open('spa.txt') as f:
         lines = f.read()
 
     return lines
@@ -565,10 +694,7 @@ data_fr_out = tf.keras.preprocessing.sequence.pad_sequences(data_fr_out,
 
 """## Create tf.data.Dataset object"""
 
-BATCH_SIZE = 64
-dataset = tf.data.Dataset.from_tensor_slices(
-    (data_en, data_fr_in, data_fr_out))
-dataset = dataset.shuffle(len(data_en)).batch(BATCH_SIZE)
+
 
 """## Create the Positional Embedding"""
 
@@ -590,8 +716,8 @@ pes = tf.constant(pes, dtype=tf.float32)
 
 """## Create the Encoder"""
 
-H = 8
-NUM_LAYERS = 4
+H = 4
+NUM_LAYERS = 2
 vocab_in_size = len(en_tokenizer.word_index) + 1
 # encoder = Encoder(vocab_size, MODEL_SIZE, NUM_LAYERS, H)
 # print(vocab_size)
@@ -726,24 +852,32 @@ NUM_EPOCHS = 100
 
 transformer = Transformer(MODEL_SIZE, NUM_LAYERS, H, vocab_in_size, vocab_out_size, max_length)
 
-# transformer.fit(dataset, epochs=100)
+BATCH_SIZE = 64
 
-starttime = time.time()
-for e in range(NUM_EPOCHS):
-    for batch, (source_seq, target_seq_in, target_seq_out) in enumerate(dataset.take(-1)):
-        loss = transformer.train_step(source_seq, target_seq_in,
-                          target_seq_out)
-        if batch % 100 == 0:
-            print('Epoch {} Batch {} Loss {:.4f} Elapsed time {:.2f}s'.format(
-                e + 1, batch, loss.numpy(), time.time() - starttime))
-            starttime = time.time()
 
-    try:
-        aa = raw_data_en[np.random.choice(len(raw_data_en))]
-        transformer.predict(aa)
-    except Exception as e:
-        print(e)
-        continue
+transformer.fit(data_en, data_fr_in, data_fr_out, batch_size=BATCH_SIZE, epochs=100, validation_split=0.2, teacher_forcing=True)
+
+# starttime = time.time()
+# dataset = tf.data.Dataset.from_tensor_slices(
+#             (data_en, data_fr_in, data_fr_out))
+#
+# dataset = dataset.shuffle(len(data_en)).batch(BATCH_SIZE)
+#
+# for e in range(NUM_EPOCHS):
+#     for batch, (source_seq, target_seq_in, target_seq_out) in enumerate(dataset.take(-1)):
+#         loss = transformer.train_step(source_seq, target_seq_in,
+#                           target_seq_out)
+#         if batch % 100 == 0:
+#             print('Epoch {} Batch {} Loss {:.4f} Elapsed time {:.2f}s'.format(
+#                 e + 1, batch, loss.numpy(), time.time() - starttime))
+#             starttime = time.time()
+#
+#     try:
+#         aa = raw_data_en[np.random.choice(len(raw_data_en))]
+#         transformer.predict(aa)
+#     except Exception as e:
+#         print(e)
+#         continue
 
 test_sents = (
     'What a ridiculous concept!',

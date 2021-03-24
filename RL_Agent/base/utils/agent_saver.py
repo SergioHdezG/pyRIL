@@ -1,11 +1,11 @@
 import types
 
-from RL_Agent import dqn_agent, ddqn_agent, dddqn_agent
-from RL_Agent import dpg_agent, ddpg_agent
-from RL_Agent import a2c_agent_discrete, a2c_agent_continuous, a2c_agent_discrete_queue, a2c_agent_continuous_queue
-from RL_Agent import a3c_agent_discrete, a3c_agent_continuous
-from RL_Agent import ppo_agent_discrete, ppo_agent_continuous, ppo_agent_discrete_parallel, \
-    ppo_agent_continuous_parallel
+# from RL_Agent import dqn_agent, ddqn_agent, dddqn_agent
+# from RL_Agent import dpg_agent, ddpg_agent
+# from RL_Agent import a2c_agent_discrete, a2c_agent_continuous, a2c_agent_discrete_queue, a2c_agent_continuous_queue
+# from RL_Agent import a3c_agent_discrete, a3c_agent_continuous
+# from RL_Agent import ppo_agent_discrete, ppo_agent_continuous, ppo_agent_discrete_parallel, \
+#     ppo_agent_continuous_parallel
 from RL_Agent.base.utils import agent_globals
 import pickle
 import json
@@ -431,34 +431,49 @@ def set_agent_attributes(att, agent):
 
 def create_new_agent(att):
     if att["agent_name"] == agent_globals.names["dqn"]:
+        from RL_Agent import dqn_agent
         agent = dqn_agent.Agent()
     elif att["agent_name"] == agent_globals.names["ddqn"]:
+        from RL_Agent import ddqn_agent
         agent = ddqn_agent.Agent()
     elif att["agent_name"] == agent_globals.names["dddqn"]:
+        from RL_Agent import dddqn_agent
         agent = dddqn_agent.Agent()
     elif att["agent_name"] == agent_globals.names["dpg"]:
+        from RL_Agent import dpg_agent
         agent = dpg_agent.Agent()
     elif att["agent_name"] == agent_globals.names["ddpg"]:
+        from RL_Agent import ddpg_agent
         agent = ddpg_agent.Agent()
     elif att["agent_name"] == agent_globals.names["a2c_discrete"]:
+        from RL_Agent import a2c_agent_discrete
         agent = a2c_agent_discrete.Agent()
     elif att["agent_name"] == agent_globals.names["a2c_continuous"]:
+        from RL_Agent import  a2c_agent_continuous
         agent = a2c_agent_continuous.Agent()
     elif att["agent_name"] == agent_globals.names["a2c_discrete_queue"]:
+        from RL_Agent import a2c_agent_discrete_queue
         agent = a2c_agent_discrete_queue.Agent()
     elif att["agent_name"] == agent_globals.names["a2c_continuous_queue"]:
+        from RL_Agent import a2c_agent_continuous_queue
         agent = a2c_agent_continuous_queue.Agent()
     elif att["agent_name"] == agent_globals.names["a3c_discrete"]:
+        from RL_Agent import a3c_agent_discrete
         agent = a3c_agent_discrete.Agent()
     elif att["agent_name"] == agent_globals.names["a3c_continuous"]:
+        from RL_Agent import a3c_agent_continuous
         agent = a3c_agent_continuous.Agent()
     elif att["agent_name"] == agent_globals.names["ppo_discrete"]:
+        from RL_Agent import ppo_agent_discrete
         agent = ppo_agent_discrete.Agent()
     elif att["agent_name"] == agent_globals.names["ppo_discrete_parallel"]:
+        from RL_Agent import ppo_agent_discrete_parallel
         agent = ppo_agent_discrete_parallel.Agent()
     elif att["agent_name"] == agent_globals.names["ppo_continuous"]:
+        from RL_Agent import ppo_agent_continuous
         agent = ppo_agent_continuous.Agent()
     elif att["agent_name"] == agent_globals.names["ppo_continuous_parallel"]:
+        from RL_Agent import ppo_agent_continuous_parallel
         agent = ppo_agent_continuous_parallel.Agent()
     set_agent_attributes(att, agent)
 

@@ -3,7 +3,7 @@ from tensorflow.keras.layers import Dense, Conv2D, Flatten
 from tensorflow.keras import backend as K
 # import tensorflow as tf
 import tensorflow.compat.v1 as tf
-tf.disable_v2_behavior()
+# tf.disable_v2_behavior()
 from termcolor import colored
 import numpy as np
 import time

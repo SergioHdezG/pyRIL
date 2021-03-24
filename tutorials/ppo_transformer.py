@@ -11,10 +11,7 @@ from RL_Agent.base.utils import agent_saver, history_utils, networks as params
 from environments import optimizing_functions
 import numpy as np
 
-
-environment_disc = "CartPole-v1"
-environment_disc = gym.make(environment_disc)
-environment_cont = optimizing_functions.optimize_env(n_params=2)
+environment = optimizing_functions.optimize_env(n_params=2)
 
 
 def lstm_custom_model(input_shape):
@@ -39,7 +36,7 @@ net_architecture = params.actor_critic_net_architecture(
                     )
 
 
-agent_cont = ppo_s2s_agent_continuous_parallel.Agent(actor_lr=1e-3,
+agent_cont = ppo_transformer_agent_continuous_parallel.Agent(actor_lr=1e-3,
                                                  critic_lr=1e-3,
                                                  batch_size=128,
                                                  memory_size=512,
@@ -48,17 +45,17 @@ agent_cont = ppo_s2s_agent_continuous_parallel.Agent(actor_lr=1e-3,
                                                  epsilon_min=0.15,
                                                  exploration_noise=5.0,
                                                  net_architecture=net_architecture,
-                                                 n_stack=4,
+                                                 n_stack=1,
                                                  img_input=False,
                                                  seq2seq=True,
                                                  teacher_forcing=False,
-                                                 decoder_start_token=environment_cont.start_token,
-                                                 decoder_final_token=environment_cont.final_token,
-                                                 max_output_len=environment_cont.action_space.seq2seq_n,
+                                                 decoder_start_token=environment.start_token,
+                                                 decoder_final_token=environment.final_token,
+                                                 max_output_len=environment.action_space.seq2seq_n,
                                                  loss_critic_discount=0.5
                                                  )
 
-problem_cont = rl_problem.Problem(environment_cont, agent_cont)
+problem_cont = rl_problem.Problem(environment, agent_cont)
 
 problem_cont.solve(5000, render=True, skip_states=1)
 problem_cont.test(render=True, n_iter=10)

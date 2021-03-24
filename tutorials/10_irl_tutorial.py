@@ -35,8 +35,8 @@ callback = Callbacks()
 
 # Comentar si ya se dispone de un fichero de experiencias como "Expert_LunarLander.pkl"
 print("Comienzo entrenamiento de un experto")
-expert_problem.solve(1000, render=False, max_step_epi=None, render_after=950, skip_states=3)
-expert_problem.test(render=False, n_iter=200, callback=callback.remember_callback)
+expert_problem.solve(1000, render=False, max_step_epi=250, render_after=980, skip_states=3)
+expert_problem.test(render=False, n_iter=400, callback=callback.remember_callback)
 
 callback.save_memories(exp_path)
 

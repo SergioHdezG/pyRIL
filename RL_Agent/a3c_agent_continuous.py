@@ -13,11 +13,11 @@ import copy
 import multiprocessing
 # import tensorflow as tf
 import tensorflow.compat.v1 as tf
-tf.disable_v2_behavior()
 import os
 
 
 class Agent(AgentSuper):
+    tf.disable_v2_behavior()
     def __init__(self, actor_lr=1e-4, critic_lr=1e-3, batch_size=64, gamma=0.95, n_stack=1, n_step_return=15,
                  train_steps=1, img_input=False, state_size=None, n_parallel_envs=None, net_architecture=None):
         """

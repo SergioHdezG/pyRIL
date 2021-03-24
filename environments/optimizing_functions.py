@@ -49,7 +49,7 @@ class optimize_env(EnvInterface):
         self.max_iter = 50
         self.last_reward = None
 
-        self.start_token = np.array([0.])
+        self.start_token = 0.
         self.final_token = None
         self.maxlen = int(self.max_iter/5.)
         self.value_list = deque(maxlen=self.maxlen)

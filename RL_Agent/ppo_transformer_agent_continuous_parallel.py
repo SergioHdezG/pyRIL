@@ -9,8 +9,9 @@ from tensorflow.keras.layers import Input, Dense
 from tensorflow.keras import backend as K
 from tensorflow.keras.optimizers import Adam
 # import tensorflow as tf
-import tensorflow.compat.v1 as tf
-tf.disable_v2_behavior()
+import tensorflow as tf
+import time
+
 
 # worker class that inits own environment, trains on it and updloads weights to global net
 class Agent(PPOSuper):
@@ -19,7 +20,7 @@ class Agent(PPOSuper):
                  loss_entropy_beta=0.001, lmbda=0.95, train_steps=10, exploration_noise=1.0, n_stack=1,
                  img_input=False, state_size=None, n_parallel_envs=None, net_architecture=None, seq2seq=False,
                  teacher_forcing=False, decoder_start_token=None, decoder_final_token=None,
-                         max_output_len=None):
+                         max_output_len=None, vocab_in_size=None, vocab_out_size=None):
         """
         Proximal Policy Optimization (PPO) agent for continuous action spaces with parallelized experience collection class.
         :param actor_lr: (float) learning rate for training the actor NN.
@@ -65,6 +66,8 @@ class Agent(PPOSuper):
         self.decoder_start_token = decoder_start_token
         self.decoder_final_token = decoder_final_token
         self.max_output_len = max_output_len
+        self.vocab_in_size = vocab_in_size
+        self.vocab_out_size = vocab_out_size
 
     def build_agent(self, state_size, n_actions, stack, action_bound=None):
         """
@@ -77,21 +80,43 @@ class Agent(PPOSuper):
         """
         super().build_agent(state_size, n_actions, stack=stack)
 
-        self.action_bound = action_bound
         self.loss_selected = self.proximal_policy_optimization_loss_continuous
+        self.actor_model, self.critic_model = self._build_model(self.net_architecture, last_activation='linear',
+                                                                model_size=128, n_layers=2, h=4,
+                                                                max_in_length=self.n_stack,
+                                                                max_out_length=self.n_actions)
+        # self._build_graph()
+        self.action_bound = action_bound
 
-        if self.seq2seq:
-            self._build_seq2seq_grap()
-        else:
-            self._build_graph()
 
         # self.keras_actor, self.keras_critic = self._build_model(self.net_architecture, last_activation='tanh')
         self.dummy_action, self.dummy_value = self.dummies_parallel(self.n_parallel_envs)
-        self.remember = self.remember_parallel
+        self.remember = self.remember_seq2seq
 
         # self.sess = tf.Session()
         # self.saver = tf.train.Saver()
         # self.sess.run(tf.global_variables_initializer())
+
+    def _build_model(self, net_architecture, last_activation, model_size, n_layers, h,
+                     max_in_length, max_out_length):
+        actor_model = Transformer(model_size, n_layers, h, vocab_in_size=self.vocab_in_size, vocab_out_size=self.vocab_out_size,
+                                       max_in_length=max_in_length,
+                                       max_out_length=max_out_length, start_token=self.decoder_start_token,
+                                       final_token=self.decoder_final_token, loss_func=self.loss_selected)
+
+        # Building critic
+        if self.img_input:
+            model = net_building.build_conv_net(net_architecture, self.state_size, critic=True)
+        elif self.stack:
+            model = net_building.build_stack_net(net_architecture, self.state_size, critic=True)
+        else:
+            model = net_building.build_nn_net(net_architecture, self.state_size, critic=True)
+        critic_model = model
+
+        critic_model.add(tf.keras.layers.Dense(1))
+        critic_model.compile(optimizer=Adam(lr=self.critic_lr), loss='mse')
+
+        return actor_model, critic_model
 
     def act_train(self, obs):
         """
@@ -103,14 +128,14 @@ class Agent(PPOSuper):
         obs = self._format_obs_act_parall(obs)
 
         if self.seq2seq:
-            p = self.actor_seq2seq_predict(obs)
+            action, p = self.actor_model.predict(obs)
         else:
             # p = self.keras_actor.predict([obs, self.dummy_value, self.dummy_action, self.dummy_value, self.dummy_value])
             p = self.actor_predict(obs)
         action = action_matrix = p + np.random.normal(loc=0, scale=self.exploration_noise*self.epsilon, size=p.shape)
 
         # value = self.keras_critic.predict(obs)
-        value = self.critic_predict(obs)
+        value = self.critic_model.pedict(obs)
         return action, action_matrix, p, value
 
     def act(self, obs):
@@ -122,129 +147,13 @@ class Agent(PPOSuper):
         obs = self._format_obs_act(obs)
 
         if self.seq2seq:
-            p = self.actor_seq2seq_predict(obs)
+            action, p = self.actor_model.predict(obs)
         else:
             # p = self.keras_actor.predict([obs, self.dummy_value, self.dummy_action, self.dummy_value, self.dummy_value])
             p = self.actor_predict(obs)
         action = p[0]
         return action
 
-    def __build_model(self, net_architecture, last_activation):
-
-        # Neural Net for Actor-Critic Model
-        if net_architecture is None:  # Standart architecture
-            net_architecture = ppo_net
-            define_output_layer = False
-        else:
-            define_output_layer = net_architecture['define_custom_output_layer']
-
-        if self.seq2seq:
-            batch_size = 64  # Batch size for training.
-            latent_dim = 256  # Latent dimensionality of the encoding space.
-            embedding_dim = 256
-            # TODO: seq2seq: esto no funcionaría con imágenes
-            num_encoder_tokens = self.state_size.shape[-1]
-            num_decoder_tokens = self.n_actions
-            actor_model = seq2seq(latent_dim, batch_size, num_encoder_tokens, num_decoder_tokens, embedding_dim)
-        else:
-            # Building actor
-            if self.img_input:
-                model = net_building.build_conv_net(net_architecture, self.state_size, actor=True)
-            elif self.stack:
-                model = net_building.build_stack_net(net_architecture, self.state_size, actor=True)
-            else:
-                model = net_building.build_nn_net(net_architecture, self.state_size, actor=True)
-            actor_model = model(self.state_t)
-
-            if not define_output_layer:
-                actor_model = tf.keras.layers.Dense(self.n_actions, activation=last_activation)(actor_model)
-
-
-        # advantage = Input(shape=(1,))
-        # old_prediction = Input(shape=(self.n_actions,))
-        # rewards = Input(shape=(1,))
-        # values = Input(shape=(1,))
-        #
-        # actor_model = Model(inputs=[actor_net.inputs, advantage, old_prediction, rewards, values],
-        #                     outputs=[actor_net.outputs])
-        # actor_model.compile(optimizer=Adam(lr=self.actor_lr),
-        #                     loss=[self.loss_selected(advantage=advantage,
-        #                                              old_prediction=old_prediction,
-        #                                              rewards=rewards,
-        #                                              values=values)])
-        # actor_model.summary()
-
-        # Building actor
-        if self.img_input:
-            model = net_building.build_conv_net(net_architecture, self.state_size, critic=True)
-        elif self.stack:
-            model = net_building.build_stack_net(net_architecture, self.state_size, critic=True)
-        else:
-            model = net_building.build_nn_net(net_architecture, self.state_size, critic=True)
-        critic_model = model(self.state_t)
-
-        if not define_output_layer:
-            critic_model = tf.keras.layers.Dense(1, activation='linear')(critic_model)
-        # critic_model.compile(optimizer=Adam(lr=self.critic_lr), loss='mse')
-
-        return actor_model, critic_model
-
-    def _build_graph(self):
-        if self.img_input:
-            self.state_t = tf.placeholder(tf.float32, shape=(None, *self.state_size), name='state')
-        elif self.stack:
-            self.state_t = tf.placeholder(tf.float32, shape=(None, *self.state_size), name='state')
-        else:
-            self.state_t = tf.placeholder(tf.float32, shape=(None, self.state_size), name='state')
-
-        self.actions_t = tf.placeholder(tf.float32, shape=(None, self.n_actions), name='actions')
-        self.old_prediction_t = tf.placeholder(tf.float32, shape=(None, self.n_actions), name='old_pred')
-        self.advantage_t = tf.placeholder(tf.float32, shape=(None, 1), name='advantage')
-        self.values_t = tf.placeholder(tf.float32, shape=(None, 1), name='value')
-        self.returns_t = tf.placeholder(tf.float32, shape=(None, 1), name='return')
-
-        self.actor_lr_t = tf.placeholder(tf.float32, shape=(), name="actor_lr")
-        self.critic_lr_t = tf.placeholder(tf.float32, shape=(), name="critic_lr")
-
-        self.actor_model, self.critic_model = self.__build_model(self.net_architecture, last_activation='linear')
-
-        self.act_tf = self.actor_model
-        self.value_tf = self.critic_model
-
-        with tf.name_scope('c_loss'):
-            self.critic_loss = tf.reduce_mean(tf.square(self.returns_t - self.critic_model))
-
-        with tf.name_scope('a_loss'):
-            y_pred = self.actor_model
-            y_true = self.actions_t
-            var = tf.square(self.exploration_noise)
-            pi = 3.1415926
-
-            # σ√2π
-            denom = tf.sqrt(2 * pi * var)
-
-            # exp(-((x−μ)^2/2σ^2))
-            prob_num = tf.exp(- K.square(y_true - y_pred) / (2 * var))
-            old_prob_num = tf.exp(- K.square(y_true - self.old_prediction_t) / (2 * var))
-
-            # exp(-((x−μ)^2/2σ^2))/(σ√2π)
-            new_prob = prob_num / denom
-            old_prob = old_prob_num / denom
-
-            ratio = tf.exp(tf.log(new_prob + 1e-10) - K.log(old_prob + 1e-10))
-
-            p1 = ratio * self.advantage_t
-            p2 = tf.clip_by_value(ratio, 1 - self.loss_clipping, 1 + self.loss_clipping) * self.advantage_t
-            actor_loss = - tf.reduce_mean(K.minimum(p1, p2))
-
-            # critic_loss__actor = tf.reduce_mean(tf.square(self.returns_t - self.values_t))
-            entropy = - tf.reduce_mean(-(new_prob * K.log(new_prob + 1e-10)))
-
-            self.actor_loss = actor_loss + self.critic_discount * self.critic_loss + self.entropy_beta * entropy
-
-            # we use adam optimizer for minimizing the loss
-            self.fit_actor = tf.train.AdamOptimizer(self.actor_lr_t).minimize(self.actor_loss)
-            self.fit_critic = tf.train.AdamOptimizer(self.critic_lr_t).minimize(self.critic_loss)
 
     def replay(self):
         """"
@@ -257,20 +166,30 @@ class Agent(PPOSuper):
         # advantage = returns - pred_values
 
         if self.seq2seq:
-            actor_loss, critic_loss = self.fit_seq2seq([obs, advantages, old_prediction, returns, values], [action],
-                                               batch_size=self.batch_size, shuffle=False, epochs=self.train_epochs,
-                                               actor_lr=self.actor_lr, critic_lr=self.critic_lr, verbose=True,
-                                               seq2seq=self.seq2seq, teacher_forcing=self.teacher_forcing)
-        else:
-            actor_loss, critic_loss = self.fit([obs, advantages, old_prediction, returns, values], [action],
-                                               batch_size=self.batch_size, shuffle=False, epochs=self.train_epochs,
-                                               actor_lr=self.actor_lr, critic_lr=self.critic_lr, verbose=False,
-                                               seq2seq=self.seq2seq, teacher_forcing=self.teacher_forcing)
+            actor_loss = self.actor_model.fit(input_data=obs, decoder_input_data=obs, target_data=action, batch_size=self.batch_size,
+                                 epochs=self.train_epochs, validation_split=0.0, shuffle=False, teacher_forcing=self.teacher_forcing,
+                                 loss_func=self.loss_selected, extra_data=[advantages,
+                                                                                           old_prediction,
+                                                                                           returns,
+                                                                                           values])
+            critic_loss = self.critic_model.fit([obs], [returns], batch_size=self.batch_size, shuffle=True,
+                                                  epochs=self.train_epochs, verbose=2)
+
+        # if self.seq2seq:
+        #     actor_loss, critic_loss = self.fit_seq2seq([obs, advantages, old_prediction, returns, values], [action],
+        #                                        batch_size=self.batch_size, shuffle=False, epochs=self.train_epochs,
+        #                                        actor_lr=self.actor_lr, critic_lr=self.critic_lr, verbose=True,
+        #                                        seq2seq=self.seq2seq, teacher_forcing=self.teacher_forcing)
+        # else:
+        #     actor_loss, critic_loss = self.fit([obs, advantages, old_prediction, returns, values], [action],
+        #                                        batch_size=self.batch_size, shuffle=False, epochs=self.train_epochs,
+        #                                        actor_lr=self.actor_lr, critic_lr=self.critic_lr, verbose=False,
+        #                                        seq2seq=self.seq2seq, teacher_forcing=self.teacher_forcing)
 
 
 
         actor_loss = self._create_hist(actor_loss)
-        critic_loss = self._create_hist(critic_loss)
+        # critic_loss = self._create_hist(critic_loss)
 
         # actor_loss = self.keras_actor.fit([obs, advantages, old_prediction, returns, values], [action], batch_size=self.batch_size, shuffle=True,
         #                             epochs=self.train_epochs, verbose=False)
@@ -279,199 +198,6 @@ class Agent(PPOSuper):
 
         self._reduce_epsilon()
         return actor_loss, critic_loss
-
-    def fit(self, x, y, batch_size=32, shuffle=False, epochs=1, actor_lr=1e-3, critic_lr=1e-3, verbose=False, seq2seq=False, teacher_forcing=False):
-
-        obs = x[0]
-        advantages = x[1]
-        old_prediction = x[2]
-        returns = x[3]
-        values = x[4]
-        actions = y[-1]
-
-        train_samples = np.int(obs.shape[0])
-        if shuffle:
-            shuffle_train_index = np.array(np.random.sample(range(train_samples), train_samples))
-            obs = obs[shuffle_train_index]
-            advantages = advantages[shuffle_train_index]
-            old_prediction = old_prediction[shuffle_train_index]
-            returns = returns[shuffle_train_index]
-            values = values[shuffle_train_index]
-            actions = actions[shuffle_train_index]
-
-        assert obs.shape[0] == advantages.shape[0] == old_prediction.shape[0] == returns.shape[0] == values.shape[0] \
-               == actions.shape[0]
-
-        # total_actor_loss = []
-        # total_critic_loss = []
-
-        for epoch in range(epochs):
-            actor_mean_loss = []
-            critic_mean_loss = []
-            for batch in range(train_samples // batch_size + 1):
-                i = batch * batch_size
-                j = (batch + 1) * batch_size
-
-                if j >= train_samples:
-                    j = train_samples
-
-                obs_input_batch = obs[i:j]
-                advantages_input_batch = advantages[i:j]
-                old_prediction_input_batch = old_prediction[i:j]
-                returns_input_batch = returns[i:j]
-                values_input_batch = values[i:j]
-                actions_input_batch = actions[i:j]
-
-                if obs_input_batch.shape[0] > 0:
-                    actor_loss, critic_loss = self.train_step(obs_input_batch, advantages_input_batch,
-                                                              old_prediction_input_batch, returns_input_batch,
-                                                              values_input_batch, actions_input_batch,
-                                                              decoder_input=None,
-                                                              actor_lr=actor_lr, critic_lr=critic_lr,
-                                                              teacher_forcing=teacher_forcing)
-
-                    actor_mean_loss.append(actor_loss)
-                    critic_mean_loss.append(critic_loss)
-
-            actor_mean_loss = np.mean(actor_mean_loss)
-            critic_mean_loss = np.mean(critic_mean_loss)
-
-            # total_actor_loss.append(actor_mean_loss)
-            # total_critic_loss.append(critic_mean_loss)
-
-            if verbose:
-                print('epoch: ', epoch + 1, "\tactor loss: ", actor_mean_loss, "\tcritic_loss: ", critic_mean_loss)
-
-        # total_actor_loss = np.mean(total_actor_loss)
-        # total_critic_loss = np.mean(total_critic_loss)
-
-        return actor_mean_loss, critic_mean_loss
-
-    def fit_seq2seq(self, x, y, batch_size=32, shuffle=False, epochs=1, actor_lr=1e-3, critic_lr=1e-3, verbose=False, seq2seq=False, teacher_forcing=False):
-
-        obs = x[0]
-        advantages = x[1]
-        old_prediction = x[2]
-        returns = x[3]
-        values = x[4]
-        actions = y[-1]
-
-        train_samples = np.int(obs.shape[0])
-        if shuffle:
-            shuffle_train_index = np.array(np.random.sample(range(train_samples), train_samples))
-            obs = obs[shuffle_train_index]
-            advantages = advantages[shuffle_train_index]
-            old_prediction = old_prediction[shuffle_train_index]
-            returns = returns[shuffle_train_index]
-            values = values[shuffle_train_index]
-            actions = actions[shuffle_train_index]
-
-        assert obs.shape[0] == advantages.shape[0] == old_prediction.shape[0] == returns.shape[0] == values.shape[0] \
-               == actions.shape[0]
-
-        # total_actor_loss = []
-        # total_critic_loss = []
-
-        for epoch in range(epochs):
-            actor_mean_loss = []
-            critic_mean_loss = []
-            for batch in range(train_samples // batch_size + 1):
-                i = batch * batch_size
-                j = (batch + 1) * batch_size
-
-                if j >= train_samples:
-                    j = train_samples
-
-                obs_input_batch = obs[i:j]
-                advantages_input_batch = advantages[i:j]
-                old_prediction_input_batch = old_prediction[i:j]
-                returns_input_batch = returns[i:j]
-                values_input_batch = values[i:j]
-                actions_input_batch = actions[i:j]
-
-                # TODO: seq2seq: decoder start token volver a colocar a fijo self.decoder_start_token
-                self.decoder_start_token = 20 * np.random.random_sample(1)- 10
-                if obs_input_batch.shape[0] > 0:
-                    actor_loss, critic_loss = self.train_step_seq2seq(obs_input_batch, advantages_input_batch,
-                                                              old_prediction_input_batch, returns_input_batch,
-                                                              values_input_batch, actions_input_batch,
-                                                              decoder_input=self.decoder_start_token,
-                                                              actor_lr=actor_lr, critic_lr=critic_lr,
-                                                              teacher_forcing=teacher_forcing)
-
-                    actor_mean_loss.append(actor_loss)
-                    critic_mean_loss.append(critic_loss)
-
-            actor_mean_loss = np.mean(actor_mean_loss)
-            critic_mean_loss = np.mean(critic_mean_loss)
-
-            # total_actor_loss.append(actor_mean_loss)
-            # total_critic_loss.append(critic_mean_loss)
-
-            if verbose:
-                print('epoch: ', epoch + 1, "\tactor loss: ", actor_mean_loss, "\tcritic_loss: ", critic_mean_loss)
-
-        # total_actor_loss = np.mean(total_actor_loss)
-        # total_critic_loss = np.mean(total_critic_loss)
-
-        return actor_mean_loss, critic_mean_loss
-
-
-    def train_step(self, obs, advantages, old_prediction, returns, values, actions, actor_lr,
-                   critic_lr):
-        dict = {self.state_t: obs,
-                self.advantage_t: advantages,
-                self.old_prediction_t: old_prediction,
-                self.returns_t: returns,
-                self.values_t: values,
-                self.actions_t: actions,
-                self.actor_lr_t: actor_lr,
-                self.critic_lr_t: critic_lr}
-
-        actor_loss, _, critic_loss, _ = self.sess.run([self.actor_loss, self.fit_actor, self.critic_loss,
-                                                       self.fit_critic], dict)
-
-        return actor_loss, critic_loss
-
-    def train_step_seq2seq(self, obs, advantages, old_prediction, returns, values, actions, decoder_input, actor_lr,
-                   critic_lr, teacher_forcing):
-        # TODO: seq2seq: expandir dimensiones en el eje que correponda. No estoy seguro de que axis=2 vaya a funcionar en todos los casos.
-        # actions = np.expand_dims(actions, axis=2)
-        # old_prediction = np.expand_dims(old_prediction, axis=2)
-        decoder_input = np.expand_dims(np.expand_dims(decoder_input, axis=0), axis=0)
-        dict = {self.state_t: obs,
-                self.advantage_t: advantages,
-                self.old_prediction_t: old_prediction,
-                self.returns_t: returns,
-                self.values_t: values,
-                self.actions_t: actions,
-                self.decoder_input_t: decoder_input,
-                self.actor_lr_t: actor_lr,
-                self.critic_lr_t: critic_lr,
-                self.out_seq_dim_t: self.max_output_len,
-                self.auxiliar_tensor: actions}
-
-        if teacher_forcing:
-            actor_loss, _ = self.sess.run([self.tf_loss, self.tf_train_op], dict)
-        else:
-
-            actor_loss, _ = self.sess.run([self.tf_std_loss, self.tf_std_train_actor], dict)
-            critic_loss, _ = self.sess.run([self.critic_loss, self.tf_std_train_critic], dict)
-
-            # actor_loss = self.sess.run([self.prueba_loss_std], dict)
-            # actor_loss, _ = self.sess.run([self.tf_std_loss, self.tf_std_train_op], dict)
-
-
-
-        return actor_loss, critic_loss
-
-    def actor_predict(self, obs):
-        action = self.sess.run(self.act_tf, {self.state_t: obs})
-        return action
-
-    def critic_predict(self, obs):
-        value = self.sess.run(self.value_tf, {self.state_t: obs})
-        return value
 
     def _create_hist(self, loss):
         """
@@ -483,242 +209,712 @@ class Agent(PPOSuper):
 
         return historial(loss)
 
-    def __build_critic_model(self, net_architecture):
+    def proximal_policy_optimization_loss_continuous(self, advantage, old_prediction, rewards, values, stddev):
 
-        # Neural Net for Actor-Critic Model
-        if net_architecture is None:  # Standart architecture
-            net_architecture = ppo_net
-            define_output_layer = False
-        else:
-            define_output_layer = net_architecture['define_custom_output_layer']
+        def loss(y_true, y_pred):
+            """
+            f(x) = (1/σ√2π)exp(-(1/2σ^2)(x−μ)^2)
+            X∼N(μ, σ)
+            """
+            # var = K.square(self.exploration_noise*self.epsilon)
+            var = K.square(stddev)
+            pi = 3.1415926
 
-        # Building critic
+            # σ√2π
+            denom = K.sqrt(2 * pi * var)
+
+            # exp(-((x−μ)^2/2σ^2))
+            prob_num = K.exp(- K.square(y_true - y_pred) / (2 * var))
+            old_prob_num = K.exp(- K.square(y_true - old_prediction) / (2 * var))
+
+            # exp(-((x−μ)^2/2σ^2))/(σ√2π)
+            new_prob = prob_num / denom
+            old_prob = old_prob_num / denom
+
+            # ratio = K.exp(K.log(new_prob + 1e-10) - K.log(old_prob + 1e-10))
+            ratio = (new_prob) / (old_prob + 1e-20)
+
+            p1 = ratio * advantage
+            p2 = K.clip(ratio, min_value=1 - self.loss_clipping, max_value=1 + self.loss_clipping) * advantage
+            actor_loss = K.mean(K.minimum(p1, p2))
+            critic_loss =  K.mean(K.square(rewards - values))
+            entropy = K.mean(-(new_prob * K.log(new_prob + 1e-10)))
+
+            return -actor_loss + self.critic_discount * critic_loss - self.entropy_beta * entropy
+
+        return loss
+
+    def proximal_policy_optimization_loss_discrete(self, y_true, y_pred, advantage, old_prediction, rewards, values):
+        new_prob = tf.math.multiply(y_true, y_pred)
+        new_prob = tf.reduce_mean(new_prob, axis=-1)
+        old_prob = tf.math.multiply(y_true, old_prediction)
+        old_prob = tf.reduce_mean(old_prob, axis=-1)
+
+        ratio = tf.math.divide(new_prob + 1e-10, old_prob + 1e-10)
+
+        p1 = ratio * advantage
+        p2 = tf.clip_by_value(ratio, clip_value_min=1 - self.loss_clipping, clip_value_max=1 + self.loss_clipping) * advantage
+
+        actor_loss = tf.reduce_mean(tf.math.minimum(p1, p2))
+        critic_loss = tf.reduce_mean(tf.math.square(rewards - values))
+        entropy = tf.reduce_mean(-(new_prob * tf.math.log(new_prob + 1e-10)))
+
+        return - actor_loss + self.critic_discount * critic_loss - self.entropy_beta * entropy
+
+    def remember_seq2seq(self, obs, action, pred_act, rewards, values, mask):
+        """
+        Store a memory in a list of memories
+        :param obs: Current Observation (State)
+        :param action: Action selected with noise
+        :param pred_act: Action predicted
+        :param reward: Reward
+        :param next_obs: Next Observation (Next State)
+        :param done: If the episode is finished
+        :return:
+        """
+
         if self.img_input:
-            model = net_building.build_conv_net(net_architecture, self.state_size, critic=True)
+                # TODO: Probar img en color en pc despacho, en personal excede la memoria
+                obs = np.transpose(obs, axes=(1, 0, 2, 3, 4))
         elif self.stack:
-            model = net_building.build_stack_net(net_architecture, self.state_size, critic=True)
+            obs = np.transpose(obs, axes=(1, 0, 2, 3))
         else:
-            model = net_building.build_nn_net(net_architecture, self.state_size, critic=True)
-        critic_model = model(self.state_t)
+            obs = np.transpose(obs, axes=(1, 0, 2))
 
-        if not define_output_layer:
-            critic_model = tf.keras.layers.Dense(1, activation='linear')(critic_model)
-        # critic_model.compile(optimizer=Adam(lr=self.critic_lr), loss='mse')
+        action = np.transpose(action, axes=(1, 0, 2, 3))
+        pred_act = np.transpose(pred_act, axes=(1, 0, 2, 3))
+        rewards = np.transpose(rewards, axes=(1, 0))
+        values = np.transpose(values, axes=(1, 0, 2))
+        mask = np.transpose(mask, axes=(1, 0))
 
-        return critic_model
+        o = obs[0]
+        a = action[0]
+        p_a = pred_act[0]
+        r = rewards[0]
+        v = values[0]
+        m = mask[0]
 
+        # TODO: Optimizar, es muy lento
+        for i in range(1, self.n_parallel_envs):
+            o = np.concatenate((o, obs[i]), axis=0)
+            a = np.concatenate((a, action[i]), axis=0)
+            p_a = np.concatenate((p_a, pred_act[i]), axis=0)
+            r = np.concatenate((r, rewards[i]), axis=0)
+            v = np.concatenate((v, values[i]), axis=0)
+            m = np.concatenate((m, mask[i]), axis=0)
 
-    def _build_seq2seq_grap(self):
+        v = np.concatenate((v, [v[-1]]), axis=0)
+        returns, advantages = self.get_advantages(v, m, r)
+        advantages = np.array(advantages)
+        returns = np.array(returns)
 
-        latent_dim = 512
-        if self.img_input:
-            self.state_t = tf.placeholder(tf.float32, shape=(None, *self.state_size), name='state')
-            # self.state_t = tf.placeholder(tf.float32, shape=(None, None, *self.state_size[1:]), name='state')
-        elif self.stack:
-            self.state_t = tf.placeholder(tf.float32, shape=(None, *self.state_size), name='state')
-            # self.state_t = tf.placeholder(tf.float32, shape=(None, None, *self.state_size[1:]), name='state')
-        else:
-            assert len(self.state_size.shape) > 1
-            # self.state_t = tf.placeholder(tf.float32, shape=(None, self.state_size), name='state')
+        # TODO: Decidir la solución a utilizar
+        index = range(len(o))
+        # index = np.random.choice(range(len(obs)), self.buffer_size, replace=False)
+        self.memory = [o[index], a[index], p_a[index], returns[index], r[index], v[index],
+                       m[index], advantages[index]]
 
-        # self.actions_t = tf.placeholder(tf.float32, shape=(None, None, self.n_actions), name='action')
-        # self.old_prediction_t = tf.placeholder(tf.float32, shape=(None, None, self.n_actions), name='old_pred')
-        self.auxiliar_tensor = tf.placeholder(tf.float32, [None, None], 'auxiliar_tensor')
-        self.actions_t = tf.placeholder(tf.float32, shape=(None, self.max_output_len), name='action')
-        self.old_prediction_t = tf.placeholder(tf.float32, shape=(None, self.max_output_len), name='old_pred')
-        self.advantage_t = tf.placeholder(tf.float32, shape=(None, 1), name='advantage')
-        self.values_t = tf.placeholder(tf.float32, shape=(None, 1), name='value')
-        self.returns_t = tf.placeholder(tf.float32, shape=(None, 1), name='return')
+class MultiHeadAttention(tf.keras.Model):
+    """ Class for Multi-Head Attention layer
+    Attributes:
+        key_size: d_key in the paper
+        h: number of attention heads
+        wq: the Linear layer for Q
+        wk: the Linear layer for K
+        wv: the Linear layer for V
+        wo: the Linear layer for the output
+    """
 
-        self.actor_lr_t = tf.placeholder(tf.float32, shape=(), name="actor_lr")
-        self.critic_lr_t = tf.placeholder(tf.float32, shape=(), name="critic_lr")
+    def __init__(self, model_size, h):
+        super(MultiHeadAttention, self).__init__()
+        self.key_size = model_size // h
+        self.h = h
+        self.wq = tf.keras.layers.Dense(model_size)  # [tf.keras.layers.Dense(key_size) for _ in range(h)]
+        self.wk = tf.keras.layers.Dense(model_size)  # [tf.keras.layers.Dense(key_size) for _ in range(h)]
+        self.wv = tf.keras.layers.Dense(model_size)  # [tf.keras.layers.Dense(value_size) for _ in range(h)]
+        self.wo = tf.keras.layers.Dense(model_size)
 
-        self.decoder_input_t = tf.placeholder(tf.float32, [None, None, self.n_actions], 'decoder_input')
-        self.decoder_h_input_t = tf.placeholder(tf.float32, [None, latent_dim], 'decoder_hidden_input')
-        self.decoder_c_input_t = tf.placeholder(tf.float32, [None, latent_dim], 'decoder_carry_input')
-        self.out_seq_dim_t = tf.placeholder(tf.int32, shape=(), name="out_seq_dim")
-        self.encoder = Encoder(latent_dim, self.batch_size)
-        self.decoder = Decoder(self.n_actions, latent_dim, self.batch_size, last_activation="linear")
+    def call(self, query, value, mask=None):
+        """ The forward pass for Multi-Head Attention layer
+        Args:
+            query: the Q matrix
+            value: the V matrix, acts as V and K
+            mask: mask to filter out unwanted tokens
+                  - zero mask: mask for padded tokens
+                  - right-side mask: mask to prevent attention towards tokens on the right-hand side
 
-        self.tf_encoder_output, self.tf_encoder_h, self.tf_encoder_c = self.encoder(self.state_t)
-        self.tf_decoder_output, self.tf_decoder_h, self.tf_decoder_c = self.decoder(self.decoder_input_t,
-                                                                                    [self.decoder_h_input_t,
-                                                                                     self.decoder_c_input_t])
+        Returns:
+            The concatenated context vector
+            The alignment (attention) vectors of all heads
+        """
+        # query has shape (batch, query_len, model_size)
+        # value has shape (batch, value_len, model_size)
+        query = self.wq(query)
+        key = self.wk(value)
+        value = self.wv(value)
 
-        self.critic_model = self.__build_critic_model(self.net_architecture)
-        # self.loss_object = tf.keras.losses.CategoricalCrossentropy(from_logits=False)
+        # Split matrices for multi-heads attention
+        batch_size = query.shape[0]
 
-        self.value_tf = self.critic_model
+        # Originally, query has shape (batch, query_len, model_size)
+        # We need to reshape to (batch, query_len, h, key_size)
+        query = tf.reshape(query, [batch_size, -1, self.h, self.key_size])
+        # In order to compute matmul, the dimensions must be transposed to (batch, h, query_len, key_size)
+        query = tf.transpose(query, [0, 2, 1, 3])
 
-        counter = tf.Variable(0)
-        loss_while = tf.Variable(0.)
-        # ta2 = tf.TensorArray(tf.float32, size=0, dynamic_size=True, clear_after_read=False)
+        # Do the same for key and value
+        key = tf.reshape(key, [batch_size, -1, self.h, self.key_size])
+        key = tf.transpose(key, [0, 2, 1, 3])
+        value = tf.reshape(value, [batch_size, -1, self.h, self.key_size])
+        value = tf.transpose(value, [0, 2, 1, 3])
 
-        with tf.name_scope('c_loss'):
-            self.critic_loss = tf.reduce_mean(tf.square(self.returns_t - self.critic_model))
+        # Compute the dot score
+        # and divide the score by square root of key_size (as stated in paper)
+        # (must convert key_size to float32 otherwise an error would occur)
+        score = tf.matmul(query, key, transpose_b=True) / tf.math.sqrt(tf.dtypes.cast(self.key_size, dtype=tf.float32))
+        # score will have shape of (batch, h, query_len, value_len)
 
-        self.auxiliar_output = self.actions_t
-        _, _, _, _, _, self.auxiliar_output, self.tf_std_loss, _, _ = tf.while_loop(self._std_train_condition, self._std_train_body,
-                                                           [self.decoder_input_t, self.tf_encoder_h,
-                                                            self.tf_encoder_c, self.actions_t, self.old_prediction_t, self.auxiliar_tensor,
-                                                            loss_while,
-                                                            self.out_seq_dim_t, counter])
+        # Mask out the score if a mask is provided
+        # There are two types of mask:
+        # - Padding mask (batch, 1, 1, value_len): to prevent attention being drawn to padded token (i.e. 0)
+        # - Look-left mask (batch, 1, query_len, value_len): to prevent decoder to draw attention to tokens to the right
+        if mask is not None:
+            score *= mask
 
+            # We want the masked out values to be zeros when applying softmax
+            # One way to accomplish that is assign them to a very large negative value
+            score = tf.where(tf.equal(score, 0), tf.ones_like(score) * -1e9, score)
 
+        # Alignment vector: (batch, h, query_len, value_len)
+        alignment = tf.nn.softmax(score, axis=-1)
 
-        self.aux_out = self.auxiliar_output
+        # Context vector: (batch, h, query_len, key_size)
+        context = tf.matmul(alignment, value)
 
+        # Finally, do the opposite to have a tensor of shape (batch, query_len, model_size)
+        context = tf.transpose(context, [0, 2, 1, 3])
+        context = tf.reshape(context, [batch_size, -1, self.key_size * self.h])
 
-        self.optimizer = tf.train.AdamOptimizer
+        # Apply one last full connected layer (WO)
+        heads = self.wo(context)
 
-        # self.tf_train_op = self.optimizer(self.actor_lr_t).minimize(self.tf_loss)
-        self.tf_std_train_actor = self.optimizer(self.actor_lr_t).minimize(self.tf_std_loss)
-        self.tf_std_train_critic = self.optimizer(self.critic_lr_t).minimize(self.critic_loss)
-
-
-    ###############################################################################
-    #               PPO loss
-    ###############################################################################
-    def _loss_object(self, y_pred, y_true, old_pred):
-        # y_pred = self.actor_model
-        # y_true = self.actions_t
-        var = tf.square(self.exploration_noise)
-        pi = 3.1415926
-
-        # σ√2π
-        denom = tf.sqrt(2 * pi * var)
-
-        # exp(-((x−μ)^2/2σ^2))
-        prob_num = tf.exp(- K.square(y_true - y_pred) / (2 * var))
-        old_prob_num = tf.exp(- K.square(y_true - old_pred) / (2 * var))
-
-        # exp(-((x−μ)^2/2σ^2))/(σ√2π)
-        new_prob = prob_num / denom
-        old_prob = old_prob_num / denom
-
-        ratio = tf.exp(tf.log(new_prob + 1e-10) - K.log(old_prob + 1e-10))
-
-        p1 = ratio * self.advantage_t
-        p2 = tf.clip_by_value(ratio, 1 - self.loss_clipping, 1 + self.loss_clipping) * self.advantage_t
-        actor_loss = - tf.reduce_mean(K.minimum(p1, p2))
-
-        # critic_loss__actor = tf.reduce_mean(tf.square(self.returns_t - self.values_t))
-        entropy = - tf.reduce_mean(-(new_prob * K.log(new_prob + 1e-10)))
-
-        actor_loss = actor_loss + self.critic_discount * self.critic_loss + self.entropy_beta * entropy
-
-        return actor_loss
-        # we use adam optimizer for minimizing the loss
-        # self.fit_actor = tf.train.AdamOptimizer(self.actor_lr_t).minimize(self.actor_loss)
-
-    ###############################################################################
-    #               PPO loss
-    ###############################################################################
-
-    def _std_train_body(self, decoder_input, decoder_h_input, decoder_c_input, tf_decoder_target, tf_old_prediction, auxiliar_output, loss, tf_out_seq_dim,
-                        counter):
-        decoder_output, decoder_h_output, decoder_c_output = self.decoder(decoder_input, [decoder_h_input,
-                                                                                        decoder_c_input])
-
-        auxiliar_output = tf.cond(tf.math.equal(counter, tf.Variable(0)), lambda: decoder_output,
-                                  lambda: tf.concat([auxiliar_output, decoder_output], axis=-1))
-
-        decoder_output = tf.expand_dims(decoder_output, 1)
-
-        counter = counter + 1
-        loss = tf.cond(tf.math.equal(counter, tf_out_seq_dim),
-                       lambda: tf.reduce_mean(self._loss_object(auxiliar_output, tf_decoder_target, tf_old_prediction)),
-                       lambda: loss)
-
-        return decoder_output, decoder_h_output, decoder_c_output, tf_decoder_target, tf_old_prediction, auxiliar_output, loss, tf_out_seq_dim, counter
-
-
-    def _std_train_condition(self, decoder_input, decoder_h_input, decoder_c_input, tf_decoder_target, tf_old_prediction, auxiliar_output, loss,
-                             tf_out_seq_dim, counter):
-        return tf_out_seq_dim > counter
-
-    def actor_seq2seq_predict(self, encoder_input):
-
-        action = [[] for i in range(encoder_input.shape[0])]
-        dict = {self.state_t: encoder_input,}
-        encoder_output, state_h, state_c = self.sess.run([self.tf_encoder_output, self.tf_encoder_h, self.tf_encoder_c],
-                                                         dict)
-
-        not_final_token = True
-        counter = 0
-        dec_input = np.array([self.decoder_start_token])
-        while (not_final_token):
-            dec_input = np.expand_dims(dec_input, 0)
-            dict = {self.decoder_input_t: dec_input,
-                    self.decoder_h_input_t: state_h,
-                    self.decoder_c_input_t: state_c}
-            decoder_output, state_h, state_c = self.sess.run(
-                [self.tf_decoder_output, self.tf_decoder_h, self.tf_decoder_c], dict)
-
-            # TODO: seq2seq: en paralñelo no va a funcionar
-
-            for i in range(encoder_input.shape[0]):
-                action[i].append(*decoder_output[i])
-
-            dec_input = decoder_output
-
-            counter += 1
-            not_final_token = counter < self.max_output_len or self.decoder_final_token == decoder_output[0]
-
-        return np.array(action)
+        return heads, alignment
 
 class Encoder(tf.keras.Model):
-    def __init__(self, enc_units, batch_sz):
-        with tf.variable_scope('encoder_scope'):
-            super(Encoder, self).__init__()
-            self.batch_sz = batch_sz
-            self.enc_units = enc_units
+    """ Class for the Encoder
+    Args:
+        model_size: d_model in the paper (depth size of the model)
+        num_layers: number of layers (Multi-Head Attention + FNN)
+        h: number of attention heads
+        embedding: Embedding layer
+        embedding_dropout: Dropout layer for Embedding
+        attention: array of Multi-Head Attention layers
+        attention_dropout: array of Dropout layers for Multi-Head Attention
+        attention_norm: array of LayerNorm layers for Multi-Head Attention
+        dense_1: array of first Dense layers for FFN
+        dense_2: array of second Dense layers for FFN
+        ffn_dropout: array of Dropout layers for FFN
+        ffn_norm: array of LayerNorm layers for FFN
+    """
 
-            # self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim)
-            self.lstm1 = tf.keras.layers.LSTM(self.enc_units,
-                                              return_sequences=True,
-                                              recurrent_initializer='glorot_uniform')
-            self.lstm2 = tf.keras.layers.LSTM(self.enc_units,
-                                             return_sequences=False,
-                                             return_state=True,
-                                             recurrent_initializer='glorot_uniform')
+    def __init__(self, vocab_size, model_size, num_layers, h, pes):
+        super(Encoder, self).__init__()
+        self.model_size = model_size
+        self.num_layers = num_layers
+        self.h = h
+        self.embedding = tf.keras.layers.Embedding(vocab_size, model_size)
+        self.embedding_dropout = tf.keras.layers.Dropout(0.1)
+        self.attention = [MultiHeadAttention(model_size, h) for _ in range(num_layers)]
+        self.attention_dropout = [tf.keras.layers.Dropout(0.1) for _ in range(num_layers)]
 
-    def call(self, x):
-        # x = self.embedding(x)
-        encoder_outputs = self.lstm1(x)
-        encoder_outputs, state_h, state_c = self.lstm2(encoder_outputs)
-        # encoder_outputs, state_h, state_c = self.lstm(x)
-        return encoder_outputs, state_h, state_c
+        self.attention_norm = [tf.keras.layers.LayerNormalization(
+            epsilon=1e-6) for _ in range(num_layers)]
 
+        self.dense_1 = [tf.keras.layers.Dense(
+            model_size * 4, activation='relu') for _ in range(num_layers)]
+        self.dense_2 = [tf.keras.layers.Dense(
+            model_size) for _ in range(num_layers)]
+        self.ffn_dropout = [tf.keras.layers.Dropout(0.1) for _ in range(num_layers)]
+        self.ffn_norm = [tf.keras.layers.LayerNormalization(
+            epsilon=1e-6) for _ in range(num_layers)]
+        self.pes = pes
+
+    def call(self, sequence, training=True, encoder_mask=None):
+        """ Forward pass for the Encoder
+        Args:
+            sequence: source input sequences
+            training: whether training or not (for Dropout)
+            encoder_mask: padding mask for the Encoder's Multi-Head Attention
+
+        Returns:
+            The output of the Encoder (batch_size, length, model_size)
+            The alignment (attention) vectors for all layers
+        """
+        embed_out = self.embedding(sequence)
+
+        embed_out *= tf.math.sqrt(tf.cast(self.model_size, tf.float32))
+        embed_out += self.pes[:sequence.shape[1], :]
+        embed_out = self.embedding_dropout(embed_out)
+
+        sub_in = embed_out
+        alignments = []
+
+        for i in range(self.num_layers):
+            sub_out, alignment = self.attention[i](sub_in, sub_in, encoder_mask)
+            sub_out = self.attention_dropout[i](sub_out, training=training)
+            sub_out = sub_in + sub_out
+            sub_out = self.attention_norm[i](sub_out)
+
+            alignments.append(alignment)
+            ffn_in = sub_out
+
+            ffn_out = self.dense_2[i](self.dense_1[i](ffn_in))
+            ffn_out = self.ffn_dropout[i](ffn_out, training=training)
+            ffn_out = ffn_in + ffn_out
+            ffn_out = self.ffn_norm[i](ffn_out)
+
+            sub_in = ffn_out
+
+        return ffn_out, alignments
 
 class Decoder(tf.keras.Model):
-    def __init__(self, vocab_size, dec_units, batch_sz, last_activation="linear"):
+    """ Class for the Decoder
+    Args:
+        model_size: d_model in the paper (depth size of the model)
+        num_layers: number of layers (Multi-Head Attention + FNN)
+        h: number of attention heads
+        embedding: Embedding layer
+        embedding_dropout: Dropout layer for Embedding
+        attention_bot: array of bottom Multi-Head Attention layers (self attention)
+        attention_bot_dropout: array of Dropout layers for bottom Multi-Head Attention
+        attention_bot_norm: array of LayerNorm layers for bottom Multi-Head Attention
+        attention_mid: array of middle Multi-Head Attention layers
+        attention_mid_dropout: array of Dropout layers for middle Multi-Head Attention
+        attention_mid_norm: array of LayerNorm layers for middle Multi-Head Attention
+        dense_1: array of first Dense layers for FFN
+        dense_2: array of second Dense layers for FFN
+        ffn_dropout: array of Dropout layers for FFN
+        ffn_norm: array of LayerNorm layers for FFN
+        dense: Dense layer to compute final output
+    """
+
+    def __init__(self, vocab_size, model_size, num_layers, h, pes):
         super(Decoder, self).__init__()
-        self.batch_sz = batch_sz
-        self.dec_units = dec_units
-        # self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim)
-        self.lstm1 = tf.keras.layers.LSTM(self.dec_units,
-                                         return_sequences=True,
-                                         recurrent_initializer='glorot_uniform')
-        self.lstm2 = tf.keras.layers.LSTM(self.dec_units,
-                                         return_sequences=False,
-                                         return_state=True,
-                                         recurrent_initializer='glorot_uniform')
-        self.fc = tf.keras.layers.Dense(vocab_size, activation=last_activation)
+        self.model_size = model_size
+        self.num_layers = num_layers
+        self.h = h
+        self.embedding = tf.keras.layers.Embedding(vocab_size, model_size)
+        self.embedding_dropout = tf.keras.layers.Dropout(0.1)
+        self.attention_bot = [MultiHeadAttention(model_size, h) for _ in range(num_layers)]
+        self.attention_bot_dropout = [tf.keras.layers.Dropout(0.1) for _ in range(num_layers)]
+        self.attention_bot_norm = [tf.keras.layers.LayerNormalization(
+            epsilon=1e-6) for _ in range(num_layers)]
+        self.attention_mid = [MultiHeadAttention(model_size, h) for _ in range(num_layers)]
+        self.attention_mid_dropout = [tf.keras.layers.Dropout(0.1) for _ in range(num_layers)]
+        self.attention_mid_norm = [tf.keras.layers.LayerNormalization(
+            epsilon=1e-6) for _ in range(num_layers)]
 
-        # used for attention
-        # self.attention = BahdanauAttention(self.dec_units)
+        self.dense_1 = [tf.keras.layers.Dense(
+            model_size * 4, activation='relu') for _ in range(num_layers)]
+        self.dense_2 = [tf.keras.layers.Dense(
+            model_size) for _ in range(num_layers)]
+        self.ffn_dropout = [tf.keras.layers.Dropout(0.1) for _ in range(num_layers)]
+        self.ffn_norm = [tf.keras.layers.LayerNormalization(
+            epsilon=1e-6) for _ in range(num_layers)]
 
-    def call(self, x, hidden):
-        # passing the concatenated vector to the GRU
-        output = self.lstm1(x, initial_state=hidden)
-        output, state_h, state_c = self.lstm2(output, initial_state=hidden)
-        # output, state_h, state_c = self.lstm(x, initial_state=hidden)
-        # output shape == (batch_size * 1, hidden_size)
-        # output = tf.reshape(output, (-1, output.shape[2]))
+        self.dense = tf.keras.layers.Dense(vocab_size)
+        self.pes = pes
 
-        # output shape == (batch_size, vocab)
-        out = self.fc(output)
+    def call(self, sequence, encoder_output, training=True, encoder_mask=None):
+        """ Forward pass for the Decoder
+        Args:
+            sequence: source input sequences
+            encoder_output: output of the Encoder (for computing middle attention)
+            training: whether training or not (for Dropout)
+            encoder_mask: padding mask for the Encoder's Multi-Head Attention
 
-        return out, state_h, state_c
+        Returns:
+            The output of the Encoder (batch_size, length, model_size)
+            The bottom alignment (attention) vectors for all layers
+            The middle alignment (attention) vectors for all layers
+        """
+        # EMBEDDING AND POSITIONAL EMBEDDING
+        embed_out = self.embedding(sequence)
 
+        embed_out *= tf.math.sqrt(tf.cast(self.model_size, tf.float32))
+        embed_out += self.pes[:sequence.shape[1], :]
+        embed_out = self.embedding_dropout(embed_out)
+
+        bot_sub_in = embed_out
+        bot_alignments = []
+        mid_alignments = []
+
+        for i in range(self.num_layers):
+            # BOTTOM MULTIHEAD SUB LAYER
+            seq_len = bot_sub_in.shape[1]
+
+            if training:
+                mask = tf.linalg.band_part(tf.ones((seq_len, seq_len)), -1, 0)
+            else:
+                mask = None
+            bot_sub_out, bot_alignment = self.attention_bot[i](bot_sub_in, bot_sub_in, mask)
+            bot_sub_out = self.attention_bot_dropout[i](bot_sub_out, training=training)
+            bot_sub_out = bot_sub_in + bot_sub_out
+            bot_sub_out = self.attention_bot_norm[i](bot_sub_out)
+
+            bot_alignments.append(bot_alignment)
+
+            # MIDDLE MULTIHEAD SUB LAYER
+            mid_sub_in = bot_sub_out
+
+            mid_sub_out, mid_alignment = self.attention_mid[i](
+                mid_sub_in, encoder_output, encoder_mask)
+            mid_sub_out = self.attention_mid_dropout[i](mid_sub_out, training=training)
+            mid_sub_out = mid_sub_out + mid_sub_in
+            mid_sub_out = self.attention_mid_norm[i](mid_sub_out)
+
+            mid_alignments.append(mid_alignment)
+
+            # FFN
+            ffn_in = mid_sub_out
+
+            ffn_out = self.dense_2[i](self.dense_1[i](ffn_in))
+            ffn_out = self.ffn_dropout[i](ffn_out, training=training)
+            ffn_out = ffn_out + ffn_in
+            ffn_out = self.ffn_norm[i](ffn_out)
+
+            bot_sub_in = ffn_out
+
+        logits = self.dense(ffn_out)
+
+        return logits, bot_alignments, mid_alignments
+
+class WarmupThenDecaySchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
+    """ Learning schedule for training the Transformer
+    Attributes:
+        model_size: d_model in the paper (depth size of the model)
+        warmup_steps: number of warmup steps at the beginning
+    """
+
+    def __init__(self, model_size, warmup_steps=2000):
+        super(WarmupThenDecaySchedule, self).__init__()
+
+        self.model_size = model_size
+        self.model_size = tf.cast(self.model_size, tf.float32)
+
+        self.warmup_steps = warmup_steps
+
+    def __call__(self, step):
+        step_term = tf.math.rsqrt(step)
+        warmup_term = step * (self.warmup_steps ** -1.5)
+
+        return tf.math.rsqrt(self.model_size) * tf.math.minimum(step_term, warmup_term)
+
+
+class Transformer:
+    """
+        encoder_size: encoder d_model in the paper (depth size of the model)
+        encoder_n_layers: encoder number of layers (Multi-Head Attention + FNN)
+        encoder_h: encoder number of attention heads
+    """
+    def __init__(self, model_size, n_layers, h, vocab_in_size, vocab_out_size, max_in_length, max_out_length,
+                 start_token, final_token, loss_func):
+
+        pes_in = []
+        for i in range(max_in_length):
+            pes_in.append(self.positional_encoding(i, model_size))
+
+        pes_in = np.concatenate(pes_in, axis=0)
+        pes_in = tf.constant(pes_in, dtype=tf.float32)
+
+        pes_out = []
+        for i in range(max_out_length):
+            pes_out.append(self.positional_encoding(i, model_size))
+
+        pes_out = np.concatenate(pes_out, axis=0)
+        pes_out = tf.constant(pes_out, dtype=tf.float32)
+
+        self.encoder = Encoder(vocab_in_size, model_size, n_layers, h, pes_in)
+
+        # sequence_in = tf.constant([[1, 2, 3, 0]])
+        # encoder_output, _ = self.encoder(sequence_in)
+        # print(encoder_output.shape)
+
+        self.decoder = Decoder(vocab_out_size, model_size, n_layers, h, pes_out)
+        # sequence_in = tf.constant([[14, 24, 36, 0, 0]])
+        # decoder_output, _, _ = self.decoder(sequence_in, encoder_output)
+        # print(decoder_output.shape)
+        self.loss_func = loss_func
+
+        self.crossentropy = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+
+        lr = WarmupThenDecaySchedule(model_size)
+        self.optimizer = tf.keras.optimizers.Adam(lr,
+                                             beta_1=0.9,
+                                             beta_2=0.98,
+                                             epsilon=1e-9)
+
+        self.max_in_seq_length = max_in_length
+        self.max_out_seq_length = max_out_length
+        self.start_token = start_token
+        self.final_token = final_token
+
+    # @tf.function
+    def predict(self, input):
+            """ Predict the output sentence for a given input sentence
+            Args:
+                input: input sequence
+            """
+
+            en_output, en_alignments = self.encoder(tf.constant(input), training=False)
+
+            a = en_output.numpy()
+            de_input = tf.constant([[self.start_token] for i in range(input.shape[0])], dtype=tf.float32)
+            b = de_input.numpy()
+
+            prob_out, _, _ = self.decoder(de_input, en_output, training=False)
+            c = prob_out.numpy()
+            new_action = prob_out[:, -1, :]
+            de_input = tf.concat((de_input, new_action), axis=-1)
+            de_out = prob_out
+            while True:
+                de_output, de_bot_alignments, de_mid_alignments = self.decoder(de_input, en_output, training=False)
+                new_action = prob_out[:, -1, :]
+
+                # Transformer doesn't have sequential mechanism (i.e. states)
+                # so we have to add the last predicted word to create a new input sequence
+                de_input = tf.concat((de_input, new_action), axis=-1)
+                # de_output = tf.expand_dims(de_output[:, -1, :], axis=1)
+                d = de_output
+                de_out = tf.concat((de_out, d), axis=1)
+
+                if de_out[0][-1] == self.final_token or de_out.shape[1] >= self.max_out_seq_length:
+                    break
+
+            return de_out.numpy(), prob_out.numpy()
+
+    def validate(self, source_seq, target_seq_in, target_seq_out, batch_size=10):
+        dataset = tf.data.Dataset.from_tensor_slices(
+            (source_seq, target_seq_in, target_seq_out))
+
+        dataset = dataset.shuffle(len(source_seq)).batch(batch_size)
+
+        loss = 0.
+        for batch, (source_seq, target_seq_in, target_seq_out) in enumerate(dataset.take(-1)):
+            loss += self.validate_step(source_seq, target_seq_in, target_seq_out)
+
+        return loss/(batch+1)
+
+    @tf.function
+    def validate_step(self, source_seq, target_seq_in, target_seq_out):
+        """ Execute one training step (forward pass + backward pass)
+        Args:
+            source_seq: source sequences
+            target_seq_in: input target sequences (<start> + ...)
+            target_seq_out: output target sequences (... + <end>)
+
+        Returns:
+            The loss value of the current pass
+        """
+        with tf.GradientTape() as tape:
+            encoder_mask = 1 - tf.cast(tf.equal(source_seq, 0), dtype=tf.float32)
+            # encoder_mask has shape (batch_size, source_len)
+            # we need to add two more dimensions in between
+            # to make it broadcastable when computing attention heads
+            encoder_mask = tf.expand_dims(encoder_mask, axis=1)
+            encoder_mask = tf.expand_dims(encoder_mask, axis=1)
+            encoder_output, _ = self.encoder(source_seq, encoder_mask=encoder_mask, training=False)
+
+            decoder_output, _, _ = self.decoder(
+                target_seq_in, encoder_output, encoder_mask=encoder_mask, training=False)
+
+            loss = self.loss_func(target_seq_out, decoder_output)
+
+        return loss
+
+    @tf.function
+    def train_step(self, source_seq, target_seq_in, target_seq_out):
+        """ Execute one training step (forward pass + backward pass)
+        Args:
+            source_seq: source sequences
+            target_seq_in: input target sequences (<start> + ...)
+            target_seq_out: output target sequences (... + <end>)
+
+        Returns:
+            The loss value of the current pass
+        """
+        with tf.GradientTape() as tape:
+            encoder_mask = 1 - tf.cast(tf.equal(source_seq, 0), dtype=tf.float32)
+            # encoder_mask has shape (batch_size, source_len)
+            # we need to add two more dimensions in between
+            # to make it broadcastable when computing attention heads
+            encoder_mask = tf.expand_dims(encoder_mask, axis=1)
+            encoder_mask = tf.expand_dims(encoder_mask, axis=1)
+            encoder_output, _ = self.encoder(source_seq, encoder_mask=encoder_mask)
+
+            decoder_output, _, _ = self.decoder(
+                target_seq_in, encoder_output, encoder_mask=encoder_mask)
+
+            loss = self.loss_func(target_seq_out, decoder_output)
+
+        variables = self.encoder.trainable_variables + self.decoder.trainable_variables
+        gradients = tape.gradient(loss, variables)
+        self.optimizer.apply_gradients(zip(gradients, variables))
+
+        return loss
+
+    @tf.function
+    def train_step_2(self, source_seq, target_seq_out, advantages_input, old_prediction_input,
+                     returns_inputh, values_inputh, loss_func):
+        """ Execute one training step (forward pass + backward pass)
+        Args:
+            source_seq: source sequences
+            target_seq_in: input target sequences (<start> + ...)
+            target_seq_out: output target sequences (... + <end>)
+
+        Returns:
+            The loss value of the current pass
+        """
+        de_input = tf.constant([[self.start_token] for i in range(source_seq.shape[0])], dtype=tf.int64)
+        with tf.GradientTape() as tape:
+            encoder_mask = 1 - tf.cast(tf.equal(source_seq, 0), dtype=tf.float32)
+            # encoder_mask has shape (batch_size, source_len)
+            # we need to add two more dimensions in between
+            # to make it broadcastable when computing attention heads
+            encoder_mask = tf.expand_dims(encoder_mask, axis=1)
+            encoder_mask = tf.expand_dims(encoder_mask, axis=1)
+            # encoder_output, _ = self.encoder(source_seq, encoder_mask=encoder_mask)
+            encoder_output, _ = self.encoder(source_seq, encoder_mask=encoder_mask, training=True)
+
+            # de_out = tf.constant([[[1 if j==0 else 0 for j in range(128)]] for i in range(64)], dtype=tf.float64)
+            de_out, _, _ = self.decoder(de_input, encoder_output, encoder_mask=encoder_mask, training=True)
+            de_out = tf.keras.layers.Softmax()(de_out)
+            new_word = tf.expand_dims(tf.argmax(de_out, -1)[:, -1], axis=1)
+            de_input = tf.concat((de_input, new_word), axis=-1)
+
+            final_loss = 0.
+            for i in range(self.max_out_seq_length-1):
+                decoder_output, _, _ = self.decoder(de_input, encoder_output, encoder_mask=encoder_mask, training=True)
+                prediction = tf.expand_dims(decoder_output[:, -1], axis=1)
+                prediction = tf.keras.layers.Softmax()(prediction)
+                de_out = tf.concat((de_out, prediction), axis=1)
+                new_word = tf.expand_dims(tf.argmax(decoder_output, -1)[:, -1], axis=1)
+
+                # Transformer doesn't have sequential mechanism (i.e. states)
+                # so we have to add the last predicted word to create a new input sequence
+                de_input = tf.concat((de_input, new_word), axis=-1)
+
+            target = tf.dtypes.cast(target_seq_out, tf.float32)
+            pred = tf.dtypes.cast(de_out, tf.float32)
+            loss = loss_func(target, pred, advantages_input, old_prediction_input, returns_inputh, values_inputh)
+
+        variables = self.encoder.trainable_variables + self.decoder.trainable_variables
+        gradients = tape.gradient(loss, variables)
+        self.optimizer.apply_gradients(zip(gradients, variables))
+
+        return loss
+
+    # def loss_func(self, targets, logits):
+    #     mask = tf.math.logical_not(tf.math.equal(targets, 0))
+    #     mask = tf.cast(mask, dtype=tf.int64)
+    #     loss = self.crossentropy(targets, logits, sample_weight=mask)
+    #
+    #     return loss
+
+    def fit(self, input_data, decoder_input_data, target_data, batch_size, epochs=1, validation_split=0.0, shuffle=False,
+            teacher_forcing=True, loss_func=None, extra_data=None):
+
+        if validation_split > 0.0:
+            validation_split = int(input_data.shape[0] * validation_split)
+            val_idx = np.random.choice(input_data.shape[0], validation_split, replace=False)
+            train_mask = np.array([False if i in val_idx else True for i in range(input_data.shape[0])])
+
+            test_samples = np.int(val_idx.shape[0])
+            train_samples = np.int(train_mask.shape[0] - test_samples)
+
+            val_input_data = input_data[val_idx]
+            val_decoder_input_data = decoder_input_data[val_idx]
+            val_target_data = target_data[val_idx]
+
+            train_input_data = input_data[train_mask]
+            train_decoder_input_data = decoder_input_data[train_mask]
+            train_target_data = target_data[train_mask]
+
+        else:
+            train_input_data = input_data
+            train_decoder_input_data = decoder_input_data
+            train_target_data = target_data
+
+
+        if loss_func is None:
+            loss_func = self.loss_func
+
+        advantages = extra_data[0]
+        old_prediction = extra_data[1]
+        returns = extra_data[2]
+        values = extra_data[3]
+
+        train_samples = np.int(input_data.shape[0])
+        assert input_data.shape[0] == advantages.shape[0] == old_prediction.shape[0] == returns.shape[0] == values.shape[0] \
+               == target_data.shape[0]
+
+        starttime = time.time()
+        final_loss = 0.
+        for e in range(epochs):
+            for batch in range(train_samples // batch_size + 1):
+                i = batch * batch_size
+                j = (batch + 1) * batch_size
+
+                if j >= train_samples:
+                    j = train_samples
+                input_data_batch = input_data[i:j]
+                advantages_input_batch = advantages[i:j]
+                old_prediction_input_batch = old_prediction[i:j]
+                returns_input_batch = returns[i:j]
+                values_input_batch = values[i:j]
+                target_data_batch = target_data[i:j]
+
+                if input_data_batch.shape[0] > 0:
+                    if teacher_forcing:
+                        loss = self.train_step(input_data_batch, input_data_batch,
+                                                target_data_batch, loss_func)
+                    else:
+                        loss = self.train_step_2(input_data_batch, target_data_batch, advantages_input_batch,
+                                                 old_prediction_input_batch, returns_input_batch, values_input_batch,
+                                                 loss_func)
+
+                if batch % 100 == 0:
+                    print('Epoch {} Batch {} Loss {:.4f} Elapsed time {:.2f}s'.format(
+                        e + 1, batch, loss.numpy(), time.time() - starttime))
+                    starttime = time.time()
+                final_loss += loss.numpy()
+
+            try:
+                if validation_split > 0.0:
+                    val_loss = self.validate(val_input_data, val_decoder_input_data, val_target_data, batch_size)
+                    print('Epoch {} val_loss {:.4f}'.format(
+                        e + 1, val_loss.numpy()))
+                    self.predict(val_input_data[np.random.choice(len(val_input_data))])
+            except Exception as e:
+                print(e)
+                continue
+
+            final_loss = final_loss/(batch+1)
+        return final_loss
+
+    def positional_encoding(self, pos, model_size):
+        """ Compute positional encoding for a particular position
+        Args:
+            pos: position of a token in the sequence
+            model_size: depth size of the model
+
+        Returns:
+            The positional encoding for the given token
+        """
+        PE = np.zeros((1, model_size))
+        for i in range(model_size):
+            if i % 2 == 0:
+                PE[:, i] = np.sin(pos / 10000 ** (i / model_size))
+            else:
+                PE[:, i] = np.cos(pos / 10000 ** ((i - 1) / model_size))
+        return PE
