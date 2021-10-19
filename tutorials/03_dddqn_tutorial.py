@@ -2,16 +2,23 @@ import sys
 from os import path
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
+import tensorflow as tf
+# Estas tres lineas resuelven algunos problemas con cuDNN en TF2 por los que no me permitía ejecutar en GPU
+physical_devices = tf.config.experimental.list_physical_devices('GPU')
+assert len(physical_devices) > 0, "Not enough GPU hardware devices available"
+config = tf.config.experimental.set_memory_growth(physical_devices[0], True)
+
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Conv2D, Flatten
 
 from RL_Problem import rl_problem
-from RL_Agent import dddqn_agent
+from RL_Agent import dddqn_agent_tf
 from RL_Agent.base.utils.Memory.deque_memory import Memory as deq_m
 import numpy as np
 import matplotlib.pylab as plt
 import gym
-from RL_Agent.base.utils import agent_saver, history_utils, networks
+from RL_Agent.base.utils import agent_saver, history_utils
+from RL_Agent.base.utils.networks import networks
 
 environment = "SpaceInvaders-v0"
 
@@ -84,7 +91,7 @@ plt.subplot(122)
 plt.imshow(aux_prep_obs.reshape(90, 80), cmap='gray')
 plt.show()
 
-agent = dddqn_agent.Agent(learning_rate=1e-3,
+agent = dddqn_agent_tf.Agent(learning_rate=1e-3,
                           batch_size=64,
                           epsilon=0.9,
                           epsilon_decay=0.999999,
@@ -112,7 +119,7 @@ problem.agent.set_memory(deq_m, memory_max_len)
 
 # Se selecciona no renderizar hasta el peisodio 3 para accelerar la simulación, aun así 5 episodios no son suficientes
 # para que el agente aprenda un comportamiento. Para solucionar este problema son necesarios algunos miles de episodios.
-problem.solve(episodes=5, render=False, skip_states=3, render_after=3)
+problem.solve(episodes=5, render=True, skip_states=3, render_after=3)
 problem.test(n_iter=2, render=True)
 
 hist = problem.get_histogram_metrics()

@@ -42,7 +42,6 @@ class PPOProblemBase(RLProblemSuper):
         self.actions_batch = []
         self.actions_probs_batch = []
         self.rewards_batch = []
-        self.values_batch = []
         self.masks_batch = []
 
         self.continuous = continuous
@@ -73,8 +72,6 @@ class PPOProblemBase(RLProblemSuper):
             stack = False
             state_size = self.state_size
 
-        # TODO: seq2seq
-        # if self.seq2seq:
 
         self._define_agent(self.n_actions, state_size, stack, action_bound=self.action_bound)
         # self._define_agent(agent=self.agent, state_size=state_size, n_actions=self.n_actions, stack=stack,
@@ -125,7 +122,6 @@ class PPOProblemBase(RLProblemSuper):
         self.actions_batch = []
         self.actions_probs_batch = []
         self.rewards_batch = []
-        self.values_batch = []
         self.masks_batch = []
         # Stacking inputs
         if self.n_stack is not None and self.n_stack > 1:
@@ -152,8 +148,11 @@ class PPOProblemBase(RLProblemSuper):
             # Stacking inputs
             if self.n_stack is not None and self.n_stack > 1:
                 for i in range(self.n_stack):
-                    obs_queue.append(np.zeros(obs.shape))
-                    obs_next_queue.append(np.zeros(obs.shape))
+                    # obs_queue.append(np.zeros(obs.shape))
+                    # obs_next_queue.append(np.zeros(obs.shape))
+                    obs_queue.append(obs)
+                    obs_next_queue.append(obs)
+
                 obs_queue.append(obs)
                 obs_next_queue.append(obs)
 
@@ -162,7 +161,7 @@ class PPOProblemBase(RLProblemSuper):
                     self.env.render()
 
                 # Select an action
-                action, action_matrix, predicted_action, value = self.act_train(obs, obs_queue)
+                action, action_matrix, predicted_action = self.act_train(obs, obs_queue)
 
                 # Agent act in the environment
                 next_obs, reward, done, info = self.env.step(action)
@@ -184,8 +183,7 @@ class PPOProblemBase(RLProblemSuper):
                                                                                                     skip_states,
                                                                                                     epochs,
                                                                                                     predicted_action,
-                                                                                                    action_matrix,
-                                                                                                    value)
+                                                                                                    action_matrix)
 
                 # copy next_obs to obs
                 obs, obs_queue = self.copy_next_obs(next_obs, obs, obs_next_queue, obs_queue)
@@ -243,10 +241,10 @@ class PPOProblemBase(RLProblemSuper):
 
 
         self.agent.remember(self.obs_batch, self.actions_batch, self.actions_probs_batch, self.rewards_batch,
-                            self.values_batch, self.masks_batch)
+                            self.masks_batch)
 
     def store_episode_experience(self, action, done, next_obs, obs, obs_next_queue, obs_queue, reward, skip_states, epochs,
-                                 predicted_action, action_matrix, value):
+                                 predicted_action, action_matrix):
 
         done, next_obs, reward, epochs = self.frame_skipping(action, done, next_obs, reward, skip_states, epochs)
         mask = not done
@@ -265,7 +263,6 @@ class PPOProblemBase(RLProblemSuper):
         self.actions_batch.append(action_matrix)
         self.actions_probs_batch.append(predicted_action)
         self.rewards_batch.append(reward)
-        self.values_batch.append(value[0])
         self.masks_batch.append(mask)
 
         return next_obs, obs_next_queue, reward, done, epochs, mask

@@ -4,7 +4,7 @@ from tensorflow.keras.layers import Dense, Input, Concatenate
 from tensorflow.keras.optimizers import Adam
 import numpy as np
 from IL_Problem.base.utils import discriminator_nn_building
-from RL_Agent.base.utils.default_networks import irl_net
+from RL_Agent.base.utils.networks.default_networks import irl_net
 
 
 # Network for the Actor Critic

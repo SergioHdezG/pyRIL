@@ -2,12 +2,20 @@ import sys
 from os import path
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
+import tensorflow as tf
+# Estas tres lineas resuelven algunos problemas con cuDNN en TF2 por los que no me permitía ejecutar en GPU
+physical_devices = tf.config.experimental.list_physical_devices('GPU')
+assert len(physical_devices) > 0, "Not enough GPU hardware devices available"
+config = tf.config.experimental.set_memory_growth(physical_devices[0], True)
+
+
 from RL_Problem import rl_problem
-from RL_Agent import dpg_agent
+from RL_Agent import dpg_agent_tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM
 import gym
-from RL_Agent.base.utils import agent_saver, history_utils, networks
+from RL_Agent.base.utils.networks import networks
+from RL_Agent.base.utils import agent_saver, history_utils
 
 environment = "LunarLander-v2"
 environment = gym.make(environment)
@@ -28,10 +36,10 @@ def lstm_custom_model(input_shape):
     return actor_model
 
 # # Despues es necesario crear un diccionario indicando que se va a usar una red custom y su arquitectura definida antes
-net_architecture = networks.net_architecture(use_custom_network=True,
-                                           custom_network=lstm_custom_model)
+net_architecture = networks.dpg_net(use_custom_network=True,
+                                    custom_network=lstm_custom_model)
 
-agent = dpg_agent.Agent(learning_rate=1e-3,
+agent = dpg_agent_tf.Agent(learning_rate=1e-3,
                         batch_size=64,
                         net_architecture=net_architecture,
                         n_stack=5)

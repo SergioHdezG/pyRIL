@@ -6,7 +6,7 @@ import numpy as np
    que permite añadir o suprimir elementos por sus dos extremos. '''
 from tensorflow.keras.layers import Dense
 from RL_Agent.base.DQN_base.dqn_agent_base import DQNAgentSuper
-from RL_Agent.base.utils.default_networks import ddqn_net
+from RL_Agent.base.utils.networks.default_networks import ddqn_net
 from RL_Agent.base.utils import agent_globals, net_building
 
 

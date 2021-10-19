@@ -76,7 +76,8 @@ class Agent(PPOSuper):
         if np.random.rand() <= self.epsilon:
             action = [np.random.choice(self.n_actions) for i in range(self.n_parallel_envs)]
         else:
-            action = [np.random.choice(self.n_actions, p=p[i]) for i in range(self.n_parallel_envs)]
+            # action = [np.random.choice(self.n_actions, p=p[i]) for i in range(self.n_parallel_envs)]
+            action = np.argmax(p, axis=-1)
         value = self.critic.predict([obs])
         action_matrix = [np.zeros(self.n_actions) for i in range(self.n_parallel_envs)]
         for i in range(self.n_parallel_envs):

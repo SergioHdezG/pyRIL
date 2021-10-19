@@ -1,12 +1,8 @@
-from tensorflow.keras.models import Sequential
+from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.layers import Dense, Conv2D, Flatten
-from tensorflow.keras import backend as K
-# import tensorflow as tf
-import tensorflow.compat.v1 as tf
-# tf.disable_v2_behavior()
+import tensorflow as tf
 from termcolor import colored
 import numpy as np
-import time
 
 def read_net_params(net_architecture, actor=False, critic=False, action=False, value=False, common=False):
     id_1 = 'conv_layers'
@@ -20,6 +16,8 @@ def read_net_params(net_architecture, actor=False, critic=False, action=False, v
     id_9 = 'use_custom_network'
     id_10 = 'custom_network'
     id_11 = 'define_custom_output_layer'
+    id_12 = 'tf_custom_model'
+    id_13 = 'use_tf_custom_model'
 
     if actor or critic:
         if actor:
@@ -37,6 +35,9 @@ def read_net_params(net_architecture, actor=False, critic=False, action=False, v
         id_8 = prefix + id_8
         # id_9 is unique
         id_10 = prefix + id_10
+        # id_11 is unique
+        # id_12 is unique
+        # id_13 is unique
 
     if action or value or common:
         if action:
@@ -56,6 +57,9 @@ def read_net_params(net_architecture, actor=False, critic=False, action=False, v
         id_8 = prefix + id_8
         # id_9 is unique
         id_10 = prefix + id_10
+        # id_11 is unique
+        # id_12 is unique
+        # id_13 is unique
 
     if (id_1 and id_2 and id_3 and id_4 and id_5 in net_architecture) \
             and (net_architecture[id_1] and net_architecture[id_2] and net_architecture[id_3] and net_architecture[id_4]
@@ -108,8 +112,16 @@ def read_net_params(net_architecture, actor=False, critic=False, action=False, v
                       'keys: '
                       'use_custom_network, custom_network', 'yellow'))
 
+    if (id_12 and id_13 in net_architecture) and (net_architecture[id_12] and net_architecture[id_13] is not None):
+        tf_custom_model = net_architecture[id_12]
+        use_tf_custom_model = net_architecture[id_13]
+    else:
+        tf_custom_model = None
+        use_tf_custom_model = False
+
     return n_conv_layers, kernel_num, kernel_size, strides, conv_activation, n_dense_layers, n_neurons, \
-           dense_activation, use_custom_net, custom_net, define_custom_output_layer
+           dense_activation, use_custom_net, custom_net, define_custom_output_layer, tf_custom_model, \
+           use_tf_custom_model
 
 
 def build_conv_net(net_architecture, input_shape, actor=False, critic=False, common=False):
@@ -257,3 +269,106 @@ def build_ddpg_nn_critic(net_architecture, input_shape, s, a):
         output = tf.nn.relu(merge + b)
 
     return output
+
+
+def build_ddpg_conv_critic_tf(net_architecture, input_shape, actor_net):
+    n_conv_layers, kernel_num, kernel_size, strides, conv_activation, \
+    n_dense_layers, n_neurons, dense_activation, use_custom_net, \
+    custom_net, define_custom_output_layer = read_net_params(net_architecture, actor=False, critic=True)
+
+    if use_custom_net:
+        try:
+            return custom_net(input_shape, actor_net)
+        except:
+            from termcolor import colored
+            print(colored('Custom critic network for DDPG requires two arguments as input: input_shape and actor_net. '
+                          'Use a function to create the network with the head function_name(input_shape, actor_net)',
+                          'red'))
+    else:
+        model_obs = Sequential()
+        model_obs.add(Conv2D(kernel_num[0], kernel_size=kernel_size[0], input_shape=input_shape,
+                          strides=(strides[0], strides[0]), padding='same',
+                          activation=conv_activation[0]))
+        for i in range(1, n_conv_layers):
+            model_obs.add(Conv2D(kernel_num[i], kernel_size=kernel_size[i],
+                                 strides=(strides[i], strides[i]), padding='same',
+                                 activation=conv_activation[i]))
+
+        model_obs.add(Flatten(input_shape=input_shape))
+        if n_dense_layers is not None:
+            for i in range(n_dense_layers - 1):
+                model_obs.add(Dense(n_neurons[i], input_dim=input_shape, activation=dense_activation[i]))
+
+        model_act = Sequential()
+        if n_dense_layers is not None:
+            for i in range(n_dense_layers - 1):
+                actor_shape = (np.array(actor_net.output.shape.as_list())[1])
+                model_act.add(Dense(n_neurons[i], input_dim=actor_shape, activation=dense_activation[i]))
+
+        merge = tf.keras.layers.Concatenate()([model_obs.output, model_act.output])
+        output = Dense(n_neurons[-1], input_dim=input_shape, activation=dense_activation[-1])(merge)
+        model = Model(inputs=[model_obs.input, model_act.input], outputs=output)
+        return model
+
+def build_ddpg_stack_critic_tf(net_architecture, input_shape, actor_net):
+    n_dense_layers, n_neurons, dense_activation, use_custom_net, \
+    custom_net, define_custom_output_layer = read_net_params(net_architecture, actor=False, critic=True)[-6:]
+
+    if use_custom_net:
+        # try:
+        return custom_net(input_shape, actor_net)
+        # except:
+        #     from termcolor import colored
+        #     print(colored('Custom critic network for DDPG requires two arguments as input: input_shape and actor_net. '
+        #                   'Use a function to create the network with the head function_name(input_shape, actor_net)',
+        #                   'red'))
+    else:
+        model_obs = Sequential()
+        model_obs.add(Flatten(input_shape=input_shape))
+        if n_dense_layers is not None:
+            for i in range(n_dense_layers-1):
+                model_obs.add(Dense(n_neurons[i], input_dim=input_shape, activation=dense_activation[i]))
+
+        model_act = Sequential()
+        if n_dense_layers is not None:
+            for i in range(n_dense_layers-1):
+                actor_shape = (np.array(actor_net.output.shape.as_list())[1])
+                model_act.add(Dense(n_neurons[i], input_dim=actor_shape, activation=dense_activation[i]))
+
+        merge = tf.keras.layers.Concatenate()([model_obs.output, model_act.output])
+        output = Dense(n_neurons[-1], input_dim=input_shape, activation=dense_activation[-1])(merge)
+        # model = Model Sequential([output])
+        model = Model(inputs=[model_obs.input, model_act.input], outputs=output)
+
+        return model
+
+
+def build_ddpg_nn_critic_tf(net_architecture, input_shape, actor_net):
+    n_dense_layers, n_neurons, dense_activation, use_custom_net, \
+    custom_net, define_custom_output_layer = read_net_params(net_architecture, actor=False, critic=True)[-6:]
+
+    if use_custom_net:
+        try:
+            return custom_net(input_shape, actor_net)
+        except:
+            from termcolor import colored
+            print(colored('Custom critic network for DDPG requires two arguments as input: input_shape and actor_net. '
+                          'Use a function to create the network with the head function_name(input_shape, actor_net)',
+                          'red'))
+    else:
+        model_obs = Sequential()
+        if n_dense_layers is not None:
+            for i in range(n_dense_layers - 1):
+                model_obs.add(Dense(n_neurons[i], input_dim=input_shape, activation=dense_activation[i]))
+
+        model_act = Sequential()
+        if n_dense_layers is not None:
+            for i in range(n_dense_layers - 1):
+                actor_shape = (np.array(actor_net.output.shape.as_list())[1])
+                model_act.add(Dense(n_neurons[i], input_dim=actor_shape, activation=dense_activation[i]))
+
+        merge = tf.keras.layers.Concatenate()([model_obs.output, model_act.output])
+        output = Dense(n_neurons[-1], input_dim=input_shape, activation=dense_activation[-1])(merge)
+        model = Model(inputs=[model_obs.input, model_act.input], outputs=output)
+        return model
+

@@ -6,7 +6,7 @@ from tensorflow.keras.layers import Input, Dense
 from tensorflow.keras import backend as K
 from tensorflow.keras.optimizers import Adam
 from RL_Agent.base.utils import net_building
-from RL_Agent.base.utils.default_networks import ppo_net
+from RL_Agent.base.utils.networks.default_networks import ppo_net
 from RL_Agent.base.agent_base import AgentSuper
 # import tensorflow as tf
 import tensorflow.compat.v1 as tf
@@ -410,7 +410,9 @@ class PPOSuper(AgentSuper):
             actor_net.add(Dense(self.n_actions, name='output', activation=last_activation))
 
         actor_model = Model(inputs=[actor_net.inputs, advantage, old_prediction, rewards, values], outputs=[actor_net.outputs])
-        actor_model.compile(optimizer=Adam(lr=self.actor_lr),
+
+        actor_optimizer = tf.keras.optimizers.Adam(self.actor_lr)
+        actor_model.compile(optimizer=actor_optimizer,
                             loss=[self.loss_selected(advantage=advantage,
                                                      old_prediction=old_prediction,
                                                      rewards=rewards,
@@ -428,7 +430,9 @@ class PPOSuper(AgentSuper):
 
         if not define_output_layer:
             critic_model.add(Dense(1))
-        critic_model.compile(optimizer=Adam(lr=self.critic_lr), loss='mse')
+        critic_optimizer = tf.keras.optimizers.Adam(self.critic_lr)
+
+        critic_model.compile(optimizer=critic_optimizer, loss='mse')
 
         return actor_model, critic_model
 
@@ -588,8 +592,11 @@ class PPOSuper(AgentSuper):
         return actions
 
     def _reduce_epsilon(self):
-        if self.epsilon > self.epsilon_min:
-            self.epsilon *= self.epsilon_decay
+        if isinstance(self.epsilon_decay, float):
+            if self.epsilon > self.epsilon_min:
+                self.epsilon *= self.epsilon_decay
+        else:
+            self.epsilon = self.epsilon_decay(self.epsilon, self.epsilon_min)
 
 
 

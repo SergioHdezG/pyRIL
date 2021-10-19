@@ -10,7 +10,7 @@ tf.disable_v2_behavior()
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense, Lambda, subtract, add
 from RL_Agent.base.DQN_base.dqn_agent_base import DQNAgentSuper
-from RL_Agent.base.utils.default_networks import dddqn_net
+from RL_Agent.base.utils.networks.default_networks import dddqn_net
 from RL_Agent.base.utils import agent_globals, net_building
 
 

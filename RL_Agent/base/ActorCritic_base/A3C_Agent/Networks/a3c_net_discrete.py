@@ -5,7 +5,7 @@ import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 import numpy as np
 from RL_Agent.base.utils import net_building
-from RL_Agent.base.utils.default_networks import a3c_net
+from RL_Agent.base.utils.networks.default_networks import a3c_net
 
 # Network for the Actor Critic
 class ACNet(object):

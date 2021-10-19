@@ -67,6 +67,7 @@ class MultiHeadAttention(tf.keras.Model):
         # and divide the score by square root of key_size (as stated in paper)
         # (must convert key_size to float32 otherwise an error would occur)
         score = tf.matmul(query, key, transpose_b=True) / tf.math.sqrt(tf.dtypes.cast(self.key_size, dtype=tf.float32))
+        # s2 = score.numpy()
         # score will have shape of (batch, h, query_len, value_len)
 
         # Mask out the score if a mask is provided
@@ -75,13 +76,17 @@ class MultiHeadAttention(tf.keras.Model):
         # - Look-left mask (batch, 1, query_len, value_len): to prevent decoder to draw attention to tokens to the right
         if mask is not None:
             score *= mask
+            # m = mask.numpy()
+            # s3 = score.numpy()
 
             # We want the masked out values to be zeros when applying softmax
             # One way to accomplish that is assign them to a very large negative value
             score = tf.where(tf.equal(score, 0), tf.ones_like(score) * -1e9, score)
+            # s4 = score.numpy()
 
         # Alignment vector: (batch, h, query_len, value_len)
         alignment = tf.nn.softmax(score, axis=-1)
+        # s5 = alignment.numpy()
 
         # Context vector: (batch, h, query_len, key_size)
         context = tf.matmul(alignment, value)
@@ -250,6 +255,9 @@ class Decoder(tf.keras.Model):
 
             if training:
                 mask = tf.linalg.band_part(tf.ones((seq_len, seq_len)), -1, 0)
+                # m = mask.numpy()
+                # s = sequence[10].numpy()
+                # m2 = encoder_mask[10].numpy()
             else:
                 mask = None
             bot_sub_out, bot_alignment = self.attention_bot[i](bot_sub_in, bot_sub_in, mask)
@@ -429,7 +437,7 @@ class Transformer:
 
         return loss
 
-    # @tf.function
+    @tf.function
     def train_step(self, source_seq, target_seq_in, target_seq_out):
         """ Execute one training step (forward pass + backward pass)
         Args:
@@ -447,10 +455,10 @@ class Transformer:
             # to make it broadcastable when computing attention heads
             encoder_mask = tf.expand_dims(encoder_mask, axis=1)
             encoder_mask = tf.expand_dims(encoder_mask, axis=1)
-            encoder_output, _ = self.encoder(source_seq, encoder_mask=encoder_mask)
+            encoder_output, _ = self.encoder(source_seq, encoder_mask=encoder_mask, training=True)
 
             decoder_output, _, _ = self.decoder(
-                target_seq_in, encoder_output, encoder_mask=encoder_mask)
+                target_seq_in, encoder_output, encoder_mask=encoder_mask, training=True)
 
             loss = self.loss_func(target_seq_out, decoder_output)
 
@@ -460,7 +468,7 @@ class Transformer:
 
         return loss
 
-    # @tf.function
+    @tf.function
     def train_step_2(self, source_seq, target_seq_out):
         """ Execute one training step (forward pass + backward pass)
         Args:
@@ -585,9 +593,9 @@ class Transformer:
 # Set to 'infer' will skip the training
 MODE = 'train'
 URL = 'http://www.manythings.org/anki/fra-eng.zip'
-FILENAME = '/home/serch/TFM/IRL3/tutorials/transformers_data/spa-eng.zip'
-NUM_EPOCHS = 50
-num_samples = 100 # 185584
+FILENAME = '/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/transformers_data/spa-eng.zip'
+NUM_EPOCHS = 10
+num_samples = 50000 # 185584
 
 
 def positional_encoding(pos, model_size):
@@ -848,14 +856,12 @@ vocab_out_size = len(fr_tokenizer.word_index) + 1
 #     return loss
 
 
-NUM_EPOCHS = 100
-
 transformer = Transformer(MODEL_SIZE, NUM_LAYERS, H, vocab_in_size, vocab_out_size, max_length)
 
 BATCH_SIZE = 64
 
 
-transformer.fit(data_en, data_fr_in, data_fr_out, batch_size=BATCH_SIZE, epochs=100, validation_split=0.2, teacher_forcing=True)
+transformer.fit(data_en, data_fr_in, data_fr_out, batch_size=BATCH_SIZE, epochs=NUM_EPOCHS, validation_split=0.2, teacher_forcing=False)
 
 # starttime = time.time()
 # dataset = tf.data.Dataset.from_tensor_slices(

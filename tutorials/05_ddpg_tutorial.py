@@ -5,7 +5,8 @@ sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 from RL_Problem import rl_problem
 from RL_Agent import ddpg_agent
 import gym
-from RL_Agent.base.utils import agent_saver, history_utils, networks
+from RL_Agent.base.utils import agent_saver, history_utils
+from RL_Agent.base.utils.networks import networks
 
 environment = "MountainCarContinuous-v0"
 environment = "LunarLanderContinuous-v2"

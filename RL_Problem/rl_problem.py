@@ -16,10 +16,28 @@ def Problem(environment, agent):
     elif agent.agent_name == agent_globals.names["dddqn"]:
         from RL_Problem.base.ValueBased import dqn_problem
         problem = dqn_problem.DQNProblem(environment, agent)
+    elif agent.agent_name == agent_globals.names["dqn_tf"]:
+        from RL_Problem.base.ValueBased import dqn_problem
+        problem = dqn_problem.DQNProblem(environment, agent)
+    elif agent.agent_name == agent_globals.names["ddqn_tf"]:
+        from RL_Problem.base.ValueBased import dqn_problem
+        problem = dqn_problem.DQNProblem(environment, agent)
+    elif agent.agent_name == agent_globals.names["dddqn_tf"]:
+        from RL_Problem.base.ValueBased import dqn_problem
+        problem = dqn_problem.DQNProblem(environment, agent)
     elif agent.agent_name == agent_globals.names["dpg"]:
         from RL_Problem.base.PolicyBased import dpg_problem
         problem = dpg_problem.DPGProblem(environment, agent)
+    elif agent.agent_name == agent_globals.names["dpg_tf"]:
+        from RL_Problem.base.PolicyBased import dpg_problem
+        problem = dpg_problem.DPGProblem(environment, agent)
+    elif agent.agent_name == agent_globals.names["dpg_continuous_tf"]:
+        from RL_Problem.base.PolicyBased import dpg_problem
+        problem = dpg_problem.DPGProblem(environment, agent)
     elif agent.agent_name == agent_globals.names["ddpg"]:
+        from RL_Problem.base.ActorCritic import ddpg_problem
+        problem = ddpg_problem.DDPGPRoblem(environment, agent)
+    elif agent.agent_name == agent_globals.names["ddpg_tf"]:
         from RL_Problem.base.ActorCritic import ddpg_problem
         problem = ddpg_problem.DDPGPRoblem(environment, agent)
     elif agent.agent_name == agent_globals.names["a2c_discrete"]:
@@ -40,6 +58,9 @@ def Problem(environment, agent):
     elif agent.agent_name == agent_globals.names["a3c_discrete"]:
         from RL_Problem.base.ActorCritic import a3c_problem
         problem = a3c_problem.A3CProblem(environment, agent)
+    elif agent.agent_name == agent_globals.names["a3c_discrete_tf"]:
+        from RL_Problem.base.ActorCritic import a3c_problem_tf
+        problem = a3c_problem_tf.A3CProblem(environment, agent)
     elif agent.agent_name == agent_globals.names["ppo_continuous"]:
         from RL_Problem.base.PPO import ppo_problem_continuous
         problem = ppo_problem_continuous.PPOProblem(environment, agent)
@@ -61,5 +82,20 @@ def Problem(environment, agent):
     elif agent.agent_name == agent_globals.names["ppo_transformer_agent_discrete_parallel"]:
         from RL_Problem.base.PPO import ppo_problem_discrete_parallel
         problem = ppo_problem_discrete_parallel.PPOProblem(environment, agent)
+    elif agent.agent_name == agent_globals.names["ppo_discrete_tf"]:
+        from RL_Problem.base.PPO import ppo_problem_discrete
+        problem = ppo_problem_discrete.PPOProblem(environment, agent)
+    elif agent.agent_name == agent_globals.names["ppo_continuous_tf"]:
+        from RL_Problem.base.PPO import ppo_problem_continuous
+        problem = ppo_problem_continuous.PPOProblem(environment, agent)
+    elif agent.agent_name == agent_globals.names["ppo_discrete_parallel_tf"]:
+        from RL_Problem.base.PPO import ppo_problem_discrete_parallel
+        problem = ppo_problem_discrete_parallel.PPOProblem(environment, agent)
+    elif agent.agent_name == agent_globals.names["ppo_continuous_parallel_tf"]:
+        from RL_Problem.base.PPO import ppo_problem_continuous_parallel
+        problem = ppo_problem_continuous_parallel.PPOProblem(environment, agent)
+    elif agent.agent_name == agent_globals.names["ppo_continuous_parallel_transformer_tf"]:
+        from RL_Problem.base.PPO import ppo_problem_continuous_parallel
+        problem = ppo_problem_continuous_parallel.PPOProblem(environment, agent)
 
     return problem

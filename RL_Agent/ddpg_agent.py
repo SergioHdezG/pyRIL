@@ -4,7 +4,7 @@ import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 import numpy as np
 from RL_Agent.base.utils.Memory.deque_memory import Memory
-from RL_Agent.base.utils.default_networks import ddpg_net
+from RL_Agent.base.utils.networks.default_networks import ddpg_net
 from tensorflow.keras.initializers import RandomNormal
 from RL_Agent.base.agent_base import AgentSuper
 from RL_Agent.base.utils import agent_globals, net_building
@@ -461,11 +461,11 @@ class Agent(AgentSuper):
         """
         Reduce the exploration rate.
         """
-        # self.epsilon = self.epsilon_min + (self.epsilon_max - self.epsilon_min) \
-        #                * np.math.exp(-self.LAMBDA * self.epsilon_steps)
-        if self.epsilon > self.epsilon_min:
-            self.epsilon *= self.epsilon_decay
-            # self.action_sigma *= self.action_noise_decay
+        if isinstance(self.epsilon_decay, float):
+            if self.epsilon > self.epsilon_min:
+                self.epsilon *= self.epsilon_decay
+        else:
+            self.epsilon = self.epsilon_decay(self.epsilon, self.epsilon_min)
 
     def _load(self, path):
         # name = path.join(path, name)

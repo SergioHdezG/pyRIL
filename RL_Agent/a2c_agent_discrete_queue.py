@@ -93,8 +93,11 @@ class Agent(A2CQueueSuper):
         """
         Reduce the exploration rate.
         """
-        if self.epsilon > self.epsilon_min:
-            self.epsilon *= self.epsilon_decay
+        if isinstance(self.epsilon_decay, float):
+            if self.epsilon > self.epsilon_min:
+                self.epsilon *= self.epsilon_decay
+        else:
+            self.epsilon = self.epsilon_decay(self.epsilon, self.epsilon_min)
 
     def _actions_to_onehot(self, actions):
         """

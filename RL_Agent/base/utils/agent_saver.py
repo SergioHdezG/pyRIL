@@ -18,12 +18,189 @@ import shutil
 import marshal
 import dill
 
-
 def prueba():
     return 1
 
-
 def save(agent, path):
+    # Save network object from RLNet
+    assert isinstance(path, str)
+
+    folder = os.path.dirname(path)
+
+    # agent_aux = copy.deepcopy(agent)
+    if not os.path.exists(folder) and folder != '':
+        os.makedirs(folder)
+
+    agent._save_network(path)
+
+    # file_name = os.path.basename(path)
+    tmp_path = 'capoirl_tmp_saving_folder/'
+
+
+
+    if not os.path.exists(tmp_path):
+        os.makedirs(tmp_path)
+
+    # agent._save_network(tmp_path + 'tmp_model')
+    agent_att, custom_net, actor_custom_net, critic_custom_net, common_custom_net, value_custom_net, adv_custom_net \
+        = extract_agent_attributes(agent)
+
+    custom_globals = actor_custom_globals = critic_custom_globals = common_custom_globals = value_custom_globals = adv_custom_globals = None
+
+    # save the network
+    if agent_att['net_architecture'] is not None and 'use_custom_network' in agent_att['net_architecture'].keys() \
+            and agent_att['net_architecture']['use_custom_network']:
+        if custom_net is not None:
+            custom_globals = dill.dumps(custom_net.__globals__)
+            custom_globals = base64.b64encode(custom_globals).decode('ascii')
+            custom_net = marshal.dumps(custom_net.__code__)
+            custom_net = base64.b64encode(custom_net).decode('ascii')
+
+        # TODO: esclarecer si hace falta hacer este paso con protobuffer y checkpoints en custom nets
+        elif actor_custom_net is not None and critic_custom_net is not None:
+            actor_custom_globals = dill.dumps(actor_custom_net.__globals__)
+            actor_custom_globals = base64.b64encode(actor_custom_globals).decode('ascii')
+            actor_custom_net = marshal.dumps(actor_custom_net.__code__)
+            actor_custom_net = base64.b64encode(actor_custom_net).decode('ascii')
+
+            critic_custom_globals = dill.dumps(critic_custom_net.__globals__)
+            critic_custom_globals = base64.b64encode(critic_custom_globals).decode('ascii')
+            critic_custom_net = marshal.dumps(critic_custom_net.__code__)
+            critic_custom_net = base64.b64encode(critic_custom_net).decode('ascii')
+
+        elif common_custom_net is not None and value_custom_net is not None and adv_custom_net is not None:
+            common_custom_globals = dill.dumps(common_custom_net.__globals__)
+            common_custom_globals = base64.b64encode(common_custom_globals).decode('ascii')
+            common_custom_net = marshal.dumps(common_custom_net.__code__)
+            common_custom_net = base64.b64encode(common_custom_net).decode('ascii')
+
+            value_custom_globals = dill.dumps(value_custom_net.__globals__)
+            value_custom_globals = base64.b64encode(value_custom_globals).decode('ascii')
+            value_custom_net = marshal.dumps(value_custom_net.__code__)
+            value_custom_net = base64.b64encode(value_custom_net).decode('ascii')
+
+            adv_custom_globals = dill.dumps(adv_custom_net.__globals__)
+            adv_custom_globals = base64.b64encode(adv_custom_globals).decode('ascii')
+            adv_custom_net = marshal.dumps(adv_custom_net.__code__)
+            adv_custom_net = base64.b64encode(adv_custom_net).decode('ascii')
+
+    agent_att = pickle.dumps(agent_att)
+    agent_att = base64.b64encode(agent_att).decode('ascii')
+
+    data = {
+        'agent': agent_att,
+        'custom_net': custom_net,
+        'custom_globals': custom_globals,
+        'actor_custom_net': actor_custom_net,
+        'actor_custom_globals': actor_custom_globals,
+        'critic_custom_net': critic_custom_net,
+        'critic_custom_globals': critic_custom_globals,
+        'common_custom_net': common_custom_net,
+        'common_custom_globals': common_custom_globals,
+        'value_custom_net': value_custom_net,
+        'value_custom_globals': value_custom_globals,
+        'adv_custom_net': adv_custom_net,
+        'adv_custom_globals': adv_custom_globals,
+    }
+
+    with open(os.path.join(path, 'agent_data.json'), 'w') as f:
+        json.dump(data, f)
+
+    shutil.rmtree(tmp_path)
+
+def export_to_protobuf(agent, path):
+    """
+    Save the agent neural network into protobuffer format for deploying.
+    This do not allows to retrain the agent once is loaded.
+    :param agent: RL_Agent to saves.
+    :param path: str. Folder for saving the agent
+    """
+    assert isinstance(path, str)
+
+    folder = os.path.dirname(path)
+
+    # agent_aux = copy.deepcopy(agent)
+    if not os.path.exists(folder) and folder != '':
+        os.makedirs(folder)
+
+    agent._save_protobuf(path)
+
+    # file_name = os.path.basename(path)
+    tmp_path = 'capoirl_tmp_saving_folder/'
+
+
+
+    if not os.path.exists(tmp_path):
+        os.makedirs(tmp_path)
+
+    # agent._save_network(tmp_path + 'tmp_model')
+    agent_att, custom_net, actor_custom_net, critic_custom_net, common_custom_net, value_custom_net, adv_custom_net \
+        = extract_agent_attributes(agent)
+
+    custom_globals = actor_custom_globals = critic_custom_globals = common_custom_globals = value_custom_globals = adv_custom_globals = None
+
+    # # save the network
+    # if agent_att['net_architecture'] is not None and 'use_custom_network' in agent_att['net_architecture'].keys() \
+    #         and agent_att['net_architecture']['use_custom_network']:
+    #     if custom_net is not None:
+    #         custom_globals = dill.dumps(custom_net.__globals__)
+    #         custom_globals = base64.b64encode(custom_globals).decode('ascii')
+    #         custom_net = marshal.dumps(custom_net.__code__)
+    #         custom_net = base64.b64encode(custom_net).decode('ascii')
+    #
+    #     # TODO: esclarecer si hace falta hacer este paso con protobuffer y checkpoints en custom nets
+    #     elif actor_custom_net is not None and critic_custom_net is not None:
+    #         actor_custom_globals = dill.dumps(actor_custom_net.__globals__)
+    #         actor_custom_globals = base64.b64encode(actor_custom_globals).decode('ascii')
+    #         actor_custom_net = marshal.dumps(actor_custom_net.__code__)
+    #         actor_custom_net = base64.b64encode(actor_custom_net).decode('ascii')
+    #
+    #         critic_custom_globals = dill.dumps(critic_custom_net.__globals__)
+    #         critic_custom_globals = base64.b64encode(critic_custom_globals).decode('ascii')
+    #         critic_custom_net = marshal.dumps(critic_custom_net.__code__)
+    #         critic_custom_net = base64.b64encode(critic_custom_net).decode('ascii')
+    #
+    #     elif common_custom_net is not None and value_custom_net is not None and adv_custom_net is not None:
+    #         common_custom_globals = dill.dumps(common_custom_net.__globals__)
+    #         common_custom_globals = base64.b64encode(common_custom_globals).decode('ascii')
+    #         common_custom_net = marshal.dumps(common_custom_net.__code__)
+    #         common_custom_net = base64.b64encode(common_custom_net).decode('ascii')
+    #
+    #         value_custom_globals = dill.dumps(value_custom_net.__globals__)
+    #         value_custom_globals = base64.b64encode(value_custom_globals).decode('ascii')
+    #         value_custom_net = marshal.dumps(value_custom_net.__code__)
+    #         value_custom_net = base64.b64encode(value_custom_net).decode('ascii')
+    #
+    #         adv_custom_globals = dill.dumps(adv_custom_net.__globals__)
+    #         adv_custom_globals = base64.b64encode(adv_custom_globals).decode('ascii')
+    #         adv_custom_net = marshal.dumps(adv_custom_net.__code__)
+    #         adv_custom_net = base64.b64encode(adv_custom_net).decode('ascii')
+
+    agent_att = pickle.dumps(agent_att)
+    agent_att = base64.b64encode(agent_att).decode('ascii')
+
+    data = {
+        'agent': agent_att,
+        'custom_net': custom_net,
+        'custom_globals': custom_globals,
+        # 'actor_custom_net': actor_custom_net,
+        # 'actor_custom_globals': actor_custom_globals,
+        # 'critic_custom_net': critic_custom_net,
+        # 'critic_custom_globals': critic_custom_globals,
+        'common_custom_net': common_custom_net,
+        'common_custom_globals': common_custom_globals,
+        'value_custom_net': value_custom_net,
+        'value_custom_globals': value_custom_globals,
+        'adv_custom_net': adv_custom_net,
+        'adv_custom_globals': adv_custom_globals,
+    }
+
+    with open(os.path.join(path, 'agent_data.json'), 'w') as f:
+        json.dump(data, f)
+
+    shutil.rmtree(tmp_path)
+
+def save_legacy(agent, path):
     assert isinstance(path, str)
 
     folder = os.path.dirname(path)
@@ -167,8 +344,198 @@ def save(agent, path):
 
     shutil.rmtree(tmp_path)
 
+def load(path, agent=None, from_checkpoint=False):
+    with open(os.path.join(path, 'agent_data.json'), 'r') as f:
+        data = json.load(f)
 
-def load(path, agent=None):
+    agent_att = base64.b64decode(data['agent'])
+    agent_att = pickle.loads(agent_att)
+
+    try:
+        custom_net = base64.b64decode(data['custom_net'])
+        custom_globals = base64.b64decode(data['custom_globals'])
+    except:
+        custom_net = None
+        custom_globals = None
+
+    try:
+        actor_custom_net = base64.b64decode(data['actor_custom_net'])
+        actor_custom_globals = base64.b64decode(data['actor_custom_globals'])
+        critic_custom_net = base64.b64decode(data['critic_custom_net'])
+        critic_custom_globals = base64.b64decode(data['critic_custom_globals'])
+    except:
+        actor_custom_net = None
+        actor_custom_globals = None
+        critic_custom_net = None
+        critic_custom_globals = None
+
+    try:
+        common_custom_net = base64.b64decode(data['common_custom_net'])
+        common_custom_globals = base64.b64decode(data['common_custom_globals'])
+        value_custom_net = base64.b64decode(data['value_custom_net'])
+        value_custom_globals = base64.b64decode(data['value_custom_globals'])
+        adv_custom_net = base64.b64decode(data['adv_custom_net'])
+        adv_custom_globals = base64.b64decode(data['adv_custom_globals'])
+    except:
+        common_custom_net = None
+        common_custom_globals = None
+        value_custom_net = None
+        value_custom_globals = None
+        adv_custom_net = None
+        adv_custom_globals = None
+
+    # custom_nets = pickle.loads(custom_nets)
+
+    if custom_net is not None:
+        custom_globals = dill.loads(custom_globals)
+        custom_globals = process_globals(custom_globals)
+        # Quizas sea mejor definir las dependencias dentro de la propia función para luego cargarla bien
+        code = marshal.loads(custom_net)
+        custom_net = types.FunctionType(code, custom_globals, "custom_net_func")
+        agent_att['net_architecture']['custom_network'] = custom_net
+
+    elif actor_custom_net is not None and critic_custom_net is not None:
+        actor_custom_globals = dill.loads(actor_custom_globals)
+        actor_custom_globals = process_globals(actor_custom_globals)
+        code = marshal.loads(actor_custom_net)
+        actor_custom_net = types.FunctionType(code, actor_custom_globals, "actor_custom_net_func")
+        agent_att['net_architecture']['actor_custom_network'] = actor_custom_net
+
+        critic_custom_globals = dill.loads(critic_custom_globals)
+        critic_custom_globals = process_globals(critic_custom_globals)
+        code = marshal.loads(critic_custom_net)
+        critic_custom_net = types.FunctionType(code, critic_custom_globals, "critic_custom_net_func")
+        agent_att['net_architecture']['critic_custom_network'] = critic_custom_net
+
+    elif common_custom_net is not None and value_custom_net is not None and adv_custom_net is not None:
+        common_custom_globals = dill.loads(common_custom_globals)
+        common_custom_globals = process_globals(common_custom_globals)
+        code = marshal.loads(common_custom_net)
+        common_custom_net = types.FunctionType(code, common_custom_globals, "common_custom_net_func")
+        agent_att['net_architecture']['common_custom_network'] = common_custom_net
+
+        value_custom_globals = dill.loads(value_custom_globals)
+        value_custom_globals = process_globals(value_custom_globals)
+        code = marshal.loads(value_custom_net)
+        value_custom_net = types.FunctionType(code, value_custom_globals, "value_custom_net_func")
+        agent_att['net_architecture']['value_custom_network'] = value_custom_net
+
+        adv_custom_globals = dill.loads(adv_custom_globals)
+        adv_custom_globals = process_globals(adv_custom_globals)
+        code = marshal.loads(adv_custom_net)
+        adv_custom_net = types.FunctionType(code, adv_custom_globals, "adv_custom_net_func")
+        agent_att['net_architecture']['action_custom_network'] = adv_custom_net
+
+    # tmp_path = 'capoirl_tmp_loading_folder/'
+    #
+    # if not os.path.exists(tmp_path):
+    #     os.makedirs(tmp_path)
+    #
+    # try:
+    #     model_json_bytes = base64.b64decode(data['model_json'])
+    #     with open(tmp_path + 'tmp_model.json', 'wb') as fp:
+    #         fp.write(model_json_bytes)
+    # except:
+    #     pass
+    # try:
+    #     model_h5_bytes = base64.b64decode(data['model_h5'])
+    #     with open(tmp_path + 'tmp_model.h5', 'wb') as fp:
+    #         fp.write(model_h5_bytes)
+    # except:
+    #     pass
+    #
+    # try:
+    #     model_actor_bytes = base64.b64decode(data['actor_h5'])
+    #     with open(tmp_path + 'tmp_modelactor.h5', 'wb') as fp:
+    #         fp.write(model_actor_bytes)
+    #     model_critic_bytes = base64.b64decode(data['critic_h5'])
+    #     with open(tmp_path + 'tmp_modelcritic.h5', 'wb') as fp:
+    #         fp.write(model_critic_bytes)
+    # except:
+    #     pass
+    #
+    # try:
+    #     checkpoint_bytes = base64.b64decode(data['model_ckpt'])
+    #     with open(tmp_path + 'checkpoint', 'wb') as fp:
+    #         fp.write(checkpoint_bytes)
+    #     index_ckpt_bytes = base64.b64decode(data['model_index'])
+    #     with open(tmp_path + 'tmp_model.index', 'wb') as fp:
+    #         fp.write(index_ckpt_bytes)
+    #     meta_ckpt_bytes = base64.b64decode(data['model_meta'])
+    #     with open(tmp_path + 'tmp_model.meta', 'wb') as fp:
+    #         fp.write(meta_ckpt_bytes)
+    #     data_ckpt_bytes = base64.b64decode(data['model_data'])
+    #     with open(tmp_path + 'tmp_model.data-00000-of-00001', 'wb') as fp:
+    #         fp.write(data_ckpt_bytes)
+    # except:
+    #     pass
+
+    if agent is None:
+        # TODO: ¿Eliminar esta opción?
+        # If there is not input agent create a raw new agent
+        agent = create_new_agent(agent_att)
+        set_agent_attributes(agent_att, agent, overwrite=True)
+    elif not agent.agent_builded:
+        # If the agent is not built, build it.
+        if agent.loads_saved_params:
+            set_agent_attributes(agent_att, agent)
+        if agent_att['action_low_bound'] is None and agent_att['action_high_bound'] is None:
+            agent.build_agent(state_size=agent_att["state_size"],
+                              n_actions=agent_att["n_actions"],
+                              stack=agent_att["stack"])
+        else:
+            agent.build_agent(state_size=agent_att["state_size"],
+                              n_actions=agent_att["n_actions"],
+                              stack=agent_att["stack"],
+                              action_bound=[agent_att['action_low_bound'], agent_att['action_high_bound']])
+    else:
+        # If the agent is built, load its attributes
+        # TODO: No tiene que sobreescribir todo
+        set_agent_attributes(agent_att, agent)
+
+    agent._load(path)
+
+    return agent
+
+def load_from_protobuf(path, agent=None):
+    """
+     Load an agent from protobuffer format for deploying.
+     This do not allows to retrain the agent once is loaded.
+     :param path: str. Folder for saving the agent
+     :param agent: RL_Agent. Initialized agent to load.
+     """
+    with open(os.path.join(path, 'agent_data.json'), 'r') as f:
+        data = json.load(f)
+
+    agent_att = base64.b64decode(data['agent'])
+    agent_att = pickle.loads(agent_att)
+
+    if agent is None:
+        # TODO: ¿Eliminar esta opción?
+        # If there is not input agent create a raw new agent
+        agent = create_new_agent(agent_att)
+        set_agent_attributes(agent_att, agent, overwrite=True)
+    elif not agent.agent_builded:
+        # If the agent is not built, build it.
+        set_agent_attributes(agent_att, agent)
+        if agent_att['action_low_bound'] is None and agent_att['action_high_bound'] is None:
+            agent.build_agent(state_size=agent_att["state_size"],
+                              n_actions=agent_att["n_actions"],
+                              stack=agent_att["stack"])
+        else:
+            agent.build_agent(state_size=agent_att["state_size"],
+                              n_actions=agent_att["n_actions"],
+                              stack=agent_att["stack"],
+                              action_bound=[agent_att['action_low_bound'], agent_att['action_high_bound']])
+    else:
+        # If the agent is built, load its attributes
+        # TODO: No tiene que sobreescribir todo
+        set_agent_attributes(agent_att, agent)
+    agent._load_protobuf(path)
+
+    return agent
+
+def load_legacy(path, agent=None):
     with open(path, 'r') as f:
         data = json.load(f)
 
@@ -310,6 +677,7 @@ def load(path, agent=None):
 
 
 def extract_agent_attributes(agent):
+    # TODO: save train_action_selection_options and action_selection_options
     try:
         action_low_bound = agent.action_bound[0]
         action_high_bound = agent.action_bound[1]
@@ -389,11 +757,12 @@ def extract_agent_attributes(agent):
         # 'save_if_better': agent.save_if_better,
         'agent_compiled': agent.agent_builded,
         'agent_name': agent.agent_name,
+        'tensorboard_dir': agent.tensorboard_dir
     }
     return dict, custom_net, actor_custom_net, critic_custom_net, common_custom_net, value_custom_net, adv_custom_net
 
 
-def set_agent_attributes(att, agent):
+def set_agent_attributes(att, agent, overwrite=False):
     agent.state_size = att['state_size']
     agent.env_state_size = att['env_state_size']
     agent.n_actions = att['n_actions']
@@ -426,6 +795,7 @@ def set_agent_attributes(att, agent):
     # agent.save_if_better = att['save_if_better']
     agent.agent_builded = att['agent_compiled']
     agent.agent_name = att['agent_name']
+    agent.tensorboard_dir = att['tensorboard_dir']
     return agent
 
 

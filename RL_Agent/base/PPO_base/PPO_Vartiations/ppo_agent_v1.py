@@ -5,7 +5,7 @@ from tensorflow.keras.layers import Input, Dense
 from tensorflow.keras import backend as K
 from tensorflow.keras.optimizers import Adam
 from RL_Agent.base.utils import net_building
-from RL_Agent.base.utils.default_networks import ppo_net
+from RL_Agent.base.utils.networks.default_networks import ppo_net
 
 
 # worker class that inits own environment, trains on it and updloads weights to global net

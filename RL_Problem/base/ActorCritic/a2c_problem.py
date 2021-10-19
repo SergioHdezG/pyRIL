@@ -1,6 +1,3 @@
-# import tensorflow as tf
-import tensorflow.compat.v1 as tf
-tf.disable_v2_behavior()
 from RL_Agent.base.utils import agent_globals
 from RL_Problem.base.rl_problem_base import *
 

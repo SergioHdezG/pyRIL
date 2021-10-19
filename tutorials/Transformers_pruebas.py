@@ -13,8 +13,8 @@ from transformers_models import *
 # Mode can be either 'train' or 'infer'
 # Set to 'infer' will skip the training
 MODE = 'train'
-URL = 'http://www.manythings.org/anki/fra-eng.zip'
-FILENAME = '/home/serch/TFM/IRL3/tutorials/transformers_data/spa-eng.zip'
+URL = 'http://www.manythings.org/anki/spa-eng.zip'
+FILENAME = '/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/transformers_data/spa-eng.zip'
 NUM_EPOCHS = 50
 num_samples = 100 # 185584
 
@@ -263,7 +263,7 @@ out_l = tf.keras.layers.Dense(class_number, activation='softmax')
 # out = flat_l(np.array(input))
 # out = flat_l(input)
 # out = tf.expand_dims(out, axis=-1)
-out, alignments = encoder(input)
+out = encoder(input)
 out = flat_l(out)
 # out = dense_l(out)
 out = out_l(out)

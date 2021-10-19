@@ -1,22 +1,29 @@
 import multiprocessing
 
+
 def dqn_net(conv_layers=None, kernel_num=None, kernel_size=None, kernel_strides=None, conv_activation=None,
-                     dense_layers=None, n_neurons=None, dense_activation=None, use_custom_network=False,
-                     custom_network=None, define_custom_output_layer=False):
+            dense_layers=None, n_neurons=None, dense_activation=None, use_custom_network=False,
+            custom_network=None, define_custom_output_layer=False, tf_custom_model=None,
+            use_tf_custom_model=False):
     return net_architecture(conv_layers=conv_layers, kernel_num=kernel_num, kernel_size=kernel_size,
-                            kernel_strides=kernel_strides, conv_activation=conv_activation,  dense_layers=dense_layers,
+                            kernel_strides=kernel_strides, conv_activation=conv_activation, dense_layers=dense_layers,
                             n_neurons=n_neurons, dense_activation=dense_activation,
                             use_custom_network=use_custom_network, custom_network=custom_network,
-                            define_custom_output_layer=define_custom_output_layer)
+                            define_custom_output_layer=define_custom_output_layer, tf_custom_model=tf_custom_model,
+                            use_tf_custom_model=use_tf_custom_model)
+
 
 def double_dqn_net(conv_layers=None, kernel_num=None, kernel_size=None, kernel_strides=None, conv_activation=None,
-                     dense_layers=None, n_neurons=None, dense_activation=None, use_custom_network=False,
-                     custom_network=None, define_custom_output_layer=False):
+                   dense_layers=None, n_neurons=None, dense_activation=None, use_custom_network=False,
+                   custom_network=None, define_custom_output_layer=False, tf_custom_model=None,
+                   use_tf_custom_model=False):
     return net_architecture(conv_layers=conv_layers, kernel_num=kernel_num, kernel_size=kernel_size,
-                            kernel_strides=kernel_strides, conv_activation=conv_activation,  dense_layers=dense_layers,
+                            kernel_strides=kernel_strides, conv_activation=conv_activation, dense_layers=dense_layers,
                             n_neurons=n_neurons, dense_activation=dense_activation,
                             use_custom_network=use_custom_network, custom_network=custom_network,
-                            define_custom_output_layer=define_custom_output_layer)
+                            define_custom_output_layer=define_custom_output_layer,
+                            tf_custom_model=tf_custom_model, use_tf_custom_model=use_tf_custom_model)
+
 
 def dueling_dqn_net(common_conv_layers=None, common_kernel_num=None, common_kernel_size=None,
                     common_kernel_strides=None, common_conv_activation=None, common_dense_layers=None,
@@ -24,7 +31,7 @@ def dueling_dqn_net(common_conv_layers=None, common_kernel_num=None, common_kern
                     action_n_neurons=None, action_dense_activation=None, value_dense_layers=None,
                     value_n_neurons=None, value_dense_activation=None, use_custom_network=False,
                     common_custom_network=None, action_custom_network=None, value_custom_network=None,
-                    define_custom_output_layer=False
+                    define_custom_output_layer=False, tf_custom_model=None, use_tf_custom_model=False
                     ):
     """
     Here you can define the architecture of your model from input layer to last hidden layer. The output layer wil be
@@ -66,49 +73,70 @@ def dueling_dqn_net(common_conv_layers=None, common_kernel_num=None, common_kern
                                     be an object returned by a function.
     :param define_custom_output_layer: True if the custom model defines the outputs layer for the advantage subnet and for
                                         the value  subnet.
+    :param tf_custom_model:         Function to create the custom tensorflow model. The model must inherit from
+                                    RL_Agent.base.utils.networks.networks_interface.RLNetModel. The function must
+                                    receive the input shape of the model.
+    :param use_tf_custom_model:     boolean. Set True if you are going to use a custom external tensorflow model with
+                                    your own architecture inheriting from
+                                    RL_Agent.base.utils.networks.networks_interface.RLNetModel.
+                                    Use this together with tf_custom_model.
+                                    Default values = False
+                                    tf_custom_model and use_custom_network can not have True value at same time
     :return: dictionary
     """
+    if use_custom_network and use_tf_custom_model:
+        raise Exception("use_custom_network and use_tf_custom_model can not have True value at the same time. Please, "
+                        "set at least one of those to False.")
     net_architecture = {
-           "common_conv_layers": common_conv_layers,
-           "common_kernel_num": common_kernel_num,
-           "common_kernel_size": common_kernel_size,
-           "common_kernel_strides": common_kernel_strides,
-           "common_conv_activation": common_conv_activation,
-           "common_dense_lay": common_dense_layers,
-           "common_n_neurons": common_n_neurons,
-           "common_dense_activation": common_dense_activation,
+        "common_conv_layers": common_conv_layers,
+        "common_kernel_num": common_kernel_num,
+        "common_kernel_size": common_kernel_size,
+        "common_kernel_strides": common_kernel_strides,
+        "common_conv_activation": common_conv_activation,
+        "common_dense_lay": common_dense_layers,
+        "common_n_neurons": common_n_neurons,
+        "common_dense_activation": common_dense_activation,
 
-           "action_dense_lay": action_dense_layers,
-           "action_n_neurons": action_n_neurons,
-           "action_dense_activation": action_dense_activation,
+        "action_dense_lay": action_dense_layers,
+        "action_n_neurons": action_n_neurons,
+        "action_dense_activation": action_dense_activation,
 
-           "value_dense_lay": value_dense_layers,
-           "value_n_neurons": value_n_neurons,
-           "value_dense_activation": value_dense_activation,
+        "value_dense_lay": value_dense_layers,
+        "value_n_neurons": value_n_neurons,
+        "value_dense_activation": value_dense_activation,
 
-           "use_custom_network": use_custom_network,
-           "common_custom_network": common_custom_network,
-           "value_custom_network": value_custom_network,
-           "action_custom_network": action_custom_network,
-           "define_custom_output_layer": define_custom_output_layer if use_custom_network else False
-           }
+        "use_custom_network": use_custom_network,
+        "common_custom_network": common_custom_network,
+        "value_custom_network": value_custom_network,
+        "action_custom_network": action_custom_network,
+        "define_custom_output_layer": define_custom_output_layer if use_custom_network else False,
+
+        "tf_custom_model": tf_custom_model,
+        "use_tf_custom_model": use_tf_custom_model
+    }
     return net_architecture
 
+
 def dpg_net(conv_layers=None, kernel_num=None, kernel_size=None, kernel_strides=None, conv_activation=None,
-                     dense_layers=None, n_neurons=None, dense_activation=None, use_custom_network=False,
-                     custom_network=None, define_custom_output_layer=False):
+            dense_layers=None, n_neurons=None, dense_activation=None, use_custom_network=False,
+            custom_network=None, define_custom_output_layer=False, tf_custom_model=None,
+            use_tf_custom_model=False):
     return net_architecture(conv_layers=conv_layers, kernel_num=kernel_num, kernel_size=kernel_size,
-                            kernel_strides=kernel_strides, conv_activation=conv_activation,  dense_layers=dense_layers,
+                            kernel_strides=kernel_strides, conv_activation=conv_activation, dense_layers=dense_layers,
                             n_neurons=n_neurons, dense_activation=dense_activation,
                             use_custom_network=use_custom_network, custom_network=custom_network,
-                            define_custom_output_layer=define_custom_output_layer)
+                            define_custom_output_layer=define_custom_output_layer,
+                            tf_custom_model=tf_custom_model,
+                            use_tf_custom_model=use_tf_custom_model
+                            )
+
 
 def ddpg_net(actor_conv_layers=None, actor_kernel_num=None, actor_kernel_size=None, actor_kernel_strides=None,
-            actor_conv_activation=None, actor_dense_layers=None, actor_n_neurons=None, actor_dense_activation=None,
-            critic_conv_layers=None, critic_kernel_num=None, critic_kernel_size=None, critic_kernel_strides=None,
-            critic_conv_activation=None, critic_dense_layers=None, critic_n_neurons=None, critic_dense_activation=None,
-            use_custom_network=False, actor_custom_network=None, critic_custom_network=None,
-             define_custom_output_layer=False):
+             actor_conv_activation=None, actor_dense_layers=None, actor_n_neurons=None, actor_dense_activation=None,
+             critic_conv_layers=None, critic_kernel_num=None, critic_kernel_size=None, critic_kernel_strides=None,
+             critic_conv_activation=None, critic_dense_layers=None, critic_n_neurons=None, critic_dense_activation=None,
+             use_custom_network=False, actor_custom_network=None, critic_custom_network=None,
+             define_custom_output_layer=False, tf_custom_model=None, use_tf_custom_model=False):
     return actor_critic_net_architecture(actor_conv_layers=actor_conv_layers, actor_kernel_num=actor_kernel_num,
                                          actor_kernel_size=actor_kernel_size, actor_kernel_strides=actor_kernel_strides,
                                          actor_conv_activation=actor_conv_activation,
@@ -123,14 +151,18 @@ def ddpg_net(actor_conv_layers=None, actor_kernel_num=None, actor_kernel_size=No
                                          use_custom_network=use_custom_network,
                                          actor_custom_network=actor_custom_network,
                                          critic_custom_network=critic_custom_network,
-                                         define_custom_output_layer=define_custom_output_layer)
+                                         define_custom_output_layer=define_custom_output_layer,
+                                         tf_custom_model=tf_custom_model,
+                                         use_tf_custom_model=use_tf_custom_model
+                                         )
+
 
 def a2c_net(actor_conv_layers=None, actor_kernel_num=None, actor_kernel_size=None, actor_kernel_strides=None,
             actor_conv_activation=None, actor_dense_layers=None, actor_n_neurons=None, actor_dense_activation=None,
             critic_conv_layers=None, critic_kernel_num=None, critic_kernel_size=None, critic_kernel_strides=None,
             critic_conv_activation=None, critic_dense_layers=None, critic_n_neurons=None, critic_dense_activation=None,
             use_custom_network=False, actor_custom_network=None, critic_custom_network=None,
-            define_custom_output_layer=False):
+            define_custom_output_layer=False, tf_custom_model=None, use_tf_custom_model=False):
     return actor_critic_net_architecture(actor_conv_layers=actor_conv_layers, actor_kernel_num=actor_kernel_num,
                                          actor_kernel_size=actor_kernel_size, actor_kernel_strides=actor_kernel_strides,
                                          actor_conv_activation=actor_conv_activation,
@@ -145,14 +177,18 @@ def a2c_net(actor_conv_layers=None, actor_kernel_num=None, actor_kernel_size=Non
                                          use_custom_network=use_custom_network,
                                          actor_custom_network=actor_custom_network,
                                          critic_custom_network=critic_custom_network,
-                                         define_custom_output_layer=define_custom_output_layer)
+                                         define_custom_output_layer=define_custom_output_layer,
+                                         tf_custom_model=tf_custom_model,
+                                         use_tf_custom_model=use_tf_custom_model
+                                         )
+
 
 def a3c_net(actor_conv_layers=None, actor_kernel_num=None, actor_kernel_size=None, actor_kernel_strides=None,
             actor_conv_activation=None, actor_dense_layers=None, actor_n_neurons=None, actor_dense_activation=None,
             critic_conv_layers=None, critic_kernel_num=None, critic_kernel_size=None, critic_kernel_strides=None,
             critic_conv_activation=None, critic_dense_layers=None, critic_n_neurons=None, critic_dense_activation=None,
             use_custom_network=False, actor_custom_network=None, critic_custom_network=None,
-            define_custom_output_layer=False):
+            define_custom_output_layer=False, tf_custom_model=None, use_tf_custom_model=False):
     return actor_critic_net_architecture(actor_conv_layers=actor_conv_layers, actor_kernel_num=actor_kernel_num,
                                          actor_kernel_size=actor_kernel_size, actor_kernel_strides=actor_kernel_strides,
                                          actor_conv_activation=actor_conv_activation,
@@ -167,14 +203,18 @@ def a3c_net(actor_conv_layers=None, actor_kernel_num=None, actor_kernel_size=Non
                                          use_custom_network=use_custom_network,
                                          actor_custom_network=actor_custom_network,
                                          critic_custom_network=critic_custom_network,
-                                         define_custom_output_layer=define_custom_output_layer)
+                                         define_custom_output_layer=define_custom_output_layer,
+                                         tf_custom_model=tf_custom_model,
+                                         use_tf_custom_model=use_tf_custom_model
+                                         )
+
 
 def ppo_net(actor_conv_layers=None, actor_kernel_num=None, actor_kernel_size=None, actor_kernel_strides=None,
             actor_conv_activation=None, actor_dense_layers=None, actor_n_neurons=None, actor_dense_activation=None,
             critic_conv_layers=None, critic_kernel_num=None, critic_kernel_size=None, critic_kernel_strides=None,
             critic_conv_activation=None, critic_dense_layers=None, critic_n_neurons=None, critic_dense_activation=None,
             use_custom_network=False, actor_custom_network=None, critic_custom_network=None,
-            define_custom_output_layer=False):
+            define_custom_output_layer=False, tf_custom_model=None, use_tf_custom_model=False):
     return actor_critic_net_architecture(actor_conv_layers=actor_conv_layers, actor_kernel_num=actor_kernel_num,
                                          actor_kernel_size=actor_kernel_size, actor_kernel_strides=actor_kernel_strides,
                                          actor_conv_activation=actor_conv_activation,
@@ -189,7 +229,10 @@ def ppo_net(actor_conv_layers=None, actor_kernel_num=None, actor_kernel_size=Non
                                          use_custom_network=use_custom_network,
                                          actor_custom_network=actor_custom_network,
                                          critic_custom_network=critic_custom_network,
-                                         define_custom_output_layer=define_custom_output_layer)
+                                         define_custom_output_layer=define_custom_output_layer,
+                                         tf_custom_model=tf_custom_model,
+                                         use_tf_custom_model=use_tf_custom_model)
+
 
 # def irl_discriminator_net(state_conv_layers=None, state_kernel_num=None, state_kernel_size=None,
 #                           state_kernel_strides=None, state_conv_activation=None, state_dense_lay=None,
@@ -268,7 +311,8 @@ def ppo_net(actor_conv_layers=None, actor_kernel_num=None, actor_kernel_size=Non
 
 def net_architecture(conv_layers=None, kernel_num=None, kernel_size=None, kernel_strides=None, conv_activation=None,
                      dense_layers=None, n_neurons=None, dense_activation=None, use_custom_network=False,
-                     custom_network=None, define_custom_output_layer=False):
+                     custom_network=None, define_custom_output_layer=False, tf_custom_model=None,
+                     use_tf_custom_model=False):
     """
     Here you can define the architecture of your model from input layer to last hidden layer. The output layer wil be
     created by the agent depending on the number of outputs and the algorithm used.
@@ -287,8 +331,20 @@ def net_architecture(conv_layers=None, kernel_num=None, kernel_size=None, kernel
                                 return the network as a tensor flow graph. These models have to be an object returned by
                                 a function.
     :param define_custom_output_layer: True if the custom model defines the outputs layer for network in custom_network.
+    :param tf_custom_model:         Function to create the custom tensorflow model. The model must inherit from
+                                    RL_Agent.base.utils.networks.networks_interface.RLNetModel. The function must
+                                    receive the input shape of the model.
+    :param use_tf_custom_model:     boolean. Set True if you are going to use a custom external tensorflow model with
+                                    your own architecture inheriting from
+                                    RL_Agent.base.utils.networks.networks_interface.RLNetModel.
+                                    Use this together with tf_custom_model.
+                                    Default values = False
+                                    tf_custom_model and use_custom_network can not have True value at same time
     :return: dictionary
     """
+    if use_custom_network and use_tf_custom_model:
+        raise Exception("use_custom_network and use_tf_custom_model can not have True value at the same time. Please, "
+                        "set at least one of those to False.")
     net_architecture = {
         "conv_layers": conv_layers,
         "kernel_num": kernel_num,
@@ -300,7 +356,9 @@ def net_architecture(conv_layers=None, kernel_num=None, kernel_size=None, kernel
         "dense_activation": dense_activation,
         "use_custom_network": use_custom_network,
         "custom_network": custom_network,
-        "define_custom_output_layer": define_custom_output_layer if use_custom_network else False
+        "define_custom_output_layer": define_custom_output_layer if use_custom_network else False,
+        "tf_custom_model": tf_custom_model,
+        "use_tf_custom_model": use_tf_custom_model
     }
     return net_architecture
 
@@ -312,7 +370,7 @@ def actor_critic_net_architecture(actor_conv_layers=None, actor_kernel_num=None,
                                   critic_kernel_strides=None, critic_conv_activation=None, critic_dense_layers=None,
                                   critic_n_neurons=None, critic_dense_activation=None, use_custom_network=False,
                                   actor_custom_network=None, critic_custom_network=None,
-                                  define_custom_output_layer=False
+                                  define_custom_output_layer=False, tf_custom_model=None, use_tf_custom_model=False
                                   ):
     """
     Here you can define the architecture of your model from input layer to last hidden layer. The output layer wil be
@@ -354,32 +412,46 @@ def actor_critic_net_architecture(actor_conv_layers=None, actor_kernel_num=None,
                                     be an object returned by a function.
     :param define_custom_output_layer: True if the custom model defines the outputs layers for the actor and critic
                                         discriminator in actor_custom_network and critic_custom_network.
+    :param tf_custom_model:         Function to create the custom tensorflow model. The model must inherit from
+                                    RL_Agent.base.utils.networks.networks_interface.RLNetModel. The function must
+                                    receive the input shape of the model.
+    :param use_tf_custom_model:     boolean. Set True if you are going to use a custom external tensorflow model with
+                                    your own architecture inheriting from
+                                    RL_Agent.base.utils.networks.networks_interface.RLNetModel.
+                                    Use this together with tf_custom_model.
+                                    Default values = False
+                                    tf_custom_model and use_custom_network can not have True value at same time
     :return: dictionary
     """
+    if use_custom_network and use_tf_custom_model:
+        raise Exception("use_custom_network and use_tf_custom_model can not have True value at the same time. Please, "
+                        "set at least one of those to False.")
     net_architecture = {
-           "actor_conv_layers": actor_conv_layers,
-           "actor_kernel_num": actor_kernel_num,
-           "actor_kernel_size": actor_kernel_size,
-           "actor_kernel_strides": actor_kernel_strides,
-           "actor_conv_activation": actor_conv_activation,
-           "actor_dense_lay": actor_dense_layers,
-           "actor_n_neurons": actor_n_neurons,
-           "actor_dense_activation": actor_dense_activation,
+        "actor_conv_layers": actor_conv_layers,
+        "actor_kernel_num": actor_kernel_num,
+        "actor_kernel_size": actor_kernel_size,
+        "actor_kernel_strides": actor_kernel_strides,
+        "actor_conv_activation": actor_conv_activation,
+        "actor_dense_lay": actor_dense_layers,
+        "actor_n_neurons": actor_n_neurons,
+        "actor_dense_activation": actor_dense_activation,
 
-           "critic_conv_layers": critic_conv_layers,
-           "critic_kernel_num": critic_kernel_num,
-           "critic_kernel_size": critic_kernel_size,
-           "critic_kernel_strides": critic_kernel_strides,
-           "critic_conv_activation": critic_conv_activation,
-           "critic_dense_lay": critic_dense_layers,
-           "critic_n_neurons": critic_n_neurons,
-           "critic_dense_activation": critic_dense_activation,
+        "critic_conv_layers": critic_conv_layers,
+        "critic_kernel_num": critic_kernel_num,
+        "critic_kernel_size": critic_kernel_size,
+        "critic_kernel_strides": critic_kernel_strides,
+        "critic_conv_activation": critic_conv_activation,
+        "critic_dense_lay": critic_dense_layers,
+        "critic_n_neurons": critic_n_neurons,
+        "critic_dense_activation": critic_dense_activation,
 
-           "use_custom_network": use_custom_network,
-           "actor_custom_network": actor_custom_network,
-           "critic_custom_network": critic_custom_network,
-           "define_custom_output_layer": define_custom_output_layer if use_custom_network else False
-           }
+        "use_custom_network": use_custom_network,
+        "actor_custom_network": actor_custom_network,
+        "critic_custom_network": critic_custom_network,
+        "define_custom_output_layer": define_custom_output_layer if use_custom_network else False,
+        "tf_custom_model": tf_custom_model,
+        "use_tf_custom_model": use_tf_custom_model
+    }
     return net_architecture
 
 # def algotirhm_hyperparams(learning_rate=1e-3, batch_size=32, epsilon=1., epsilon_decay=0.9999, epsilon_min=0.1,

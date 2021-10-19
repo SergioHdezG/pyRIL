@@ -8,7 +8,8 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Flatten, LSTM
 import gym
 import numpy as np
-from RL_Agent.base.utils import agent_saver, history_utils, networks as params
+from RL_Agent.base.utils import agent_saver, history_utils
+from RL_Agent.base.utils.networks import networks as params
 
 environment_disc = "LunarLander-v2"
 # environment_disc = "SpaceInvaders-v0"
@@ -101,52 +102,52 @@ agent_disc = a3c_agent_discrete.Agent(actor_lr=1e-3,
                                       img_input=False,
                                       state_size=state_size)
 
-# # agent_disc = agent_saver.load('agent_a3c.json')
-# # Descomentar para ejecutar el ejemplo discreto
-# problem_disc = rl_problem.Problem(environment_disc, agent_disc)
+# agent_disc = agent_saver.load('agent_a3c.json')
+# Descomentar para ejecutar el ejemplo discreto
+problem_disc = rl_problem.Problem(environment_disc, agent_disc)
+
+# Indicamos que se quiere usar la función de recompensa y la normalización
+# problem_disc.preprocess = atari_preprocess
+# problem_disc.clip_norm_reward = clip_norm_atari_reward
+
+# En este caso se utiliza el parámetro max_step_epi=500 para indicar que cada episodio termine a las 500 épocas o
+# iteraciones ya que por defecto este entorno llega hasta 1000. Esto es util para entornos que no tengan definido un
+# máximo de épocas.
+
+# problem_disc.load('/home/serch/TFM/IRL3/tutorials/tmp/', 'a3c-479')
+problem_disc.solve(10000, render=False, skip_states=1)
+
+problem_disc.test(render=True, n_iter=10)
+
+hist = problem_disc.get_historic_reward()
+history_utils.plot_reward_hist(hist, 10)
+
+agent_saver.save(agent_disc, 'agent_a3c.json')
+
+
+
+# agent_cont = a3c_agent_continuous.Agent(actor_lr=1e-4,
+#                                         critic_lr=1e-3,
+#                                         batch_size=64,
+#                                         n_step_return=16,
+#                                         net_architecture=net_architecture,
+#                                         n_stack=4)
 #
-# # Indicamos que se quiere usar la función de recompensa y la normalización
-# # problem_disc.preprocess = atari_preprocess
-# # problem_disc.clip_norm_reward = clip_norm_atari_reward
+# # agent_cont = agent_saver.load('agent_a3c.json')
+# # # Descomentar para ejecutar el ejemplo continuo
+# problem_cont = rl_problem.Problem(environment_cont, agent_cont)
 #
-# # En este caso se utiliza el parámetro max_step_epi=500 para indicar que cada episodio termine a las 500 épocas o
-# # iteraciones ya que por defecto este entorno llega hasta 1000. Esto es util para entornos que no tengan definido un
-# # máximo de épocas.
+# # En este caso no se utiliza el parámetro max_step_epi=500 por lo que el máximo de iteraciones será el que viene por
+# # defecto (1000).
+# # el parametro save_live_histogram permite ver en tiempo real un grafico de la recompensa frente a los peisodios,
+# # numero de épocas por episodio frente a iteraciones, valor de epsilon y en caso de realizar Imitatio Learning la
+# # pérdida del discriminador.
+# problem_cont.solve(250, render=False, max_step_epi=500, skip_states=1, save_live_histogram='expert_demonstrations/hist.txt')
+# problem_cont.test(render=True, n_iter=10)
 #
-# # problem_disc.load('/home/serch/TFM/IRL3/tutorials/tmp/', 'a3c-479')
-# problem_disc.solve(10000, render=False, skip_states=1)
-
-# problem_disc.test(render=True, n_iter=10)
+# # hist = problem_cont.get_histogram_metrics()
+# # history_utils.plot_reward_hist(hist, 10)
 #
-# hist = problem_disc.get_historic_reward()
-# history_utils.plot_reward_hist(hist, 10)
-#
-# agent_saver.save(agent_disc, 'agent_a3c.json')
-
-
-
-agent_cont = a3c_agent_continuous.Agent(actor_lr=1e-4,
-                                        critic_lr=1e-3,
-                                        batch_size=64,
-                                        n_step_return=16,
-                                        net_architecture=net_architecture,
-                                        n_stack=4)
-
-# agent_cont = agent_saver.load('agent_a3c.json')
-# # Descomentar para ejecutar el ejemplo continuo
-problem_cont = rl_problem.Problem(environment_cont, agent_cont)
-
-# En este caso no se utiliza el parámetro max_step_epi=500 por lo que el máximo de iteraciones será el que viene por
-# defecto (1000).
-# el parametro save_live_histogram permite ver en tiempo real un grafico de la recompensa frente a los peisodios,
-# numero de épocas por episodio frente a iteraciones, valor de epsilon y en caso de realizar Imitatio Learning la
-# pérdida del discriminador.
-problem_cont.solve(250, render=False, max_step_epi=500, skip_states=1, save_live_histogram='expert_demonstrations/hist.txt')
-problem_cont.test(render=True, n_iter=10)
-
-# hist = problem_cont.get_histogram_metrics()
-# history_utils.plot_reward_hist(hist, 10)
-
-agent_saver.save(agent_cont, 'agent_a3c.json')
+# agent_saver.save(agent_cont, 'agent_a3c.json')
 
 

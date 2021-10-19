@@ -11,6 +11,9 @@ from tensorflow.keras.models import model_from_json
 from tensorflow.keras.optimizers import Adam
 from RL_Agent.base.agent_base import AgentSuper
 from tensorflow.keras.optimizers import Adam
+from RL_Agent.base.utils.networks.networks_interface import RLNetModel as RLNetModelTF
+from RL_Agent.base.utils.networks import action_selection_options
+
 
 class DQNAgentSuper(AgentSuper):
     """
@@ -19,11 +22,17 @@ class DQNAgentSuper(AgentSuper):
     """
     def __init__(self, learning_rate=None, batch_size=None, epsilon=None, epsilon_decay=None, epsilon_min=None,
                  gamma=None, n_stack=None, img_input=None, state_size=None, memory_size=False, train_steps=None,
-                 net_architecture=None):
+                 tensorboard_dir=None, net_architecture=None,
+                 train_action_selection_options=action_selection_options.greedy_action,
+                 action_selection_options=action_selection_options.argmax
+                 ):
         super().__init__(learning_rate=learning_rate, batch_size=batch_size, epsilon=epsilon,
                          epsilon_decay=epsilon_decay, epsilon_min=epsilon_min, gamma=gamma, memory_size=memory_size,
                          train_steps=train_steps, n_stack=n_stack, img_input=img_input, state_size=state_size,
-                         net_architecture=net_architecture)
+                         tensorboard_dir=tensorboard_dir, net_architecture=net_architecture,
+                         train_action_selection_options=train_action_selection_options,
+                         action_selection_options=action_selection_options
+                         )
 
     def build_agent(self, n_actions, state_size, stack):
         """ Attributes:
@@ -31,7 +40,9 @@ class DQNAgentSuper(AgentSuper):
                 state_size:         Int or Tuple. State dimensions.
                 batch_size:         Int. Batch size for training.
                 epsilon_min:        Min value epsilon can take.
-                epsilon_decay:      Decay rate for epsilon.
+                :param epsilon_decay: (float or func) exploration-exploitation rate reduction. If float it reduce epsilon by
+            multiplication (new epsilon = epsilon * epsilon_decay). If func it receives (epsilon, epsilon_min) as
+            arguments and it is applied to return the new epsilon value.
                 learning_rate:      Learning rate for training.
                 gamma:              Discount factor for target value.
                 epsilon:            Initial value for epsilon.
@@ -41,30 +52,19 @@ class DQNAgentSuper(AgentSuper):
         """
         super().build_agent(state_size=state_size, n_actions=n_actions, stack=stack)
 
-        # if self.model_params is not None:
-        #     batch_size, epsilon, epsilon_min, epsilon_decay, learning_rate, _ = \
-        #         parse_model_params(self.model_params)
-
-        # self.batch_size = batch_size
-        # self.epsilon_min = epsilon_min
-        # self.epsilon_decay = epsilon_decay
-        # self.learning_rate = learning_rate
         self.model = self._build_model(self.net_architecture)
-        self.target_model = self._build_model(self.net_architecture)
         self.model.summary()
 
         self.memory = Memory(maxlen=self.memory_size)
         self.optimizer = Adam
 
-        # self.gamma = gamma  # discount rate
-        # self.epsilon = epsilon  # exploration rate
         self.epsilon_max = self.epsilon
         self.lr_reducer = lr_reducer()
 
     def compile(self):
-        super().compile()
-        self.model.compile(loss='mse', optimizer=self.optimizer(lr=self.learning_rate))
-
+        # super().compile()
+        # self.model.compile(loss='mse', optimizer=self.optimizer(lr=self.learning_rate))
+        pass
     def _build_model(self, net_achitecture):
         """ Build the neural network"""
         pass
@@ -86,67 +86,24 @@ class DQNAgentSuper(AgentSuper):
         Selecting the action using epsilon greedy policy
         :param obs: Observation (State)
         """
-        # Exploration
-        if np.random.rand() <= self.epsilon:
-            return random.randrange(self.n_actions)
-
-        # Exploitation
-        # if self.img_input:
-        #     if self.stack:
-        #         # obs = obs.reshape(-1, *self.state_size)
-        #
-        #         # TODO: chaquear como gacer Temporal channel first y multiple color channel last
-        #
-        #         # obs = np.squeeze(obs, axis=3)
-        #
-        #         # TODO: Descomentar para depurar visualmente
-        #         # import matplotlib.pylab as plt
-        #         # plt.figure(1)
-        #         # plt.subplot(221)
-        #         # plt.imshow(obs[0])
-        #         # plt.subplot(222)
-        #         # plt.imshow(obs[1])
-        #         # plt.subplot(223)
-        #         # plt.imshow(obs[2])
-        #         # plt.subplot(224)
-        #         # plt.imshow(obs[3])
-        #
-        #         # obs = obs.transpose(1, 2, 0)
-        #         obs = np.dstack(obs)
-        #     # TODO: Descomentar para depurar visualmente
-        #     # plt.figure(2)
-        #     # plt.imshow(np.mean(obs, axis=2))
-        #     # plt.show()
-        #
-        #     obs = np.array([obs])
-        # elif self.stack:
-        #     # obs = obs.reshape(-1, *self.state_size)
-        #     obs = np.array([obs])
-        # else:
-        #     obs = obs.reshape(-1, self.state_size)
         obs = self._format_obs_act(obs)
-        act_values = self.model.predict(obs)
-        return np.argmax(act_values[0])  # returns action
+        act_pred = self.model.predict(obs)
+
+        action = self.train_action_selection_options(act_pred, self.n_actions, epsilon=self.epsilon, n_env=1)
+        action = action[0]
+
+        return action
 
     def act(self, obs):
         """
         Selecting the action for test mode.
         :param obs: Observation (State)
         """
-        # if self.img_input:
-        #     if self.stack:
-        #         # obs = np.squeeze(obs, axis=3)
-        #         # obs = obs.transpose(1, 2, 0)
-        #         obs = np.dstack(obs)
-        #     obs = np.array([obs])
-        #
-        # elif self.stack:
-        #     obs = np.array([obs])
-        # else:
-        #     obs = obs.reshape(-1, self.state_size)
         obs = self._format_obs_act(obs)
-        act_values = self.model.predict(obs)
-        return np.argmax(act_values[0])  # returns action
+        act_pred = self.model.predict(obs)
+        action = self.action_selection_options(act_pred, self.n_actions, epsilon=self.epsilon, n_env=1)
+        action = action[0]
+        return action
 
     def load_memories(self):
         """
@@ -173,25 +130,12 @@ class DQNAgentSuper(AgentSuper):
         if self.memory.len() > self.batch_size:
             obs, action, reward, next_obs, done, tree_idx, is_weights_mb = self.load_memories()
 
-            target_f_aux = self.model.predict(obs)
-            target = self._calc_target(done, reward, next_obs)
-
             if self.memory.memory_type == "queue":
-                for i in range(target.shape[0]):
-                    target_f_aux[i][action[i]] = target[i]
-                self.model.fit(obs, target_f_aux, epochs=self.train_epochs, verbose=0, callbacks=[self.lr_reducer])
 
-            # elif self.memory.memory_type == "per":
-            #     aux_pred = copy.copy(target_f_aux)
-            #     aux_pred = copy.copy(target_f_aux)
-            #     abs_error = []
-            #     for i in range(target.shape[0]):
-            #         target_f_aux[i][action[i]] = target[i]
-            #         abs_error.append(np.abs(aux_pred[i][action[i]] - target[i]))
-            #
-            #     self.memory.batch_update(tree_idx, np.array(abs_error))
-            #     self.model.fit(obs, target_f_aux, epochs=1, verbose=0, sample_weight=is_weights_mb)
-            #
+                self.model.fit(obs, next_obs, action, reward, done,
+                               epochs=self.train_epochs, batch_size=self.batch_size, verbose=0, validation_split=0.,
+                               shuffle=True, callbacks=[self.lr_reducer], kargs=[self.gamma])
+
             self._reduce_epsilon()
 
     def _calc_target(self, done, reward, next_obs):
@@ -226,11 +170,14 @@ class DQNAgentSuper(AgentSuper):
         print("Saved model to disk")
 
     def copy_model_to_target(self):
-        self.target_model.set_weights(self.model.get_weights())
+        self.model.copy_model_to_target()
 
     def _reduce_epsilon(self):
-        if self.epsilon > self.epsilon_min:
-            self.epsilon *= self.epsilon_decay
+        if isinstance(self.epsilon_decay, float):
+            if self.epsilon > self.epsilon_min:
+                self.epsilon *= self.epsilon_decay
+        else:
+            self.epsilon = self.epsilon_decay(self.epsilon, self.epsilon_min)
 
     def set_memory(self, memory, size):
         self.memory_size = size

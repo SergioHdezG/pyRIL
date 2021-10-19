@@ -52,7 +52,6 @@ class PPOProblemParallelBase(PPOProblemBase):
         self.actions_batch = []
         self.actions_probs_batch = []
         self.rewards_batch = []
-        self.values_batch = []
         self.masks_batch = []
         # Stacking inputs
         if self.n_stack is not None and self.n_stack > 1:
@@ -79,8 +78,11 @@ class PPOProblemParallelBase(PPOProblemBase):
             for i in range(self.n_stack):
                 zero_obs = np.zeros(obs[0].shape)
                 for o, queue, next_queue in zip(obs, obs_queue, obs_next_queue):
-                    [queue.append(zero_obs) for i in range(self.n_stack)]
-                    [next_queue.append(zero_obs) for i in range(self.n_stack)]
+                    # [queue.append(zero_obs) for i in range(self.n_stack)]
+                    # [next_queue.append(zero_obs) for i in range(self.n_stack)]
+                    [queue.append(o) for i in range(self.n_stack)]
+                    [next_queue.append(o) for i in range(self.n_stack)]
+
                 for o, queue, next_queue in zip(obs, obs_queue, obs_next_queue):
                     queue.append(o)
                     next_queue.append(o)
@@ -90,7 +92,14 @@ class PPOProblemParallelBase(PPOProblemBase):
                 self.env.render()
 
             # Select an action
-            action, action_matrix, predicted_action, value = self.act_train(obs, obs_queue)
+            action, action_matrix, predicted_action = self.act_train(obs, obs_queue)
+
+            try:
+                if hasattr(self.env_test.action_space, 'low') and hasattr(self.env_test.action_space, 'high'):
+                    action = np.clip(action, self.env_test.action_space.low, self.env_test.action_space.high)
+                    action_matrix = np.clip(action_matrix, self.env_test.action_space.low, self.env_test.action_space.high)
+            except:
+                print('Exception applying boundaries to the actions. ppo_problem_parallel_base.py, line 99.')
 
             # Agent act in the environment
             next_obs, reward, done, info = self.env.step(action)
@@ -111,8 +120,7 @@ class PPOProblemParallelBase(PPOProblemBase):
                                                                                                 skip_states,
                                                                                                 epochs,
                                                                                                 predicted_action,
-                                                                                                action_matrix,
-                                                                                                value)
+                                                                                                action_matrix)
 
             # copy next_obs to obs
             obs, obs_queue = self.copy_next_obs(next_obs, obs, obs_next_queue, obs_queue)
@@ -186,11 +194,10 @@ class PPOProblemParallelBase(PPOProblemBase):
                 else:
                     raise Exception('Type of parameter save_live_histories must be string but ' +
                                     str(type(save_live_histories)) + ' has been received')
-        self.agent.remember(self.obs_batch, self.actions_batch, self.actions_probs_batch, self.rewards_batch,
-                            self.values_batch, self.masks_batch)
+        self.agent.remember(self.obs_batch, self.actions_batch, self.actions_probs_batch, self.rewards_batch, self.masks_batch)
 
     def store_episode_experience(self, action, done, next_obs, obs, obs_next_queue, obs_queue, reward, skip_states, epochs,
-                                predicted_action, action_matrix, value):
+                                predicted_action, action_matrix):
 
         done, next_obs, reward, epochs = self.frame_skipping(action, done, next_obs, reward, skip_states, epochs)
 
@@ -213,7 +220,6 @@ class PPOProblemParallelBase(PPOProblemBase):
         self.actions_batch.append(action_matrix)
         self.actions_probs_batch.append(predicted_action)
         self.rewards_batch.append(reward)
-        self.values_batch.append(value)
         self.masks_batch.append(mask)
 
         return next_obs, obs_next_queue, reward, done, epochs, mask

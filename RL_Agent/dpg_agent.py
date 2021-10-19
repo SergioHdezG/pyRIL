@@ -3,7 +3,7 @@ import os
 import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 from RL_Problem.base.rl_problem_base import *
-from RL_Agent.base.utils.default_networks import dpg_net
+from RL_Agent.base.utils.networks.default_networks import dpg_net
 from RL_Agent.base.agent_base import AgentSuper
 from RL_Agent.base.utils import agent_globals, net_building
 
@@ -173,10 +173,10 @@ class Agent(AgentSuper):
         # self.outputs_softmax = tf.keras.activations.softmax(logits)
 
         # next we define our loss function as cross entropy loss
-        neg_log_prob = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=labels)
+        self.neg_log_prob = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=labels)
 
         # reward guided loss
-        self.loss = tf.reduce_mean(neg_log_prob * self.discounted_episode_rewards_norm)
+        self.loss = tf.reduce_mean(self.neg_log_prob * self.discounted_episode_rewards_norm)
 
         # we use adam optimizer for minimizing the loss
         self.train_op = self.optimizer(self.graph_learning_rate).minimize(self.loss)
@@ -231,6 +231,7 @@ class Agent(AgentSuper):
 
             for i in range(self.train_epochs):
                 self.sess.run(self.train_op, feed_dict=dict)
+                loss, probs = self.sess.run([self.loss, self.neg_log_prob], feed_dict=dict)
 
             self.done = False
             return discounted_episode_rewards_norm

@@ -600,8 +600,11 @@ class Worker(object):
         return obs, obs_queue
 
     def _reduce_epsilon(self):
-        if self.epsilon > self.epsilon_min:
-            self.epsilon *= self.epsilon_decay
+        if isinstance(self.epsilon_decay, float):
+            if self.epsilon > self.epsilon_min:
+                self.epsilon *= self.epsilon_decay
+        else:
+            self.epsilon = self.epsilon_decay(self.epsilon, self.epsilon_min)
 
     def load(self, dir, name):
         self.worker._load(dir)

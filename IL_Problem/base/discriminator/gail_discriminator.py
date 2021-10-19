@@ -4,7 +4,7 @@ tf.disable_v2_behavior()
 from tensorflow.keras.layers import Dense, Concatenate
 from IL_Problem.base.discriminator.discriminator_base import DiscriminatorBase
 from IL_Problem.base.utils import discriminator_nn_building
-from RL_Agent.base.utils.default_networks import irl_net
+from RL_Agent.base.utils.networks.default_networks import irl_net
 import numpy as np
 
 

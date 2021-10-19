@@ -1,7 +1,6 @@
 import numpy as np
 from abc import ABCMeta, abstractmethod
 
-
 class AgentInterface(object, metaclass=ABCMeta):
     """
     This class is an interface for building reinforcement learning agents. Here are the definitions of the methods that
@@ -17,7 +16,7 @@ class AgentInterface(object, metaclass=ABCMeta):
     @abstractmethod
     def build_agent(self):
         """
-        Define the agent params, structure, architecture, neural nets ...
+        Define the agent params, structure, architecture, neural nets and agent_builded flag ...
         """
         pass
 
@@ -96,7 +95,8 @@ class AgentSuper(AgentInterface):
                  epsilon_decay=None, epsilon_min=None, gamma=None, tau=None, n_step_return=None, memory_size=None,
                  loss_clipping=None, loss_critic_discount=None, loss_entropy_beta=None, lmbda=None, train_steps=None,
                  exploration_noise=None, n_stack=None, img_input=None, state_size=None, n_parallel_envs=None,
-                 net_architecture=None):
+                 tensorboard_dir=None, net_architecture=None, train_action_selection_options=None,
+                 action_selection_options=None, loads_saved_params=None):
         """
         Abstract agent class for defining the principal attributes of an rl agent.
         :param learning_rate: (float) learning rate for training the agent NN. Not used if actor_lr or critic_lr are 
@@ -106,8 +106,9 @@ class AgentSuper(AgentInterface):
         :param batch_size: (int) batch size for training procedure.
         :param epsilon: (float) exploration-exploitation rate during training. epsilon=1.0 -> Exploration,
             epsilon=0.0 -> Exploitation.
-        :param epsilon_decay: (float) exploration-exploitation rate reduction factor. Reduce epsilon by multiplication
-            (new epsilon = epsilon*epsilon_decay)
+        :param epsilon_decay: (float or func) exploration-exploitation rate reduction. If float it reduce epsilon by
+            multiplication (new epsilon = epsilon * epsilon_decay). If func it receives (epsilon, epsilon_min) as
+            arguments and it is applied to return the new epsilon value.
         :param epsilon_min: (float) min exploration-exploitation rate allowed during training.
         :param gamma: (float) Discount or confidence factor for target value estimation.
         :param tau: (float) Transference factor between main and target discriminator.
@@ -128,6 +129,9 @@ class AgentSuper(AgentInterface):
             kernels are selected.
         :param net_architecture: (dict) Define the net architecture. Is recommended use dicts from
             RL_Agent.base.utils.networks
+        :param loads_saved_params: (bool) If True when loading from a checkpoint all the agent parameters will be loaded
+                                    in the state they was saved. If False the new specified parameters are maintained
+                                    when a saved agent is loaded.
         """
         super().__init__()
 
@@ -166,7 +170,16 @@ class AgentSuper(AgentInterface):
         self.save_if_better = True
 
         self.optimizer = None
+
+        self.tensorboard_dir=tensorboard_dir
         self.agent_builded = False
+        self.loads_saved_params = loads_saved_params
+
+        self.train_action_selection_options = train_action_selection_options
+        self.action_selection_options = action_selection_options
+
+        self.model = None   # Neural network model. The model should inherits from
+                            # RL_Agent.base.utils.networks.networks_interface.RLNetModel
 
     def build_agent(self, state_size, n_actions, stack):
         """
