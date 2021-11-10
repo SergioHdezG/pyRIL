@@ -87,7 +87,7 @@ class A2CQueueSuper(A2CSuper):
         if self.memory.len() >= self.batch_size:
             obs, next_obs, action, reward, done, returns = self.load_main_memories()
 
-            actor_loss, critic_loss = self.actor.fit(np.float32(obs),
+            actor_loss, critic_loss = self.model.fit(np.float32(obs),
                                                      np.float32(next_obs),
                                                      np.float32(action),
                                                      np.float32(reward),

@@ -4,8 +4,10 @@ import os
 import tensorflow as tf
 import numpy as np
 from abc import ABCMeta, abstractmethod
+from RL_Agent.base.utils.networks import tensor_board_loss_functions
 
-class RLNetModel(object, metaclass=ABCMeta):
+
+class RLNetInterfaz(object, metaclass=ABCMeta):
     """
     A class for defining your own computation graph without worrying about the reinforcement learning procedure. Her
     e you are able to completely configure your neural network, optimizer, loss function, metrics and almost do anything
@@ -125,10 +127,47 @@ class RLNetModel(object, metaclass=ABCMeta):
     #     :param path: (str) path to load from the neural network
     #     """
 
+class RLNetModel(RLNetInterfaz):
+    """
+    A class for defining your own computation graph without worrying about the reinforcement learning procedure. Her
+    e you are able to completely configure your neural network, optimizer, loss function, metrics and almost do anything
+    else tensorflow allows. You can even use tensorboard to monitor the behaviour of the computation graph further than
+    the metrics recorded by this library.
+    """
+
+    def __init__(self, tensorboard_dir):
+        super().__init__()
+        self.optimizer = None   # Optimization algorithm form tensorflow or keras
+        self.loss_func = None
+        self.metrics = None
+        self._tensorboard_util(tensorboard_dir)
+        self.loss_sumaries = tensor_board_loss_functions.loss_sumaries
+        self.rl_sumaries = tensor_board_loss_functions.rl_sumaries
+
+    def _tensorboard_util(self, tensorboard_dir):
+        if tensorboard_dir is not None:
+            current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+            self.train_log_dir = os.path.join(tensorboard_dir, 'gradient_tape/' + current_time + '/train')
+            self.train_summary_writer = tf.summary.create_file_writer(self.train_log_dir)
+        else:
+            self.train_log_dir = None
+            self.train_summary_writer = None
+
+    def process_globals(self, custom_globals):
+        globs = globals()
+        for key in globs:
+            for cust_key in custom_globals:
+                if key == cust_key:
+                    custom_globals[cust_key] = globs[key]
+                    break
+        return custom_globals
+
 class TrainingHistory():
     def __init__(self):
         self.history = {'loss': [],
-                        'val_loss': []}
+                        'acc': [],
+                        'val_loss': [],
+                        'val_acc': []}
 
 class RLSequentialModel(object):
     """

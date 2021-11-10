@@ -11,6 +11,7 @@ from RL_Agent.base.utils.networks import networks, losses, returns_calculations,
 from tutorials.transformers_models import *
 from RL_Agent.base.utils.networks.networks_interface import RLNetModel
 from RL_Agent.base.utils.networks.agent_networks import PPONet
+from RL_Agent.base.utils import agent_saver, history_utils
 
 environment_disc = "LunarLander-v2"
 environment_disc = gym.make(environment_disc)
@@ -213,8 +214,8 @@ def actor_custom_model_tf(input_shape):
 
 def actor_custom_model(input_shape):
 
-    lstm = LSTM(64, activation='tanh')
-    dense_1 = Dense(256, input_shape=input_shape, activation='relu')
+    lstm = LSTM(32, activation='tanh')
+    dense_1 = Dense(128, input_shape=input_shape, activation='relu')
     dense_2 = Dense(128, activation='relu')
     output = Dense(4, activation='softmax')
     def model():
@@ -229,8 +230,8 @@ def actor_custom_model(input_shape):
 
 def critic_custom_model(input_shape):
 
-    lstm = LSTM(64, activation='tanh')
-    dense_1 = Dense(256, input_shape=input_shape, activation='relu')
+    lstm = LSTM(32, activation='tanh')
+    dense_1 = Dense(128, input_shape=input_shape, activation='relu')
     dense_2 = Dense(128, activation='relu')
     output = Dense(1, activation='linear')
     def model():
@@ -259,13 +260,13 @@ net_architecture = networks.actor_critic_net_architecture(
 
 agent_cont = ppo_agent_discrete_parallel_tf.Agent(actor_lr=1e-4,
                                                  critic_lr=1e-4,
-                                                 batch_size=256,
+                                                 batch_size=128,
                                                  memory_size=1000,
                                                  epsilon=1.0,
-                                                 epsilon_decay=0.9,
+                                                 epsilon_decay=0.95,
                                                  epsilon_min=0.15,
                                                  net_architecture=net_architecture,
-                                                 n_stack=4,
+                                                 n_stack=3,
                                                  img_input=False,
                                                  state_size=None,
                                                  loss_critic_discount=0.001,
@@ -274,15 +275,19 @@ agent_cont = ppo_agent_discrete_parallel_tf.Agent(actor_lr=1e-4,
                                                   tensorboard_dir='/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/tf_tutorials/tensorboard_logs/')
 
 # Descomentar para ejecutar el ejemplo continuo
-# agent_cont = agent_saver.load('agent_ppo.json')
+# agent_cont = agent_saver.load('agent_discrete_ppo', agent=ppo_agent_discrete_parallel_tf.Agent(), overwrite_attrib=False)
+agent_cont = agent_saver.load('agent_discrete_ppo', agent=agent_cont, overwrite_attrib=True)
+
 problem_cont = rl_problem.Problem(environment_disc, agent_cont)
+
+# agent_cont = agent_saver.load('agent_discrete_ppo', agent=problem_cont.agent, overwrite_attrib=True)
 
 # agent_cont.actor.extract_variable_summaries = extract_variable_summaries
 
-problem_cont.solve(2000, render=False, max_step_epi=512, render_after=2090, skip_states=1)
+problem_cont.solve(10, render=False, max_step_epi=512, render_after=2090, skip_states=1)
 problem_cont.test(render=True, n_iter=10)
 #
-# hist = problem_cont.get_histogram_metrics()
-# history_utils.plot_reward_hist(hist, 10)
+hist = problem_cont.get_histogram_metrics()
+history_utils.plot_reward_hist(hist, 10)
 #
-# agent_saver.save(agent_cont, 'agent_ppo.json')
+agent_saver.save(agent_cont, 'agent_discrete_ppo')

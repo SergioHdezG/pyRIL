@@ -18,6 +18,8 @@ import gym
 from RL_Agent.base.utils.networks import networks
 from RL_Agent.base.utils.networks.networks_interface import RLNetModel, TrainingHistory
 import tensorflow as tf
+from RL_Agent.base.utils import agent_saver
+
 
 environment = "LunarLander-v2"
 environment = gym.make(environment)
@@ -233,9 +235,15 @@ agent = dpg_agent_tf.Agent(learning_rate=1e-3,
                             net_architecture=net_architecture,
                            tensorboard_dir='/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/tf_tutorials/tensorboard_logs/')
 
+# agent = agent_saver.load('agent_dpg', agent=dpg_agent_tf.Agent())
+# agent = agent_saver.load('agent_dpg', agent=agent, overwrite_attrib=True)
+
 problem = rl_problem.Problem(environment, agent)
 
-problem.solve(500, render=False, render_after=190, skip_states=3)
-problem.test(render=True, n_iter=10)
+# agent = agent_saver.load('agent_dpg', agent=problem.agent, overwrite_attrib=True)
 
-# agent_saver.save(agent_cont, 'agent_ppo.json')
+
+problem.solve(10, render=False, render_after=190, skip_states=3)
+problem.test(render=True, n_iter=5)
+
+agent_saver.save(agent, 'agent_dpg')

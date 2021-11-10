@@ -1,3 +1,4 @@
+import datetime
 import os
 
 import numpy as np
@@ -79,7 +80,7 @@ class Agent(AgentSuper):
         # self.learning_counter = 0
         self.memory = Memory(maxlen=self.memory_size)
 
-        self.actor = self._build_actor_net(net_architecture=self.net_architecture)
+        self.model = self._build_actor_net(net_architecture=self.net_architecture)
         # self.actor_target = self._build_actor_net(net_architecture=self.net_architecture)
         #
         # self.critic = self._build_critic_net(net_architecture=self.net_architecture, actor_net=self.actor)
@@ -157,12 +158,12 @@ class Agent(AgentSuper):
                     critic_model.output)
                 critic_model = tf.keras.models.Model(inputs=critic_model.input, outputs=critic_out)
 
-            agent_model = DDPGNet(actor_model, critic_model, tensorboard_dir=self.tensorboard_dir)
+            model = DDPGNet(actor_model, critic_model, tensorboard_dir=self.tensorboard_dir)
             optimizer_actor = tf.keras.optimizers.RMSprop(self.actor_lr)
             optimizer_critic = tf.keras.optimizers.RMSprop(self.critic_lr)
-            agent_model.compile(optimizer=[optimizer_actor, optimizer_critic],
+            model.compile(optimizer=[optimizer_actor, optimizer_critic],
                                 loss=[ddpg_actor_loss, ddpg_critic_loss])
-        return agent_model
+        return model
 
     def remember(self, obs, action, reward, next_obs, done):
         """
@@ -182,7 +183,7 @@ class Agent(AgentSuper):
         :return: (int) action selected.
         """
         obs = self._format_obs_act(obs)
-        act_pred = self.actor.predict(obs)
+        act_pred = self.model.predict(obs)
         action = self.train_action_selection_options(act_pred, self.n_actions, epsilon=self.epsilon, n_env=1, exploration_noise=self.exploration_noise)
         action = action[0]
         return np.clip(action, self.action_bound[0], self.action_bound[1])
@@ -194,7 +195,7 @@ class Agent(AgentSuper):
         :return: (int) action selected.
         """
         obs = self._format_obs_act(obs)
-        act_pred = self.actor.predict(obs)
+        act_pred = self.model.predict(obs)
         action = self.action_selection_options(act_pred, self.n_actions, epsilon=self.epsilon, n_env=1)
         action = action[0]
         return action
@@ -225,7 +226,7 @@ class Agent(AgentSuper):
             obs, action, rewards, next_obs = self.load_memories()
 
             # TODO: Aqui tienen que entrar las variables correspondientes, de momento entran las que hay disponibles.
-            actor_loss = self.actor.fit(np.float32(obs),
+            actor_loss = self.model.fit(np.float32(obs),
                                         np.float32(next_obs),
                                         np.float32(action),
                                         np.float32(rewards),
@@ -264,12 +265,73 @@ class Agent(AgentSuper):
             self.epsilon = self.epsilon_decay(self.epsilon, self.epsilon_min)
             # self.action_sigma *= self.action_noise_decay
 
-    def _load(self, path):
+    def _load(self, path, checkpoint=False):
+        """
+        Loads the neural networks of the agent.
+        :param path: (str) path to folder to load the network
+        :param checkpoint: (bool) If True the network is loaded as Tensorflow checkpoint, otherwise the network is
+                                   loaded in protobuffer format.
+        """
+        self.model.restore(path)
+        # if checkpoint:
+        #     # Load a checkpoint
+        #     actor_chkpoint = tf.train.Checkpoint(model=self.model.actor_net)
+        #     actor_manager = tf.train.CheckpointManager(actor_chkpoint,
+        #                                                os.path.join(path, 'actor', 'checkpoint'),
+        #                                                checkpoint_name='actor',
+        #                                                max_to_keep=3)
+        #     actor_chkpoint.restore(actor_manager.latest_checkpoint)
+        #
+        #     critic_chkpoint = tf.train.Checkpoint(model=self.model.critic_net)
+        #     critic_manager = tf.train.CheckpointManager(critic_chkpoint,
+        #                                                os.path.join(path, 'critic', 'checkpoint'),
+        #                                                checkpoint_name='critic',
+        #                                                max_to_keep=3)
+        #     critic_chkpoint.restore(critic_manager.latest_checkpoint)
+        # else:
+        #     # Load a protobuffer
+        #     self.model.actor_net = tf.saved_model.load(os.path.join(path, 'actor'))
+        #     self.model.critic_net = tf.saved_model.load(os.path.join(path, 'critic'))
+        print("Loaded model from disk")
+
+    def _load_legacy(self, path):
         # name = path.join(path, name)
         loaded_model = tf.train.import_meta_graph(path + '.meta')
         loaded_model.restore(self.sess, tf.train.latest_checkpoint(os.path.dirname(path) + "/./"))
 
     def _save_network(self, path):
+        """
+        Saves the neural networks of the agent.
+        :param path: (str) path to folder to store the network
+        :param checkpoint: (bool) If True the network is stored as Tensorflow checkpoint, otherwise the network is
+                                    stored in protobuffer format.
+        """
+        # if checkpoint:
+        #     # Save a checkpoint
+        #     actor_chkpoint = tf.train.Checkpoint(model=self.model.actor_net)
+        #     actor_manager = tf.train.CheckpointManager(actor_chkpoint,
+        #                                                os.path.join(path, 'actor', 'checkpoint'),
+        #                                                checkpoint_name='actor',
+        #                                                max_to_keep=3)
+        #     save_path = actor_manager.save()
+        #
+        #     critic_chkpoint = tf.train.Checkpoint(model=self.model.critic_net)
+        #     critic_manager = tf.train.CheckpointManager(critic_chkpoint,
+        #                                                os.path.join(path, 'critic', 'checkpoint'),
+        #                                                checkpoint_name='critic',
+        #                                                max_to_keep=3)
+        #     critic_manager.save()
+        # else:
+        # Save a protobuffer
+
+        self.model.save(path)
+        # tf.saved_model.save(self.model.actor_net, os.path.join(path, 'actor'))
+        # tf.saved_model.save(self.model.critic_net, os.path.join(path, 'critic'))
+
+        print("Saved model to disk")
+        print(datetime.datetime.now())
+
+    def _save_network_legacy(self, path):
         self.saver.save(self.sess, path)
 
     def bc_fit(self, expert_traj, epochs, batch_size, learning_rate=1e-3, shuffle=False, optimizer=None, loss='mse',

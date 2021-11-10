@@ -99,6 +99,18 @@ def ppo_loss_discrete(y_true, y_pred, advantage, old_prediction, returns, values
     critic_loss = tf.math.reduce_mean(tf.math.square(returns - values))
     entropy = tf.math.reduce_mean(-(new_prob * tf.math.log(new_prob + 1e-10)))
 
+    # y_p = y_pred.numpy()
+    # y_t = y_true.numpy()
+    # n_p = new_prob.numpy()
+    # o_p = old_prob.numpy()
+    # r = ratio.numpy()
+    # p1_ = p1.numpy()
+    # p2_ = p2.numpy()
+    # a_l = actor_loss.numpy()
+    # c_l = critic_loss.numpy()
+    # e = entropy.numpy()
+    # o = old_prediction.numpy()
+
     return - actor_loss + critic_discount * critic_loss - entropy_beta * entropy, [actor_loss, critic_loss, entropy]
 
 

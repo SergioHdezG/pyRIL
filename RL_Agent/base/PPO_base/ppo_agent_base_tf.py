@@ -87,14 +87,23 @@ class PPOSuper(AgentSuper):
 
         if self.img_input:
                 # TODO: Probar img en color en pc despacho, en personal excede la memoria
-                obs = np.transpose(obs, axes=(1, 0, 2, 3, 4))
+                if len(np.array(obs).shape) > 4:
+                    obs = np.transpose(obs, axes=(1, 0, 2, 3, 4))
+                else:
+                    obs = np.transpose(obs, axes=(1, 0, 2, 3))
         elif self.stack:
             obs = np.transpose(obs, axes=(1, 0, 2, 3))
         else:
             obs = np.transpose(obs, axes=(1, 0, 2))
 
-        action = np.transpose(action, axes=(1, 0, 2))
-        pred_act = np.transpose(pred_act, axes=(1, 0, 2))
+        if len(np.array(pred_act).shape) > 3:
+            action = np.transpose(action, axes=(1, 0, 2, 3))
+        else:
+            action = np.transpose(action, axes=(1, 0, 2))
+        if len(np.array(pred_act).shape) > 3:
+            pred_act = np.transpose(pred_act, axes=(1, 0, 2, 3))
+        else:
+            pred_act = np.transpose(pred_act, axes=(1, 0, 2))
         rewards = np.transpose(rewards, axes=(1, 0))
         mask = np.transpose(mask, axes=(1, 0))
 

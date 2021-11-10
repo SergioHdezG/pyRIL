@@ -9,7 +9,8 @@ from RL_Agent import ppo_agent_discrete_parallel_tf, ppo_agent_continuous_parall
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, Flatten
 import gym
-from RL_Agent.base.utils import agent_saver, history_utils, networks
+from RL_Agent.base.utils import agent_saver, history_utils
+from RL_Agent.base.utils.networks import networks
 import numpy as np
 from tutorials.transformers_models import *
 from environments import optimizing, optimizing_2

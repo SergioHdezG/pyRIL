@@ -76,8 +76,8 @@ class Agent(PPOSuper):
         self.model = self._build_model(self.net_architecture, last_activation='softmax')
         self.remember = self.remember_parallel
 
-
     def act_train(self, obs):
+        # TODO: exportar a otros algoritmos la ejecución cuando se usan seq2seq
         """
         Select an action given an observation in exploration mode.
         :param obs: (numpy nd array) observation (state).
@@ -94,9 +94,15 @@ class Agent(PPOSuper):
         #     action = np.argmax(p, axis=-1)
         action = self.train_action_selection_options(act_pred, self.n_actions, epsilon=self.epsilon, n_env=self.n_parallel_envs)
 
-        action_matrix = [np.zeros(self.n_actions) for i in range(self.n_parallel_envs)]
-        for i in range(self.n_parallel_envs):
-            action_matrix[i][action[i]] = 1
+        # action_matrix = [np.zeros(self.n_actions) for i in range(self.n_parallel_envs)]
+        action_matrix = np.zeros(act_pred.shape)
+        if len(action_matrix.shape) > 2:
+            for i in range(self.n_parallel_envs):
+                for j in range(action_matrix.shape[1]):
+                    action_matrix[i, j][action[i, j]] = 1
+        else:
+            for i in range(self.n_parallel_envs):
+                action_matrix[i][action[i]] = 1
         return action, action_matrix, act_pred
 
     def act(self, obs):

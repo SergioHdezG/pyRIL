@@ -204,12 +204,73 @@ class Agent(AgentSuper):
             self.done = False
         return loss
 
-    def _load(self, path):
+    def _load(self, path, checkpoint=False):
+        """
+        Loads the neural networks of the agent.
+        :param path: (str) path to folder to load the network
+        :param checkpoint: (bool) If True the network is loaded as Tensorflow checkpoint, otherwise the network is
+                                   loaded in protobuffer format.
+        """
+        self.model.restore(path)
+        # if checkpoint:
+        #     # Load a checkpoint
+        #     actor_chkpoint = tf.train.Checkpoint(model=self.model.actor_net)
+        #     actor_manager = tf.train.CheckpointManager(actor_chkpoint,
+        #                                                os.path.join(path, 'actor', 'checkpoint'),
+        #                                                checkpoint_name='actor',
+        #                                                max_to_keep=3)
+        #     actor_chkpoint.restore(actor_manager.latest_checkpoint)
+        #
+        #     critic_chkpoint = tf.train.Checkpoint(model=self.model.critic_net)
+        #     critic_manager = tf.train.CheckpointManager(critic_chkpoint,
+        #                                                os.path.join(path, 'critic', 'checkpoint'),
+        #                                                checkpoint_name='critic',
+        #                                                max_to_keep=3)
+        #     critic_chkpoint.restore(critic_manager.latest_checkpoint)
+        # else:
+        #     # Load a protobuffer
+        #     self.model.actor_net = tf.saved_model.load(os.path.join(path, 'actor'))
+        #     self.model.critic_net = tf.saved_model.load(os.path.join(path, 'critic'))
+        print("Loaded model from disk")
+
+    def _load_legacy(self, path):
         # name = os.path.join(path, name)
         loaded_model = tf.train.import_meta_graph(path + '.meta')
         loaded_model.restore(self.sess, tf.train.latest_checkpoint(os.path.dirname(path) + "/./"))
 
     def _save_network(self, path):
+        """
+        Saves the neural networks of the agent.
+        :param path: (str) path to folder to store the network
+        :param checkpoint: (bool) If True the network is stored as Tensorflow checkpoint, otherwise the network is
+                                    stored in protobuffer format.
+        """
+        # if checkpoint:
+        #     # Save a checkpoint
+        #     actor_chkpoint = tf.train.Checkpoint(model=self.model.actor_net)
+        #     actor_manager = tf.train.CheckpointManager(actor_chkpoint,
+        #                                                os.path.join(path, 'actor', 'checkpoint'),
+        #                                                checkpoint_name='actor',
+        #                                                max_to_keep=3)
+        #     save_path = actor_manager.save()
+        #
+        #     critic_chkpoint = tf.train.Checkpoint(model=self.model.critic_net)
+        #     critic_manager = tf.train.CheckpointManager(critic_chkpoint,
+        #                                                os.path.join(path, 'critic', 'checkpoint'),
+        #                                                checkpoint_name='critic',
+        #                                                max_to_keep=3)
+        #     critic_manager.save()
+        # else:
+        # Save a protobuffer
+
+        self.model.save(path)
+        # tf.saved_model.save(self.model.actor_net, os.path.join(path, 'actor'))
+        # tf.saved_model.save(self.model.critic_net, os.path.join(path, 'critic'))
+
+        print("Saved model to disk")
+        print(datetime.datetime.now())
+
+    def _save_network_legacy(self, path):
         self.model.save_weights(path + 'actor' + ".h5")
         print("Saved model to disk")
         print(datetime.datetime.now())

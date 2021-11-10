@@ -58,7 +58,7 @@ class Agent(A2CSuper):
 
         super().build_agent(state_size, n_actions, stack=stack, continuous_actions=True)
         self.loss_selected = [losses.a2c_actor_loss, losses.a2c_critic_loss]
-        self.actor = self._build_model(self.net_architecture, last_activation='tanh')
+        self.model = self._build_model(self.net_architecture, last_activation='tanh')
 
     def _build_model(self, net_architecture, last_activation):
         # Neural Net for Actor-Critic Model
@@ -120,7 +120,7 @@ class Agent(A2CSuper):
         :return: ([floats]) numpy array of float of action shape.
         """
         obs = self._format_obs_act(obs)
-        act_pred = self.actor.predict(obs)
+        act_pred = self.model.predict(obs)
         action = self.action_selection_options(act_pred, self.n_actions, epsilon=self.epsilon, n_env=1)
         action = action[0]
         action = np.clip(action, a_min=self.action_bound[0], a_max=self.action_bound[1])
@@ -133,7 +133,7 @@ class Agent(A2CSuper):
         :return: ([floats]) numpy array of float of action shape.
         """
         obs = self._format_obs_act(obs)
-        act_pred = self.actor.predict(obs)
+        act_pred = self.model.predict(obs)
         action = self.action_selection_options(act_pred, self.n_actions, epsilon=self.epsilon, n_env=1)
         action = action[0]
         action = np.clip(action, a_min=self.action_bound[0], a_max=self.action_bound[1])

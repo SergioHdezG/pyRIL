@@ -41,7 +41,7 @@ net_architecture = networks.actor_critic_net_architecture(
                     actor_kernel_strides=[4, 2, 1],                 critic_kernel_strides=[2, 2],
                     actor_conv_activation=['relu', 'relu', 'relu'], critic_conv_activation=['tanh', 'tanh'],
                     actor_dense_layers=2,                           critic_dense_layers=2,
-                    actor_n_neurons=[256, 256],                     critic_n_neurons=[256, 256],
+                    actor_n_neurons=[128, 128],                     critic_n_neurons=[128, 128],
                     actor_dense_activation=['relu', 'relu'],        critic_dense_activation=['relu', 'relu']
                     )
 
@@ -50,20 +50,24 @@ net_architecture = networks.actor_critic_net_architecture(
 # a2c_agent_discrete_queue)  y dos para acciones continuas (a2c_agent_continuous, a2c_agent_continuous_queue). Por
 # otro lado encontramos una versión de cada uno que utiliza una memoria de repetición de experiencias
 # (a2c_agent_discrete_queue, a2c_agent_continuous_queue)
-agent_disc = a2c_agent_discrete_queue_tf.Agent(actor_lr=1e-3,
-                                      critic_lr=1e-3,
+agent_disc = a2c_agent_discrete_queue_tf.Agent(actor_lr=1e-2,
+                                      critic_lr=1e-2,
                                       batch_size=128,
                                       epsilon=0.7,
                                       epsilon_decay=0.9999,
                                       epsilon_min=0.15,
+                                      n_stack=3,
                                       n_step_return=15,
                                       net_architecture=net_architecture,
                                       tensorboard_dir='/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/tf_tutorials/tensorboard_logs/')
 
-#agent_disc = agent_saver.load('agent_a2c.json')
+# agent_disc = agent_saver.load('agent_a2c', agent=a2c_agent_discrete_queue_tf.Agent())
+# agent_disc = agent_saver.load('agent_a2c', agent=agent_disc, overwrite_attrib=True)
 
 # Descomentar para ejecutar el ejemplo discreto
 problem_disc = rl_problem.Problem(environment_disc, agent_disc)
+
+# agent = agent_saver.load('agent_a2c', agent=problem.agent, overwrite_attrib=True)
 
 # Seleccionamos el tamaño de la memoria
 memory_max_len = 10000  # Indicamos la capacidad máxima de la memoria
@@ -72,7 +76,7 @@ memory_max_len = 10000  # Indicamos la capacidad máxima de la memoria
 # En este caso se utiliza el parámetro max_step_epi=500 para indicar que cada episodio termine a las 500 épocas o
 # iteraciones ya que por defecto este entorno llega hasta 1000. Esto es util para entornos que no tengan definido un
 # máximo de épocas.
-problem_disc.solve(1000, render=False, max_step_epi=500, skip_states=1)
+problem_disc.solve(200, render=False, max_step_epi=500, skip_states=1)
 problem_disc.test(render=True, n_iter=10)
 
-agent_saver.save(agent_disc, 'agent_a2c.json')
+agent_saver.save(agent_disc, 'agent_a2c')

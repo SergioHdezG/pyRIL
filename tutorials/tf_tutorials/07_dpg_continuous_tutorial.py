@@ -18,6 +18,7 @@ import gym
 from RL_Agent.base.utils.networks import networks
 from RL_Agent.base.utils.networks.networks_interface import RLNetModel, TrainingHistory
 import tensorflow as tf
+from RL_Agent.base.utils import agent_saver
 
 environment = "LunarLanderContinuous-v2"
 environment = gym.make(environment)
@@ -113,7 +114,7 @@ class ActorNet(RLNetModel):
         else:
             dataset = dataset.batch(batch_size)
 
-        history = TariningHistory()
+        history = TrainingHistory()
 
         start_time = time.time()
 
@@ -227,15 +228,20 @@ net_architecture = networks.dpg_net(dense_layers=2,
 
 
 
-agent = dpg_agent_continuous_tf.Agent(learning_rate=1e-4,
+agent = dpg_agent_continuous_tf.Agent(learning_rate=1e-3,
                             batch_size=64,
-                            n_stack=5,
+                            n_stack=1,
                             net_architecture=net_architecture,
                                       tensorboard_dir='/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/tf_tutorials/tensorboard_logs/')
 
+# agent = agent_saver.load('agent_dpg_cont', agent=dpg_agent_continuous_tf.Agent())
+# agent = agent_saver.load('agent_dpg_cont', agent=agent, overwrite_attrib=True)
+
 problem = rl_problem.Problem(environment, agent)
 
-problem.solve(1000, render=False, render_after=190, skip_states=1)
-problem.test(render=True, n_iter=10)
+# agent = agent_saver.load('agent_dpg_cont', agent=problem.agent, overwrite_attrib=True)
 
-# agent_saver.save(agent_cont, 'agent_ppo.json')
+problem.solve(500, render=False, render_after=490, skip_states=1)
+problem.test(render=True, n_iter=5)
+
+agent_saver.save(agent, 'agent_dpg_cont')

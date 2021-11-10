@@ -18,17 +18,20 @@ from tensorflow.keras.layers import Dense, LSTM, Flatten
 
 class PPONet(RLNetModel):
     def __init__(self, actor_net, critic_net, chckpoint_path=None, chckpoints_to_keep=10, tensorboard_dir=None):
-        super().__init__()
+        super().__init__(tensorboard_dir)
 
         self.actor_net = actor_net
         self.critic_net = critic_net
 
-        if tensorboard_dir is not None:
-            current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-            self.train_log_dir = os.path.join(tensorboard_dir, 'gradient_tape/' + current_time + '/train')
-            self.train_summary_writer = tf.summary.create_file_writer(self.train_log_dir)
-        else:
-            self.train_summary_writer = None
+        # self._tensorboard_util(tensorboard_dir)
+
+        # if tensorboard_dir is not None:
+        #     current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        #     self.train_log_dir = os.path.join(tensorboard_dir, 'gradient_tape/' + current_time + '/train')
+        #     self.train_summary_writer = tf.summary.create_file_writer(self.train_log_dir)
+        # else:
+        #     self.train_summary_writer = None
+
         self.total_epochs = 0
         self.loss_func_actor = None
         self.loss_func_critic = None
@@ -36,8 +39,8 @@ class PPONet(RLNetModel):
         self.optimizer_critic = None
         self.metrics = None
         self.calculate_advantages = None
-        self.loss_sumaries = tensor_board_loss_functions.loss_sumaries
-        self.rl_sumaries = tensor_board_loss_functions.rl_sumaries
+        # self.loss_sumaries = tensor_board_loss_functions.loss_sumaries
+        # self.rl_sumaries = tensor_board_loss_functions.rl_sumaries
 
         if chckpoint_path is not None:
             self.actor_chkpoint = tf.train.Checkpoint(model=self.actor_net)
@@ -52,10 +55,9 @@ class PPONet(RLNetModel):
                                                         checkpoint_name='critic',
                                                         max_to_keep=chckpoints_to_keep)
 
-    def compile(self, loss, optimizer, metrics=tf.keras.metrics.BinaryAccuracy()):
+    def compile(self, loss, optimizer, metrics=tf.keras.metrics.MeanSquaredError()):
         self.loss_func_actor = loss[0]
         self.loss_func_critic = loss[1]
-        self.optimizer_actor = optimizer[0]
         self.optimizer_actor = optimizer[0]
         self.optimizer_critic = optimizer[1]
         self.calculate_advantages = returns_calculations.gae
@@ -65,7 +67,7 @@ class PPONet(RLNetModel):
         pass
 
     def predict(self, x):
-        y_ = self._predict(x,)
+        y_ = self._predict(x)
         return y_.numpy()
 
     def predict_values(self, x):
@@ -93,8 +95,24 @@ class PPONet(RLNetModel):
         y_ = self.critic_net(tf.cast(x, tf.float32), training=False)
         return y_
 
-    @tf.function(experimental_relax_shapes=True)
     def train_step(self, x, old_prediction, y, returns, advantages, stddev=None, loss_clipping=0.3,
+                   critic_discount=0.5, entropy_beta=0.001):
+        """
+        Execute one training step (forward pass + backward pass)
+        Args:
+            source_seq: source sequences
+            target_seq_in: input target sequences (<start> + ...)
+            target_seq_out: output target sequences (... + <end>)
+
+        Returns:
+            The loss value of the current pass
+        """
+
+        return self._train_step(x, old_prediction, y, returns, advantages, stddev, loss_clipping,
+                   critic_discount, entropy_beta)
+
+    @tf.function(experimental_relax_shapes=True)
+    def _train_step(self, x, old_prediction, y, returns, advantages, stddev=None, loss_clipping=0.3,
                    critic_discount=0.5, entropy_beta=0.001):
         """
         Execute one training step (forward pass + backward pass)
@@ -365,8 +383,10 @@ class PPONet(RLNetModel):
         self.total_epochs = data['total_epochs']
         self.train_log_dir = data['train_log_dir']
 
-        self.train_summary_writer = tf.summary.create_file_writer(self.train_log_dir)
-
+        if self.train_log_dir is not None:
+            self.train_summary_writer = tf.summary.create_file_writer(self.train_log_dir)
+        else:
+            self.train_summary_writer = None
         # self.optimizer_actor = tf.saved_model.load(os.path.join(path, 'optimizer_actor'))
         # self.optimizer_critic = tf.saved_model.load(os.path.join(path, 'optimizer_critic'))
         # self.metricst = tf.saved_model.load(os.path.join(path, 'metrics'))
@@ -468,37 +488,36 @@ class PPONet(RLNetModel):
         print("Saved model to disk")
         print(datetime.datetime.now())
 
-    def process_globals(self, custom_globals):
-        globs = globals()
-        for key in globs:
-            for cust_key in custom_globals:
-                if key == cust_key:
-                    custom_globals[cust_key] = globs[key]
-                    break
-        return custom_globals
-
-
 class DQNNet(RLNetModel):
-    def __init__(self, net, tensorboard_dir=None):
-        super().__init__()
+    def __init__(self, net, chckpoint_path=None, chckpoints_to_keep=10, tensorboard_dir=None):
+        super().__init__(tensorboard_dir)
 
         self.net = net
         self.target_net = tf.keras.models.clone_model(net)
 
-        if tensorboard_dir is not None:
-            current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-            train_log_dir = os.path.join(tensorboard_dir, 'gradient_tape/' + current_time + '/train')
-            self.train_summary_writer = tf.summary.create_file_writer(train_log_dir)
-        else:
-            self.train_summary_writer = None
+        # self._tensorboard_util(tensorboard_dir)
+        # if tensorboard_dir is not None:
+        #     current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        #     train_log_dir = os.path.join(tensorboard_dir, 'gradient_tape/' + current_time + '/train')
+        #     self.train_summary_writer = tf.summary.create_file_writer(train_log_dir)
+        # else:
+        #     self.train_summary_writer = None
+
         self.total_epochs = 0
         self.loss_func = None
         self.optimizer = None
         self.metrics = None
-        self.loss_sumaries = tensor_board_loss_functions.loss_sumaries
-        self.rl_sumaries = tensor_board_loss_functions.rl_sumaries
+        # self.loss_sumaries = tensor_board_loss_functions.loss_sumaries
+        # self.rl_sumaries = tensor_board_loss_functions.rl_sumaries
 
-    def compile(self, loss, optimizer, metrics=tf.keras.metrics.BinaryAccuracy()):
+        if chckpoint_path is not None:
+            self.net_chkpoint = tf.train.Checkpoint(model=self.net)
+            self.net_manager = tf.train.CheckpointManager(self.net_chkpoint,
+                                                       os.path.join(chckpoint_path, 'checkpoint'),
+                                                       checkpoint_name='actor',
+                                                       max_to_keep=chckpoints_to_keep)
+
+    def compile(self, loss, optimizer, metrics=tf.keras.metrics.Accuracy()):
         self.loss_func = loss[0]
         self.optimizer = optimizer[0]
         self.metrics = metrics
@@ -601,6 +620,116 @@ class DQNNet(RLNetModel):
 
         return history
 
+    def save(self, path):
+        # Serializar función calculate_advanteges
+        # calculate_advantages_globals = dill.dumps(self.calculate_advantages.__globals__)
+        # calculate_advantages_globals = base64.b64encode(calculate_advantages_globals).decode('ascii')
+        # calculate_advantages_code = marshal.dumps(self.calculate_advantages.__code__)
+        # calculate_advantages_code = base64.b64encode(calculate_advantages_code).decode('ascii')
+
+        # Serializar función loss_sumaries
+        loss_sumaries_globals = dill.dumps(self.loss_sumaries.__globals__)
+        loss_sumaries_globals = base64.b64encode(loss_sumaries_globals).decode('ascii')
+        loss_sumaries_code = marshal.dumps(self.loss_sumaries.__code__)
+        loss_sumaries_code = base64.b64encode(loss_sumaries_code).decode('ascii')
+
+        # Serializar función loss_sumaries
+        rl_sumaries_globals = dill.dumps(self.rl_sumaries.__globals__)
+        rl_sumaries_globals = base64.b64encode(rl_sumaries_globals).decode('ascii')
+        rl_sumaries_code = marshal.dumps(self.rl_sumaries.__code__)
+        rl_sumaries_code = base64.b64encode(rl_sumaries_code).decode('ascii')
+
+        # saves actor and critic networks
+        self.save_checkpoint(path)
+
+        # TODO: Qeda guardar las funciones de pérdida. De momento confio en las que hay definidad como estandar.
+        data = {
+            "train_log_dir": self.train_log_dir,
+            "total_epochs": self.total_epochs,
+            # "calculate_advantages_globals": calculate_advantages_globals,
+            # "calculate_advantages_code": calculate_advantages_code,
+            "loss_sumaries_globals": loss_sumaries_globals,
+            "loss_sumaries_code": loss_sumaries_code,
+            "rl_sumaries_globals": rl_sumaries_globals,
+            "rl_sumaries_code": rl_sumaries_code,
+            }
+
+        with open(os.path.join(path, 'model_data.json'), 'w') as f:
+            json.dump(data, f)
+
+    def save_checkpoint(self, path=None):
+        if path is None:
+            # Save a checkpoint
+            self.net_manager.save()
+        else:
+            net_chkpoint = tf.train.Checkpoint(model=self.net,
+                                                 optimizer=self.optimizer,
+                                                 # loss_func=self.loss_func,
+                                                 metrics=self.metrics,
+                                                 )
+            net_manager = tf.train.CheckpointManager(net_chkpoint,
+                                                       os.path.join(path, 'net'),
+                                                       checkpoint_name='net',
+                                                       max_to_keep=1)
+            net_manager.save()
+
+
+    def restore(self, path):
+        with open(os.path.join(path, 'model_data.json'), 'r') as f:
+            data = json.load(f)
+
+        loss_sumaries_code = base64.b64decode(data['loss_sumaries_code'])
+        loss_sumaries_globals = base64.b64decode(data['loss_sumaries_globals'])
+
+        rl_sumaries_code = base64.b64decode(data['rl_sumaries_code'])
+        rl_sumaries_globals = base64.b64decode(data['rl_sumaries_globals'])
+
+
+        loss_sumaries_globals = dill.loads(loss_sumaries_globals)
+        loss_sumaries_globals = self.process_globals(loss_sumaries_globals)
+        loss_sumaries_code = marshal.loads(loss_sumaries_code)
+        self.loss_sumaries = types.FunctionType(loss_sumaries_code, loss_sumaries_globals, "loss_sumaries_func")
+
+        rl_sumaries_globals = dill.loads(rl_sumaries_globals)
+        rl_sumaries_globals = self.process_globals(rl_sumaries_globals)
+        rl_sumaries_code = marshal.loads(rl_sumaries_code)
+        self.loss_sumaries = types.FunctionType(rl_sumaries_code, rl_sumaries_globals, "rl_sumaries_func")
+
+        self.total_epochs = data['total_epochs']
+        self.train_log_dir = data['train_log_dir']
+
+        if self.train_log_dir is not None:
+            self.train_summary_writer = tf.summary.create_file_writer(self.train_log_dir)
+        else:
+            self.train_summary_writer = None
+
+        # self.optimizer_actor = tf.saved_model.load(os.path.join(path, 'optimizer_actor'))
+        # self.optimizer_critic = tf.saved_model.load(os.path.join(path, 'optimizer_critic'))
+        # self.metricst = tf.saved_model.load(os.path.join(path, 'metrics'))
+
+        # TODO: falta cargar loss_func_actor y loss_func_critic
+        # tf.saved_model.save(self.loss_func_actor, os.path.join(path, 'loss_func_actor'))
+        # tf.saved_model.save(self.loss_func_critic, os.path.join(path, 'loss_func_critic'))
+
+        self.load_checkpoint(path)
+
+    def load_checkpoint(self, path=None, chckpoint_to_restore='latest'):
+        if path is None:
+            if chckpoint_to_restore == 'latest':
+                self.net_chkpoint.restore(self.net_manager.latest_checkpoint)
+            else:
+                chck = self.net_manager.checkpoints
+        else:
+            net_chkpoint = tf.train.Checkpoint(model=self.net,
+                                                 optimizer=self.optimizer,
+                                                 # loss_func_actor=self.loss_func_actor,
+                                                 metrics=self.metrics)
+            net_manager = tf.train.CheckpointManager(net_chkpoint,
+                                                       os.path.join(path, 'net'),
+                                                       checkpoint_name='net',
+                                                       max_to_keep=1)
+            net_chkpoint.restore(net_manager.latest_checkpoint)
+
     def get_weights(self):
         weights = []
         for layer in self.net.layers:
@@ -679,25 +808,35 @@ class DDDQNNet(DDQNNet):
 
 
 class DPGNet(RLNetModel):
-    def __init__(self, net, tensorboard_dir=None):
-        super().__init__()
+    def __init__(self, net, chckpoint_path=None, chckpoints_to_keep=10, tensorboard_dir=None):
+        super().__init__(tensorboard_dir)
 
         self.net = net
 
-        if tensorboard_dir is not None:
-            current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-            train_log_dir = os.path.join(tensorboard_dir, 'gradient_tape/' + current_time + '/train')
-            self.train_summary_writer = tf.summary.create_file_writer(train_log_dir)
-        else:
-            self.train_summary_writer = None
+        # self._tensorboard_util(tensorboard_dir)
+
+        # if tensorboard_dir is not None:
+        #     current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        #     train_log_dir = os.path.join(tensorboard_dir, 'gradient_tape/' + current_time + '/train')
+        #     self.train_summary_writer = tf.summary.create_file_writer(train_log_dir)
+        # else:
+        #     self.train_summary_writer = None
+
         self.total_epochs = 0
         self.loss_func = None
         self.optimizer = None
         self.metrics = None
-        self.loss_sumaries = tensor_board_loss_functions.loss_sumaries
-        self.rl_sumaries = tensor_board_loss_functions.rl_sumaries
+        # self.loss_sumaries = tensor_board_loss_functions.loss_sumaries
+        # self.rl_sumaries = tensor_board_loss_functions.rl_sumaries
 
-    def compile(self, loss, optimizer, metrics=tf.keras.metrics.BinaryAccuracy()):
+        if chckpoint_path is not None:
+            self.net_chkpoint = tf.train.Checkpoint(model=self.net)
+            self.net_manager = tf.train.CheckpointManager(self.net_chkpoint,
+                                                       os.path.join(chckpoint_path, 'checkpoint'),
+                                                       checkpoint_name='actor',
+                                                       max_to_keep=chckpoints_to_keep)
+
+    def compile(self, loss, optimizer, metrics=tf.keras.metrics.MeanSquaredError()):
         self.loss_func = loss[0]
         self.optimizer = optimizer[0]
         self.metrics = metrics
@@ -796,6 +935,115 @@ class DPGNet(RLNetModel):
                     cb.on_epoch_end(e)
         return history
 
+    def save(self, path):
+        # Serializar función calculate_advanteges
+        # calculate_advantages_globals = dill.dumps(self.calculate_advantages.__globals__)
+        # calculate_advantages_globals = base64.b64encode(calculate_advantages_globals).decode('ascii')
+        # calculate_advantages_code = marshal.dumps(self.calculate_advantages.__code__)
+        # calculate_advantages_code = base64.b64encode(calculate_advantages_code).decode('ascii')
+
+        # Serializar función loss_sumaries
+        loss_sumaries_globals = dill.dumps(self.loss_sumaries.__globals__)
+        loss_sumaries_globals = base64.b64encode(loss_sumaries_globals).decode('ascii')
+        loss_sumaries_code = marshal.dumps(self.loss_sumaries.__code__)
+        loss_sumaries_code = base64.b64encode(loss_sumaries_code).decode('ascii')
+
+        # Serializar función loss_sumaries
+        rl_sumaries_globals = dill.dumps(self.rl_sumaries.__globals__)
+        rl_sumaries_globals = base64.b64encode(rl_sumaries_globals).decode('ascii')
+        rl_sumaries_code = marshal.dumps(self.rl_sumaries.__code__)
+        rl_sumaries_code = base64.b64encode(rl_sumaries_code).decode('ascii')
+
+        # saves actor and critic networks
+        self.save_checkpoint(path)
+
+        # TODO: Qeda guardar las funciones de pérdida. De momento confio en las que hay definidad como estandar.
+        data = {
+            "train_log_dir": self.train_log_dir,
+            "total_epochs": self.total_epochs,
+            # "calculate_advantages_globals": calculate_advantages_globals,
+            # "calculate_advantages_code": calculate_advantages_code,
+            "loss_sumaries_globals": loss_sumaries_globals,
+            "loss_sumaries_code": loss_sumaries_code,
+            "rl_sumaries_globals": rl_sumaries_globals,
+            "rl_sumaries_code": rl_sumaries_code,
+            }
+
+        with open(os.path.join(path, 'model_data.json'), 'w') as f:
+            json.dump(data, f)
+
+    def save_checkpoint(self, path=None):
+        if path is None:
+            # Save a checkpoint
+            self.net_manager.save()
+        else:
+            net_chkpoint = tf.train.Checkpoint(model=self.net,
+                                                 optimizer=self.optimizer,
+                                                 # loss_func=self.loss_func,
+                                                 metrics=self.metrics,
+                                                 )
+            net_manager = tf.train.CheckpointManager(net_chkpoint,
+                                                       os.path.join(path, 'net'),
+                                                       checkpoint_name='net',
+                                                       max_to_keep=1)
+            net_manager.save()
+
+    def restore(self, path):
+        with open(os.path.join(path, 'model_data.json'), 'r') as f:
+            data = json.load(f)
+
+        loss_sumaries_code = base64.b64decode(data['loss_sumaries_code'])
+        loss_sumaries_globals = base64.b64decode(data['loss_sumaries_globals'])
+
+        rl_sumaries_code = base64.b64decode(data['rl_sumaries_code'])
+        rl_sumaries_globals = base64.b64decode(data['rl_sumaries_globals'])
+
+
+        loss_sumaries_globals = dill.loads(loss_sumaries_globals)
+        loss_sumaries_globals = self.process_globals(loss_sumaries_globals)
+        loss_sumaries_code = marshal.loads(loss_sumaries_code)
+        self.loss_sumaries = types.FunctionType(loss_sumaries_code, loss_sumaries_globals, "loss_sumaries_func")
+
+        rl_sumaries_globals = dill.loads(rl_sumaries_globals)
+        rl_sumaries_globals = self.process_globals(rl_sumaries_globals)
+        rl_sumaries_code = marshal.loads(rl_sumaries_code)
+        self.loss_sumaries = types.FunctionType(rl_sumaries_code, rl_sumaries_globals, "rl_sumaries_func")
+
+        self.total_epochs = data['total_epochs']
+        self.train_log_dir = data['train_log_dir']
+
+        if self.train_log_dir is not None:
+            self.train_summary_writer = tf.summary.create_file_writer(self.train_log_dir)
+        else:
+            self.train_summary_writer = None
+
+        # self.optimizer_actor = tf.saved_model.load(os.path.join(path, 'optimizer_actor'))
+        # self.optimizer_critic = tf.saved_model.load(os.path.join(path, 'optimizer_critic'))
+        # self.metricst = tf.saved_model.load(os.path.join(path, 'metrics'))
+
+        # TODO: falta cargar loss_func_actor y loss_func_critic
+        # tf.saved_model.save(self.loss_func_actor, os.path.join(path, 'loss_func_actor'))
+        # tf.saved_model.save(self.loss_func_critic, os.path.join(path, 'loss_func_critic'))
+
+        self.load_checkpoint(path)
+
+    def load_checkpoint(self, path=None, chckpoint_to_restore='latest'):
+        if path is None:
+            if chckpoint_to_restore == 'latest':
+                self.net_chkpoint.restore(self.net_manager.latest_checkpoint)
+            else:
+                chck = self.net_manager.checkpoints
+        else:
+            net_chkpoint = tf.train.Checkpoint(model=self.net,
+                                                 optimizer=self.optimizer,
+                                                 # loss_func_actor=self.loss_func_actor,
+                                                 metrics=self.metrics)
+            net_manager = tf.train.CheckpointManager(net_chkpoint,
+                                                       os.path.join(path, 'net'),
+                                                       checkpoint_name='net',
+                                                       max_to_keep=1)
+            net_chkpoint.restore(net_manager.latest_checkpoint)
+
     def get_weights(self):
         weights = []
         for layer in self.net.layers:
@@ -808,8 +1056,8 @@ class DPGNet(RLNetModel):
 
 
 class DDPGNet(RLNetModel):
-    def __init__(self, actor_net, critic_net, tensorboard_dir=None):
-        super().__init__()
+    def __init__(self, actor_net, critic_net, chckpoint_path=None, chckpoints_to_keep=10, tensorboard_dir=None):
+        super().__init__(tensorboard_dir)
 
         self.actor_net = actor_net
         self.critic_net = critic_net
@@ -817,25 +1065,40 @@ class DDPGNet(RLNetModel):
         self.actor_target_net = tf.keras.models.clone_model(actor_net)
         self.critic_target_net = tf.keras.models.clone_model(critic_net)
 
-        if tensorboard_dir is not None:
-            current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-            train_log_dir = os.path.join(tensorboard_dir, 'gradient_tape/' + current_time + '/train')
-            self.train_summary_writer = tf.summary.create_file_writer(train_log_dir)
-        else:
-            self.train_summary_writer = None
+        # self._tensorboard_util(tensorboard_dir)
+        # if tensorboard_dir is not None:
+        #     current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        #     train_log_dir = os.path.join(tensorboard_dir, 'gradient_tape/' + current_time + '/train')
+        #     self.train_summary_writer = tf.summary.create_file_writer(train_log_dir)
+        # else:
+        #     self.train_summary_writer = None
+
         self.total_epochs = 0
         self.loss_actor = None
         self.loss_critic = None
         self.optimizer = None
         self.metrics = None
-        self.loss_sumaries = tensor_board_loss_functions.loss_sumaries
-        self.rl_sumaries = tensor_board_loss_functions.rl_sumaries
+        # self.loss_sumaries = tensor_board_loss_functions.loss_sumaries
+        # self.rl_sumaries = tensor_board_loss_functions.rl_sumaries
 
-    def compile(self, loss, optimizer, metrics=None):
+        if chckpoint_path is not None:
+            self.actor_chkpoint = tf.train.Checkpoint(model=self.actor_net)
+            self.actor_manager = tf.train.CheckpointManager(self.actor_chkpoint,
+                                                       os.path.join(chckpoint_path, 'actor', 'checkpoint'),
+                                                       checkpoint_name='actor',
+                                                       max_to_keep=chckpoints_to_keep)
+
+            self.critic_chkpoint = tf.train.Checkpoint(model=self.critic_net)
+            self.critic_manager = tf.train.CheckpointManager(self.critic_chkpoint,
+                                                        os.path.join(chckpoint_path, 'critic', 'checkpoint'),
+                                                        checkpoint_name='critic',
+                                                        max_to_keep=chckpoints_to_keep)
+
+    def compile(self, loss, optimizer, metrics=tf.keras.metrics.Accuracy()):
         self.loss_actor = loss[0]
         self.loss_critic = loss[1]
-        self.actor_optimizer = optimizer[0]
-        self.critic_optimizer = optimizer[1]
+        self.optimizer_actor = optimizer[0]
+        self.optimizer_critic = optimizer[1]
         self.metrics = metrics
 
     def summary(self):
@@ -887,8 +1150,8 @@ class DDPGNet(RLNetModel):
         gradients_actor, gradients_critic = tape.gradient([loss_actor, loss_critic],
                                                           [variables_actor, variables_critic])
 
-        self.actor_optimizer.apply_gradients(zip(gradients_actor, variables_actor))
-        self.critic_optimizer.apply_gradients(zip(gradients_critic, variables_critic))
+        self.optimizer_actor.apply_gradients(zip(gradients_actor, variables_actor))
+        self.optimizer_critic.apply_gradients(zip(gradients_critic, variables_critic))
 
         return [loss_actor, loss_critic], [gradients_actor, gradients_critic], [variables_actor, variables_critic]
 
@@ -947,6 +1210,137 @@ class DDPGNet(RLNetModel):
         self.soft_replace(tau)
         return history
 
+    def save(self, path):
+        # Serializar función calculate_advanteges
+        # calculate_advantages_globals = dill.dumps(self.calculate_advantages.__globals__)
+        # calculate_advantages_globals = base64.b64encode(calculate_advantages_globals).decode('ascii')
+        # calculate_advantages_code = marshal.dumps(self.calculate_advantages.__code__)
+        # calculate_advantages_code = base64.b64encode(calculate_advantages_code).decode('ascii')
+
+        # Serializar función loss_sumaries
+        loss_sumaries_globals = dill.dumps(self.loss_sumaries.__globals__)
+        loss_sumaries_globals = base64.b64encode(loss_sumaries_globals).decode('ascii')
+        loss_sumaries_code = marshal.dumps(self.loss_sumaries.__code__)
+        loss_sumaries_code = base64.b64encode(loss_sumaries_code).decode('ascii')
+
+        # Serializar función loss_sumaries
+        rl_sumaries_globals = dill.dumps(self.rl_sumaries.__globals__)
+        rl_sumaries_globals = base64.b64encode(rl_sumaries_globals).decode('ascii')
+        rl_sumaries_code = marshal.dumps(self.rl_sumaries.__code__)
+        rl_sumaries_code = base64.b64encode(rl_sumaries_code).decode('ascii')
+
+        # saves actor and critic networks
+        self.save_checkpoint(path)
+
+        # TODO: Qeda guardar las funciones de pérdida. De momento confio en las que hay definidad como estandar.
+        data = {
+            "train_log_dir": self.train_log_dir,
+            "total_epochs": self.total_epochs,
+            # "calculate_advantages_globals": calculate_advantages_globals,
+            # "calculate_advantages_code": calculate_advantages_code,
+            "loss_sumaries_globals": loss_sumaries_globals,
+            "loss_sumaries_code": loss_sumaries_code,
+            "rl_sumaries_globals": rl_sumaries_globals,
+            "rl_sumaries_code": rl_sumaries_code,
+            }
+
+        with open(os.path.join(path, 'model_data.json'), 'w') as f:
+            json.dump(data, f)
+
+    def save_checkpoint(self, path=None):
+        if path is None:
+            # Save a checkpoint
+            self.actor_manager.save()
+            self.critic_manager.save()
+        else:
+            actor_chkpoint = tf.train.Checkpoint(model=self.actor_net,
+                                                 optimizer=self.optimizer_actor,
+                                                 # loss_func_actor=self.loss_func_actor,
+                                                 metrics=self.metrics,
+                                                 )
+            actor_manager = tf.train.CheckpointManager(actor_chkpoint,
+                                                       os.path.join(path, 'actor'),
+                                                       checkpoint_name='actor',
+                                                       max_to_keep=1)
+            actor_manager.save()
+
+            critic_chkpoint = tf.train.Checkpoint(model=self.critic_net,
+                                                  optimizer=self.optimizer_critic,
+                                                  # loss_func_critic=self.loss_func_critic
+                                                  )
+            critic_manager = tf.train.CheckpointManager(critic_chkpoint,
+                                                        os.path.join(path, 'critic'),
+                                                        checkpoint_name='critic',
+                                                        max_to_keep=1)
+            critic_manager.save()
+
+    def restore(self, path):
+        with open(os.path.join(path, 'model_data.json'), 'r') as f:
+            data = json.load(f)
+
+        loss_sumaries_code = base64.b64decode(data['loss_sumaries_code'])
+        loss_sumaries_globals = base64.b64decode(data['loss_sumaries_globals'])
+
+        rl_sumaries_code = base64.b64decode(data['rl_sumaries_code'])
+        rl_sumaries_globals = base64.b64decode(data['rl_sumaries_globals'])
+
+
+        loss_sumaries_globals = dill.loads(loss_sumaries_globals)
+        loss_sumaries_globals = self.process_globals(loss_sumaries_globals)
+        loss_sumaries_code = marshal.loads(loss_sumaries_code)
+        self.loss_sumaries = types.FunctionType(loss_sumaries_code, loss_sumaries_globals, "loss_sumaries_func")
+
+        rl_sumaries_globals = dill.loads(rl_sumaries_globals)
+        rl_sumaries_globals = self.process_globals(rl_sumaries_globals)
+        rl_sumaries_code = marshal.loads(rl_sumaries_code)
+        self.loss_sumaries = types.FunctionType(rl_sumaries_code, rl_sumaries_globals, "rl_sumaries_func")
+
+        self.total_epochs = data['total_epochs']
+        self.train_log_dir = data['train_log_dir']
+
+        if self.train_log_dir is not None:
+            self.train_summary_writer = tf.summary.create_file_writer(self.train_log_dir)
+        else:
+            self.train_summary_writer = None
+
+        # self.optimizer_actor = tf.saved_model.load(os.path.join(path, 'optimizer_actor'))
+        # self.optimizer_critic = tf.saved_model.load(os.path.join(path, 'optimizer_critic'))
+        # self.metricst = tf.saved_model.load(os.path.join(path, 'metrics'))
+
+        # TODO: falta cargar loss_func_actor y loss_func_critic
+        # tf.saved_model.save(self.loss_func_actor, os.path.join(path, 'loss_func_actor'))
+        # tf.saved_model.save(self.loss_func_critic, os.path.join(path, 'loss_func_critic'))
+
+        self.load_checkpoint(path)
+
+    def load_checkpoint(self, path=None, chckpoint_to_restore='latest'):
+        if path is None:
+            if chckpoint_to_restore == 'latest':
+                self.actor_chkpoint.restore(self.actor_manager.latest_checkpoint)
+                self.critic_chkpoint.restore(self.critic_manager.latest_checkpoint)
+            else:
+                chck = self.actor_manager.checkpoints
+        else:
+            actor_chkpoint = tf.train.Checkpoint(model=self.actor_net,
+                                                 optimizer=self.optimizer_actor,
+                                                 # loss_func_actor=self.loss_func_actor,
+                                                 metrics=self.metrics)
+            actor_manager = tf.train.CheckpointManager(actor_chkpoint,
+                                                       os.path.join(path, 'actor'),
+                                                       checkpoint_name='actor',
+                                                       max_to_keep=1)
+            actor_chkpoint.restore(actor_manager.latest_checkpoint)
+
+            critic_chkpoint = tf.train.Checkpoint(model=self.critic_net,
+                                                  optimizer=self.optimizer_critic,
+                                                  # loss_func_critic=self.loss_func_critic
+                                                  )
+            critic_manager = tf.train.CheckpointManager(critic_chkpoint,
+                                                        os.path.join(path, 'critic'),
+                                                        checkpoint_name='critic',
+                                                        max_to_keep=1)
+            critic_chkpoint.restore(critic_manager.latest_checkpoint)
+
     def get_weights(self):
         weights = []
         for layer in self.actor_net.layers:
@@ -979,17 +1373,18 @@ class DDPGNet(RLNetModel):
 
 class A2CNetDiscrete(RLNetModel):
     def __init__(self, actor_net, critic_net, tensorboard_dir=None):
-        super().__init__()
+        super().__init__(tensorboard_dir)
 
         self.actor_net = actor_net
         self.critic_net = critic_net
 
-        if tensorboard_dir is not None:
-            current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-            train_log_dir = os.path.join(tensorboard_dir, 'gradient_tape/' + current_time + '/train')
-            self.train_summary_writer = tf.summary.create_file_writer(train_log_dir)
-        else:
-            self.train_summary_writer = None
+        # if tensorboard_dir is not None:
+        #     current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        #     train_log_dir = os.path.join(tensorboard_dir, 'gradient_tape/' + current_time + '/train')
+        #     self.train_summary_writer = tf.summary.create_file_writer(train_log_dir)
+        # else:
+        #     self.train_summary_writer = None
+
         self.total_epochs = 0
         self.loss_func_actor = None
         self.loss_func_critic = None
@@ -997,10 +1392,10 @@ class A2CNetDiscrete(RLNetModel):
         self.optimizer_critic = None
         self.metrics = None
         self.calculate_returns = None
-        self.loss_sumaries = tensor_board_loss_functions.loss_sumaries
-        self.rl_sumaries = tensor_board_loss_functions.rl_sumaries
+        # self.loss_sumaries = tensor_board_loss_functions.loss_sumaries
+        # self.rl_sumaries = tensor_board_loss_functions.rl_sumaries
 
-    def compile(self, loss, optimizer, metrics=tf.keras.metrics.BinaryAccuracy()):
+    def compile(self, loss, optimizer, metrics=tf.keras.metrics.Accuracy()):
         self.loss_func_actor = loss[0]
         self.loss_func_critic = loss[1]
         self.optimizer_actor = optimizer[0]
@@ -1151,6 +1546,143 @@ class A2CNetDiscrete(RLNetModel):
                     cb.on_epoch_end(e)
         return history_actor, history_critic
 
+    def save(self, path):
+        # Serializar función calculate_advanteges
+        # calculate_advantages_globals = dill.dumps(self.calculate_advantages.__globals__)
+        # calculate_advantages_globals = base64.b64encode(calculate_advantages_globals).decode('ascii')
+        # calculate_advantages_code = marshal.dumps(self.calculate_advantages.__code__)
+        # calculate_advantages_code = base64.b64encode(calculate_advantages_code).decode('ascii')
+
+        # Serializar función loss_sumaries
+        loss_sumaries_globals = dill.dumps(self.loss_sumaries.__globals__)
+        loss_sumaries_globals = base64.b64encode(loss_sumaries_globals).decode('ascii')
+        loss_sumaries_code = marshal.dumps(self.loss_sumaries.__code__)
+        loss_sumaries_code = base64.b64encode(loss_sumaries_code).decode('ascii')
+
+        # Serializar función loss_sumaries
+        rl_sumaries_globals = dill.dumps(self.rl_sumaries.__globals__)
+        rl_sumaries_globals = base64.b64encode(rl_sumaries_globals).decode('ascii')
+        rl_sumaries_code = marshal.dumps(self.rl_sumaries.__code__)
+        rl_sumaries_code = base64.b64encode(rl_sumaries_code).decode('ascii')
+
+        # saves actor and critic networks
+        self.save_checkpoint(path)
+
+        # TODO: Qeda guardar las funciones de pérdida. De momento confio en las que hay definidad como estandar.
+        data = {
+            "train_log_dir": self.train_log_dir,
+            "total_epochs": self.total_epochs,
+            # "calculate_advantages_globals": calculate_advantages_globals,
+            # "calculate_advantages_code": calculate_advantages_code,
+            "loss_sumaries_globals": loss_sumaries_globals,
+            "loss_sumaries_code": loss_sumaries_code,
+            "rl_sumaries_globals": rl_sumaries_globals,
+            "rl_sumaries_code": rl_sumaries_code,
+            }
+
+        with open(os.path.join(path, 'model_data.json'), 'w') as f:
+            json.dump(data, f)
+
+    def restore(self, path):
+        with open(os.path.join(path, 'model_data.json'), 'r') as f:
+            data = json.load(f)
+
+        calculate_advantages_code = base64.b64decode(data['calculate_advantages_code'])
+        calculate_advantages_globals = base64.b64decode(data['calculate_advantages_globals'])
+
+        loss_sumaries_code = base64.b64decode(data['loss_sumaries_code'])
+        loss_sumaries_globals = base64.b64decode(data['loss_sumaries_globals'])
+
+        rl_sumaries_code = base64.b64decode(data['rl_sumaries_code'])
+        rl_sumaries_globals = base64.b64decode(data['rl_sumaries_globals'])
+
+        calculate_advantages_globals = dill.loads(calculate_advantages_globals)
+        calculate_advantages_globals = self.process_globals(calculate_advantages_globals)
+        calculate_advantages_code = marshal.loads(calculate_advantages_code)
+        self.calculate_advantages = types.FunctionType(calculate_advantages_code, calculate_advantages_globals,
+                                                       "calculate_advantages_func")
+
+        loss_sumaries_globals = dill.loads(loss_sumaries_globals)
+        loss_sumaries_globals = self.process_globals(loss_sumaries_globals)
+        loss_sumaries_code = marshal.loads(loss_sumaries_code)
+        self.loss_sumaries = types.FunctionType(loss_sumaries_code, loss_sumaries_globals, "loss_sumaries_func")
+
+        rl_sumaries_globals = dill.loads(rl_sumaries_globals)
+        rl_sumaries_globals = self.process_globals(rl_sumaries_globals)
+        rl_sumaries_code = marshal.loads(rl_sumaries_code)
+        self.loss_sumaries = types.FunctionType(rl_sumaries_code, rl_sumaries_globals, "rl_sumaries_func")
+
+        self.total_epochs = data['total_epochs']
+        self.train_log_dir = data['train_log_dir']
+
+        if self.train_log_dir is not None:
+            self.train_summary_writer = tf.summary.create_file_writer(self.train_log_dir)
+        else:
+            self.train_summary_writer = None
+        # self.optimizer_actor = tf.saved_model.load(os.path.join(path, 'optimizer_actor'))
+        # self.optimizer_critic = tf.saved_model.load(os.path.join(path, 'optimizer_critic'))
+        # self.metricst = tf.saved_model.load(os.path.join(path, 'metrics'))
+
+        # TODO: falta cargar loss_func_actor y loss_func_critic
+        # tf.saved_model.save(self.loss_func_actor, os.path.join(path, 'loss_func_actor'))
+        # tf.saved_model.save(self.loss_func_critic, os.path.join(path, 'loss_func_critic'))
+
+        self.load_checkpoint(path)
+
+    def save_checkpoint(self, path=None):
+        if path is None:
+            # Save a checkpoint
+            self.actor_manager.save()
+            self.critic_manager.save()
+        else:
+            actor_chkpoint = tf.train.Checkpoint(model=self.actor_net,
+                                                 optimizer=self.optimizer_actor,
+                                                 # loss_func_actor=self.loss_func_actor,
+                                                 metrics=self.metrics,
+                                                 )
+            actor_manager = tf.train.CheckpointManager(actor_chkpoint,
+                                                       os.path.join(path, 'actor'),
+                                                       checkpoint_name='actor',
+                                                       max_to_keep=1)
+            actor_manager.save()
+
+            critic_chkpoint = tf.train.Checkpoint(model=self.critic_net,
+                                                  optimizer=self.optimizer_critic,
+                                                  # loss_func_critic=self.loss_func_critic
+                                                  )
+            critic_manager = tf.train.CheckpointManager(critic_chkpoint,
+                                                        os.path.join(path, 'critic'),
+                                                        checkpoint_name='critic',
+                                                        max_to_keep=1)
+            critic_manager.save()
+
+    def load_checkpoint(self, path=None, chckpoint_to_restore='latest'):
+        if path is None:
+            if chckpoint_to_restore == 'latest':
+                self.actor_chkpoint.restore(self.actor_manager.latest_checkpoint)
+                self.critic_chkpoint.restore(self.critic_manager.latest_checkpoint)
+            else:
+                chck = self.actor_manager.checkpoints
+        else:
+            actor_chkpoint = tf.train.Checkpoint(model=self.actor_net,
+                                                 optimizer=self.optimizer_actor,
+                                                 # loss_func_actor=self.loss_func_actor,
+                                                 metrics=self.metrics)
+            actor_manager = tf.train.CheckpointManager(actor_chkpoint,
+                                                       os.path.join(path, 'actor'),
+                                                       checkpoint_name='actor',
+                                                       max_to_keep=1)
+            actor_chkpoint.restore(actor_manager.latest_checkpoint)
+
+            critic_chkpoint = tf.train.Checkpoint(model=self.critic_net,
+                                                  optimizer=self.optimizer_critic,
+                                                  # loss_func_critic=self.loss_func_critic
+                                                  )
+            critic_manager = tf.train.CheckpointManager(critic_chkpoint,
+                                                        os.path.join(path, 'critic'),
+                                                        checkpoint_name='critic',
+                                                        max_to_keep=1)
+            critic_chkpoint.restore(critic_manager.latest_checkpoint)
 
 class A2CNetContinuous(A2CNetDiscrete):
     def __init__(self, actor_net, critic_net, tensorboard_dir=None):

@@ -33,7 +33,11 @@ def random_choice(act_pred, n_actions, epsilon=0., n_env=1, exploration_noise=1.
 def greedy_action(act_pred, n_actions, epsilon=0., n_env=1, exploration_noise=1.0):
     if np.random.rand() <= epsilon:
         # action = [random.randrange(n_actions) for i in range(n_env)]
-        action = [np.random.choice(n_actions) for i in range(n_env)]
+        # action = [np.random.choice(n_actions) for i in range(n_env)]
+        # action = [np.random.rand(n_actions) for i in range(n_env)]
+        # TODO: al utilizar algoritmos normales puede petar
+        action = np.random.rand(*act_pred.shape)
+        action = np.argmax(action, axis=-1)
     else:
         action = np.argmax(act_pred, axis=-1)
     return action

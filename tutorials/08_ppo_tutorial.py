@@ -102,18 +102,18 @@ state_size = None
 #                                       img_input=False,
 #                                       state_size=state_size)
 #
-# agent_disc = ppo_agent_discrete_parallel_tf.Agent(actor_lr=1e-4, ##WarmupThenDecaySchedule(256, warmup_steps=4000),
-#                                                critic_lr=1e-4,  #WarmupThenDecaySchedule(256, warmup_steps=4000),
-#                                                batch_size=32,
-#                                                epsilon=0.8,
-#                                                epsilon_decay=0.95,
-#                                                epsilon_min=0.15,
-#                                                memory_size=512,
-#                                                net_architecture=net_architecture,
-#                                                n_stack=4,
-#                                                img_input=False,
-#                                                state_size=state_size,
-#                                                loss_critic_discount=0.5)
+agent_disc = ppo_agent_discrete_parallel_tf.Agent(actor_lr=1e-4, ##WarmupThenDecaySchedule(256, warmup_steps=4000),
+                                               critic_lr=1e-4,  #WarmupThenDecaySchedule(256, warmup_steps=4000),
+                                               batch_size=32,
+                                               epsilon=0.8,
+                                               epsilon_decay=0.95,
+                                               epsilon_min=0.15,
+                                               memory_size=512,
+                                               net_architecture=net_architecture,
+                                               n_stack=4,
+                                               img_input=False,
+                                               state_size=state_size,
+                                               loss_critic_discount=0.5)
 
 # agent_cont = ppo_agent_continuous_tf.Agent(actor_lr=1e-4,
 #                                         critic_lr=1e-4,
@@ -127,48 +127,48 @@ state_size = None
 #                                         img_input=False,
 #                                         state_size=state_size
 #                                         )
-
-agent_cont = ppo_agent_continuous_parallel_tf.Agent(actor_lr=1e-5,
-                                                 critic_lr=1e-5,
-                                                 batch_size=64,
-                                                 memory_size=512,
-                                                 epsilon=1.0,
-                                                 epsilon_decay=0.995,
-                                                 epsilon_min=0.15,
-                                                 net_architecture=net_architecture,
-                                                 n_stack=20,
-                                                 img_input=False,
-                                                 state_size=state_size,
-                                                 loss_critic_discount=0.5,
-                                                 loss_entropy_beta=0.001,
-                                                 exploration_noise=1.0)
-
-# # Descomentar para ejecutar el ejemplo discreto
-# # agent_disc = agent_saver.load('agent_ppo.json')
-# problem_disc = rl_problem.Problem(environment_disc, agent_disc)
 #
-# # problem_disc.preprocess = atari_preprocess
-#
-# # agent_disc.actor.extract_variable_summaries = extract_variable_summaries
-# # En este caso se utiliza el parámetro max_step_epi=500 para indicar que cada episodio termine a las 500 épocas o
-# # iteraciones ya que por defecto este entorno llega hasta 1000. Esto es util para entornos que no tengan definido un
-# # máximo de épocas.
-# problem_disc.solve(2000, render=False, max_step_epi=512, render_after=2090, skip_states=1, save_live_histogram='hist.json')
-# problem_disc.test(render=True, n_iter=100)
-# # agent_saver.save(agent_disc, 'agent_ppo.json')
+# agent_cont = ppo_agent_continuous_parallel_tf.Agent(actor_lr=1e-5,
+#                                                  critic_lr=1e-5,
+#                                                  batch_size=64,
+#                                                  memory_size=512,
+#                                                  epsilon=1.0,
+#                                                  epsilon_decay=0.995,
+#                                                  epsilon_min=0.15,
+#                                                  net_architecture=net_architecture,
+#                                                  n_stack=20,
+#                                                  img_input=False,
+#                                                  state_size=state_size,
+#                                                  loss_critic_discount=0.5,
+#                                                  loss_entropy_beta=0.001,
+#                                                  exploration_noise=1.0)
 
-# Descomentar para ejecutar el ejemplo continuo
-# agent_cont = agent_saver.load('agent_ppo.json')
-# agent_cont = agent_saver.load'agent_ppo.json')
-problem_cont = rl_problem.Problem(environment_cont, agent_cont)
+# Descomentar para ejecutar el ejemplo discreto
+# agent_disc = agent_saver.load('agent_ppo.json')
+problem_disc = rl_problem.Problem(environment_disc, agent_disc)
 
-# agent_cont.actor.extract_variable_summaries = extract_variable_summaries
-# En este caso no se utiliza el parámetro max_step_epi=500 por lo que el máximo de iteraciones será el que viene por
-# defecto (1000).
-problem_cont.solve(2000, render=False, max_step_epi=512, render_after=2090, skip_states=1)
-problem_cont.test(render=True, n_iter=10)
+# problem_disc.preprocess = atari_preprocess
+
+# agent_disc.actor.extract_variable_summaries = extract_variable_summaries
+# En este caso se utiliza el parámetro max_step_epi=500 para indicar que cada episodio termine a las 500 épocas o
+# iteraciones ya que por defecto este entorno llega hasta 1000. Esto es util para entornos que no tengan definido un
+# máximo de épocas.
+problem_disc.solve(2000, render=False, max_step_epi=512, render_after=2090, skip_states=1, save_live_histogram='hist.json')
+problem_disc.test(render=True, n_iter=100)
+# agent_saver.save(agent_disc, 'agent_ppo.json')
+
+# # Descomentar para ejecutar el ejemplo continuo
+# # agent_cont = agent_saver.load('agent_ppo.json')
+# # agent_cont = agent_saver.load'agent_ppo.json')
+# problem_cont = rl_problem.Problem(environment_cont, agent_cont)
 #
-# hist = problem_cont.get_histogram_metrics()
-# history_utils.plot_reward_hist(hist, 10)
-#
-# agent_saver.save(agent_cont, 'agent_ppo.json')
+# # agent_cont.actor.extract_variable_summaries = extract_variable_summaries
+# # En este caso no se utiliza el parámetro max_step_epi=500 por lo que el máximo de iteraciones será el que viene por
+# # defecto (1000).
+# problem_cont.solve(2000, render=False, max_step_epi=512, render_after=2090, skip_states=1)
+# problem_cont.test(render=True, n_iter=10)
+# #
+# # hist = problem_cont.get_histogram_metrics()
+# # history_utils.plot_reward_hist(hist, 10)
+# #
+# # agent_saver.save(agent_cont, 'agent_ppo.json')

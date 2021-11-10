@@ -344,7 +344,14 @@ def save_legacy(agent, path):
 
     shutil.rmtree(tmp_path)
 
-def load(path, agent=None, from_checkpoint=False):
+def load(path, agent, overwrite_attrib=False):
+    """
+    Load an agent from file.
+    :param path: (string) path to saved agent folder
+    :param agent: (RL_Agent) agent entity to load.
+    :param overwrite_attrib: (bool) If False the agent's attributes will be loaded from file. If True the new defined
+                                agent's attributes will be used
+    """
     with open(os.path.join(path, 'agent_data.json'), 'r') as f:
         data = json.load(f)
 
@@ -470,28 +477,32 @@ def load(path, agent=None, from_checkpoint=False):
     # except:
     #     pass
 
-    if agent is None:
-        # TODO: ¿Eliminar esta opción?
-        # If there is not input agent create a raw new agent
-        agent = create_new_agent(agent_att)
-        set_agent_attributes(agent_att, agent, overwrite=True)
-    elif not agent.agent_builded:
+    # if agent is None:
+    #     # TODO: ¿Eliminar esta opción?
+    #     # If there is not input agent create a raw new agent
+    #     agent = create_new_agent(agent_att)
+    #     set_agent_attributes(agent_att, agent, overwrite=True)
+    if not agent.agent_builded:
         # If the agent is not built, build it.
-        if agent.loads_saved_params:
-            set_agent_attributes(agent_att, agent)
+        # if agent.loads_saved_params:
+        set_agent_attributes(agent_att, agent, not overwrite_attrib, set_nones=True)
         if agent_att['action_low_bound'] is None and agent_att['action_high_bound'] is None:
-            agent.build_agent(state_size=agent_att["state_size"],
-                              n_actions=agent_att["n_actions"],
-                              stack=agent_att["stack"])
+            agent.build_agent(state_size=agent.state_size,
+                              n_actions=agent.n_actions,
+                              stack=agent.stack)
         else:
-            agent.build_agent(state_size=agent_att["state_size"],
-                              n_actions=agent_att["n_actions"],
-                              stack=agent_att["stack"],
+            # agent.build_agent(state_size=agent_att["state_size"],
+            #                   n_actions=agent_att["n_actions"],
+            #                   stack=agent_att["stack"],
+            #                   action_bound=[agent_att['action_low_bound'], agent_att['action_high_bound']])
+            agent.build_agent(state_size=agent.state_size,
+                              n_actions=agent.n_actions,
+                              stack=agent.stack,
                               action_bound=[agent_att['action_low_bound'], agent_att['action_high_bound']])
     else:
         # If the agent is built, load its attributes
         # TODO: No tiene que sobreescribir todo
-        set_agent_attributes(agent_att, agent)
+        set_agent_attributes(agent_att, agent, not overwrite_attrib)
 
     agent._load(path)
 
@@ -762,40 +773,80 @@ def extract_agent_attributes(agent):
     return dict, custom_net, actor_custom_net, critic_custom_net, common_custom_net, value_custom_net, adv_custom_net
 
 
-def set_agent_attributes(att, agent, overwrite=False):
-    agent.state_size = att['state_size']
-    agent.env_state_size = att['env_state_size']
-    agent.n_actions = att['n_actions']
-    agent.stack = att['stack']
-    agent.learning_rate = att['learning_rate']
-    agent.actor_lr = att['actor_lr']
-    agent.critic_lr = att['critic_lr']
-    agent.batch_size = att['batch_size']
-    agent.epsilon = att['epsilon']
-    agent.epsilon_decay = att['epsilon_decay']
-    agent.epsilon_min = att['epsilon_min']
-    agent.gamma = att['gamma']
-    agent.tau = att['tau']
-    agent.memory_size = att['memory_size']
-    agent.loss_clipping = att['loss_clipping']
-    agent.critic_discount = att['critic_discount']
-    agent.entropy_beta = att['entropy_beta']
-    agent.lmbda = att['lmbda']
-    agent.train_epochs = att['train_epochs']
-    agent.exploration_noise = att['exploration_noise']
-    agent.n_step_return = att['n_step_return']
-    agent.n_stack = att['n_stack']
-    agent.img_input = att['img_input']
-    agent.n_parallel_envs = att['n_parallel_envs']
-    agent.net_architecture = att['net_architecture']
-    agent.action_bound = [att['action_low_bound'], att['action_high_bound']]
+def set_agent_attributes(att, agent, set_all, set_nones=False):
+    """
+    Asigna los atributos del agente cargados desde fichero.
+    :param att: (dict) atributos
+    :param agent: (RL_Agent) agente
+    :param set_all: (bool) If True, all the attributes will be overwrited with values from att dictionary. If False, set_nones will be taked into account.
+    :param set_nones: (bool) If True, onlly the attributes with None value will be setted. If False, everey attribute of the agent will be setted.
+    """
+    if (set_nones and agent.state_size is None) or set_all:
+        agent.state_size = att['state_size']
+    if (set_nones and agent.env_state_size is None) or set_all:
+        agent.env_state_size = att['env_state_size']
+    if (set_nones and agent.n_actions is None) or set_all:
+        agent.n_actions = att['n_actions']
+    if (set_nones and agent.n_stack is None) or set_all:
+        agent.n_stack = att['n_stack']
+    if (set_nones and agent.stack is None):
+        agent.stack = agent.n_stack > 1
+    if set_all:
+        agent.stack = att['stack']
+    if (set_nones and agent.learning_rate is None) or set_all:
+        agent.learning_rate = att['learning_rate']
+    if (set_nones and agent.actor_lr is None) or set_all:
+        agent.actor_lr = att['actor_lr']
+    if (set_nones and agent.critic_lr is None) or set_all:
+        agent.critic_lr = att['critic_lr']
+    if (set_nones and agent.batch_size is None) or set_all:
+        agent.batch_size = att['batch_size']
+    if (set_nones and agent.epsilon is None) or set_all:
+        agent.epsilon = att['epsilon']
+    if (set_nones and agent.epsilon_decay is None) or set_all:
+        agent.epsilon_decay = att['epsilon_decay']
+    if (set_nones and agent.epsilon_min is None) or set_all:
+        agent.epsilon_min = att['epsilon_min']
+    if (set_nones and agent.gamma is None) or set_all:
+        agent.gamma = att['gamma']
+    if (set_nones and agent.tau is None) or set_all:
+        agent.tau = att['tau']
+    if (set_nones and agent.memory_size is None) or set_all:
+        agent.memory_size = att['memory_size']
+    if (set_nones and agent.loss_clipping is None) or set_all:
+        agent.loss_clipping = att['loss_clipping']
+    if (set_nones and agent.critic_discount is None) or set_all:
+        agent.critic_discount = att['critic_discount']
+    if (set_nones and agent.entropy_beta is None) or set_all:
+        agent.entropy_beta = att['entropy_beta']
+    if (set_nones and agent.lmbda is None) or set_all:
+        agent.lmbda = att['lmbda']
+    if (set_nones and agent.train_epochs is None) or set_all:
+        agent.train_epochs = att['train_epochs']
+    if (set_nones and agent.exploration_noise is None) or set_all:
+        agent.exploration_noise = att['exploration_noise']
+    if (set_nones and agent.n_step_return is None) or set_all:
+        agent.n_step_return = att['n_step_return']
+    if (set_nones and agent.img_input is None) or set_all:
+        agent.img_input = att['img_input']
+    if (set_nones and agent.n_parallel_envs is None) or set_all:
+        agent.n_parallel_envs = att['n_parallel_envs']
+    if (set_nones and agent.net_architecture is None) or set_all:
+        agent.net_architecture = att['net_architecture']
+    if (set_nones and hasattr(agent, 'action_bound') and agent.action_bound is None) or set_all:
+        agent.action_bound = [att['action_low_bound'], att['action_high_bound']]
+    # TODO: estos atributos no son necesarios en la nueva versión
     # agent.save_base = att['save_base']
     # agent.save_name = att['save_name']
     # agent.save_each = att['save_each']
     # agent.save_if_better = att['save_if_better']
-    agent.agent_builded = att['agent_compiled']
-    agent.agent_name = att['agent_name']
-    agent.tensorboard_dir = att['tensorboard_dir']
+    # TODO: agent_builded no lo cargo por que solo será true una vez que se haya contruido el modelo. Al cargarlo no esta todavía construido.
+    # if (set_nones and agent.agent_builded is None) or set_all:
+    #     agent.agent_builded = att['agent_compiled']
+    # TODO: agent_name no lo cargo por que siempre lo tiene que tener el agente
+    # agent.agent_name = att['agent_name']
+    if (set_nones and agent.tensorboard_dir is None) or set_all:
+        agent.tensorboard_dir = att['tensorboard_dir']
     return agent
 
 

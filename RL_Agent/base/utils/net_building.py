@@ -113,17 +113,11 @@ def read_net_params(net_architecture, actor=False, critic=False, action=False, v
                       'use_custom_network, custom_network', 'yellow'))
 
     if (id_12 and id_13 in net_architecture) and (net_architecture[id_12] and net_architecture[id_13] is not None):
-        tf_custom_model = net_architecture[id_12]
-        use_tf_custom_model = net_architecture[id_13]
-    else:
-        tf_custom_model = None
-        use_tf_custom_model = False
+        use_custom_net = net_architecture[id_13]
+        custom_net = net_architecture[id_12]
 
     return n_conv_layers, kernel_num, kernel_size, strides, conv_activation, n_dense_layers, n_neurons, \
-           dense_activation, use_custom_net, custom_net, define_custom_output_layer, tf_custom_model, \
-           use_tf_custom_model
-
-
+           dense_activation, use_custom_net, custom_net, define_custom_output_layer
 def build_conv_net(net_architecture, input_shape, actor=False, critic=False, common=False):
     n_conv_layers, kernel_num, kernel_size, strides, conv_activation, \
     n_dense_layers, n_neurons, dense_activation, use_custom_net, \
@@ -150,8 +144,8 @@ def build_conv_net(net_architecture, input_shape, actor=False, critic=False, com
 
 
 def build_stack_net(net_architecture, input_shape, actor=False, critic=False, common=False):
-    n_dense_layers, n_neurons, dense_activation, use_custom_net, \
-    custom_net, define_custom_output_layer = read_net_params(net_architecture, actor, critic, common=common)[-6:]
+    _, _, _, _, _, n_dense_layers, n_neurons, dense_activation, use_custom_net, \
+    custom_net, define_custom_output_layer = read_net_params(net_architecture, actor, critic, common=common)
 
     if use_custom_net:
         return custom_net(input_shape)
@@ -166,8 +160,8 @@ def build_stack_net(net_architecture, input_shape, actor=False, critic=False, co
 
 
 def build_nn_net(net_architecture, input_shape, actor=False, critic=False, action=False, value=False, common=False):
-    n_dense_layers, n_neurons, dense_activation, use_custom_net, \
-    custom_net, define_custom_output_layer = read_net_params(net_architecture, actor, critic, action=action, value=value, common=common)[-6:]
+    _, _, _, _, _, n_dense_layers, n_neurons, dense_activation, use_custom_net, \
+    custom_net, define_custom_output_layer = read_net_params(net_architecture, actor, critic, action=action, value=value, common=common)
 
     if use_custom_net:
         return custom_net((input_shape,))
@@ -217,8 +211,9 @@ def build_ddpg_conv_critic(net_architecture, input_shape, s, a):
 
 
 def build_ddpg_stack_critic(net_architecture, input_shape, s, a):
-    n_dense_layers, n_neurons, dense_activation, use_custom_net, \
-    custom_net, define_custom_output_layer = read_net_params(net_architecture, actor=False, critic=True)[-6:]
+    _, _, _, _, _, n_dense_layers, n_neurons, dense_activation, use_custom_net, \
+    custom_net, define_custom_output_layer = read_net_params(net_architecture, actor=False, critic=True)
+
 
     if use_custom_net:
         return custom_net(input_shape, s, a)
@@ -245,8 +240,8 @@ def build_ddpg_stack_critic(net_architecture, input_shape, s, a):
 
 
 def build_ddpg_nn_critic(net_architecture, input_shape, s, a):
-    n_dense_layers, n_neurons, dense_activation, use_custom_net, \
-    custom_net, define_custom_output_layer = read_net_params(net_architecture, actor=False, critic=True)[-6:]
+    _, _, _, _, _, n_dense_layers, n_neurons, dense_activation, use_custom_net, \
+    custom_net, define_custom_output_layer = read_net_params(net_architecture, actor=False, critic=True)
 
     if use_custom_net:
         return custom_net(input_shape, s, a)
@@ -311,8 +306,8 @@ def build_ddpg_conv_critic_tf(net_architecture, input_shape, actor_net):
         return model
 
 def build_ddpg_stack_critic_tf(net_architecture, input_shape, actor_net):
-    n_dense_layers, n_neurons, dense_activation, use_custom_net, \
-    custom_net, define_custom_output_layer = read_net_params(net_architecture, actor=False, critic=True)[-6:]
+    _, _, _, _, _, n_dense_layers, n_neurons, dense_activation, use_custom_net, \
+    custom_net, define_custom_output_layer = read_net_params(net_architecture, actor=False, critic=True)
 
     if use_custom_net:
         # try:
@@ -344,8 +339,8 @@ def build_ddpg_stack_critic_tf(net_architecture, input_shape, actor_net):
 
 
 def build_ddpg_nn_critic_tf(net_architecture, input_shape, actor_net):
-    n_dense_layers, n_neurons, dense_activation, use_custom_net, \
-    custom_net, define_custom_output_layer = read_net_params(net_architecture, actor=False, critic=True)[-6:]
+    _, _, _, _, _, n_dense_layers, n_neurons, dense_activation, use_custom_net, \
+    custom_net, define_custom_output_layer = read_net_params(net_architecture, actor=False, critic=True)
 
     if use_custom_net:
         try:

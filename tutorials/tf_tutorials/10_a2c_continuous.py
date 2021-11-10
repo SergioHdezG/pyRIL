@@ -41,12 +41,16 @@ agent_cont = a2c_agent_continuous_tf.Agent(actor_lr=5e-4,
                                         net_architecture=net_architecture,
                                         loss_entropy_beta=0.002,
                                         tensorboard_dir='/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/tf_tutorials/tensorboard_logs/')
-# agent_saver.save(agent_disc, 'agent_a2c.json')
+
 
 # Descomentar para ejecutar el ejemplo continuo
-# agent_cont = agent_saver.load('agent_a2c.json')
+# agent_cont = agent_saver.load('agent_a2c_cont', agent=a2c_agent_continuous_tf.Agent())
+# agent_cont = agent_saver.load('agent_a2c_cont', agent=agent_cont, overwrite_attrib=True)
 
 problem_cont= rl_problem.Problem(environment_cont, agent_cont)
+
+# agent = agent_saver.load('agent_a2c_cont', agent=problem.agent, overwrite_attrib=True)
+
 # En este caso no se utiliza el parámetro max_step_epi=500 por lo que el máximo de iteraciones será el que viene por
 # defecto (1000).
 problem_cont.solve(1000, render=False, skip_states=1)
@@ -55,4 +59,4 @@ problem_cont.test(render=True, n_iter=10)
 hist = problem_cont.get_histogram_metrics()
 history_utils.plot_reward_hist(hist, 10)
 
-agent_saver.save(agent_cont, 'agent_a2c.json')
+agent_saver.save(agent_cont, 'agent_a2c_cont')

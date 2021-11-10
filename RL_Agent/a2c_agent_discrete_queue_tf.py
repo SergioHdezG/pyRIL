@@ -63,7 +63,7 @@ class Agent(A2CQueueSuper):
         """
         super().build_agent(state_size, n_actions, stack=stack, continuous_actions=False)
         self.loss_selected = [losses.a2c_actor_loss, losses.a2c_critic_loss]
-        self.actor = self._build_model(self.net_architecture, last_activation='softmax')
+        self.model = self._build_model(self.net_architecture, last_activation='softmax')
 
     def _build_model(self, net_architecture, last_activation):
         # Neural Net for Actor-Critic Model
@@ -140,11 +140,11 @@ class Agent(A2CQueueSuper):
         :param obs: (numpy nd array) observation or state.
         :return: (int) action selected.
         """
-        # if np.random.rand() <= self.epsilon:
-        #     return random.randrange(self.n_actions)
+        if np.random.rand() <= self.epsilon:
+            return random.randrange(self.n_actions)
 
         obs = self._format_obs_act(obs)
-        act_pred = self.actor.predict(obs)
+        act_pred = self.model.predict(obs)
         action = self.action_selection_options(act_pred, self.n_actions, epsilon=self.epsilon, n_env=1)
         # action = np.random.choice(self.n_actions, p=p[0])
         action = action[0]
@@ -157,7 +157,7 @@ class Agent(A2CQueueSuper):
         :return: (int) action selected.
         """
         obs = self._format_obs_act(obs)
-        act_pred = self.actor.predict(obs)
+        act_pred = self.model.predict(obs)
         action = self.action_selection_options(act_pred, self.n_actions, epsilon=self.epsilon, n_env=1)
         # action = np.random.choice(self.n_actions, p=p[0])
         action = action[0]

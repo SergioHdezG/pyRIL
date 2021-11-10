@@ -20,6 +20,8 @@ from RL_Agent.base.utils.networks import networks
 from RL_Agent.base.utils.networks.networks_interface import RLNetModel, TrainingHistory
 import tensorflow as tf
 import numpy as np
+from RL_Agent.base.utils import agent_saver
+
 
 environment = "LunarLanderContinuous-v2"
 environment = gym.make(environment)
@@ -261,27 +263,32 @@ net_architecture = networks.ddpg_net(use_custom_network=True,
                                      critic_custom_network=critic_custom_model,
                                      define_custom_output_layer=True)
 
-# net_architecture = networks.actor_critic_net_architecture(
-#                     actor_dense_layers=3,                                critic_dense_layers=3,
-#                     actor_n_neurons=[128, 128, 128],                     critic_n_neurons=[128, 128, 128],
-#                     actor_dense_activation=['relu', 'relu', 'relu'],     critic_dense_activation=['relu', 'relu', 'relu']
-#                     )
+net_architecture = networks.actor_critic_net_architecture(
+                    actor_dense_layers=3,                                critic_dense_layers=3,
+                    actor_n_neurons=[128, 128, 128],                     critic_n_neurons=[128, 128, 128],
+                    actor_dense_activation=['relu', 'relu', 'relu'],     critic_dense_activation=['relu', 'relu', 'relu']
+                    )
 
 
 
-agent = ddpg_agent_tf.Agent(actor_lr=1e-2,
-                            critic_lr=1e-2,
-                            batch_size=128,
+agent = ddpg_agent_tf.Agent(actor_lr=1e-4,
+                            critic_lr=1e-4,
+                            batch_size=64,
                             epsilon=0.5,
                             epsilon_decay=0.9999,
                             epsilon_min=0.15,
-                            n_stack=4,
+                            n_stack=1,
                             net_architecture=net_architecture,
                             tensorboard_dir='/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/tf_tutorials/tensorboard_logs/')
 
+# agent = agent_saver.load('agent_ddpg', agent=ddpg_agent_tf.Agent())
+# agent = agent_saver.load('agent_ddpg', agent=agent, overwrite_attrib=True)
+
 problem = rl_problem.Problem(environment, agent)
 
-problem.solve(1000, render=False, render_after=400, skip_states=2)
-problem.test(render=True, n_iter=10)
+# agent = agent_saver.load('agent_ddpg', agent=problem.agent, overwrite_attrib=True)
 
-# agent_saver.save(agent_cont, 'agent_ppo.json')
+problem.solve(500, render=False, render_after=990, skip_states=2)
+problem.test(render=True, n_iter=5)
+
+agent_saver.save(agent, 'agent_ddpg')

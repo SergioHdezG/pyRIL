@@ -18,6 +18,7 @@ import gym
 from RL_Agent.base.utils.networks import networks
 from RL_Agent.base.utils.networks.networks_interface import RLNetModel, TrainingHistory
 import tensorflow as tf
+from RL_Agent.base.utils import agent_saver, history_utils
 
 environment = "CartPole-v1"
 environment = gym.make(environment)
@@ -225,7 +226,7 @@ net_architecture = networks.dqn_net(dense_layers=2,
 
 
 
-agent = ddqn_agent_tf.Agent(learning_rate=1e-3,
+agent = ddqn_agent_tf.Agent(learning_rate=1e-4,
                             batch_size=128,
                             epsilon=0.4,
                             epsilon_decay=0.999,
@@ -235,9 +236,14 @@ agent = ddqn_agent_tf.Agent(learning_rate=1e-3,
                             net_architecture=net_architecture,
                             tensorboard_dir='/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/tf_tutorials/tensorboard_logs/')
 
+# agent = agent_saver.load('agent_ddqn', agent=ddqn_agent_tf.Agent())
+agent = agent_saver.load('agent_ddqn', agent=agent, overwrite_attrib=True)
+
 problem = rl_problem.Problem(environment, agent)
 
-problem.solve(100, render=True, skip_states=2)
-problem.test(render=True, n_iter=10)
+# agent = agent_saver.load('agent_ddqn', agent=problem.agent, overwrite_attrib=True)
 
-# agent_saver.save(agent_cont, 'agent_ppo.json')
+problem.solve(100, render=True, skip_states=2)
+problem.test(render=True, n_iter=5)
+
+agent_saver.save(agent, 'agent_ddqn')

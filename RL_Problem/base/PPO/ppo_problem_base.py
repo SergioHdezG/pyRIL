@@ -63,7 +63,11 @@ class PPOProblemBase(RLProblemSuper):
         if self.img_input:
             stack = self.n_stack is not None and self.n_stack > 1
             # TODO: Tratar n_stack como ambos channel last and channel first
-            state_size = (*self.state_size[:2], self.state_size[-1] * self.n_stack)
+            if len(self.state_size) > 2:
+                state_size = (*self.state_size[:2], self.state_size[-1] * self.n_stack)
+            else:
+                state_size = self.state_size
+
 
         elif self.n_stack is not None and self.n_stack > 1:
             stack = True
