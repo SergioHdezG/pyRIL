@@ -37,8 +37,7 @@ class DeepIRL(ILProblemSuper):
         :param use_expert_actions: (bool) If True the discriminator will use the states and actions related to each
             state as input, if False the discriminator only use states as inputs.
         """
-        # TODO: Como hago un checkeo en condiciones?
-        # self._check_agent(rl_problem.agent)
+        self._check_agent(rl_problem.agent)
         super().__init__(rl_problem=rl_problem, expert_traj=expert_traj, lr_disc=lr_disc,
                          batch_size_disc=batch_size_disc, epochs_disc=epochs_disc, val_split_disc=val_split_disc,
                          n_stack_disc=n_stack_disc, net_architecture=net_architecture, use_expert_actions=use_expert_actions)

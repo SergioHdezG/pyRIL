@@ -3,6 +3,7 @@ from IL_Problem.base.utils.callbacks import Callbacks
 from abc import ABCMeta, abstractmethod
 import numpy as np
 
+
 class ILProblemSuper(object, metaclass=ABCMeta):
     """ Imitation Learning Problem.
 
@@ -47,7 +48,7 @@ class ILProblemSuper(object, metaclass=ABCMeta):
         elif self.n_stack > 1 and self.n_stack != n_stack_disc and n_stack_disc != 1:
             raise Exception("Is not allowed to use stacked input for both discriminator and agent if number of stacked "
                             "inputs differ. It is allowed to use the same stacking number for both or use stacked input"
-                            "for agent but don't use it for discriminator. Discriminator: n_stack_disc = "
+                            "for agent but not for discriminator. Discriminator: n_stack_disc = "
                             + str(n_stack_disc) + ", Agent: n_stack = " + str(self.n_stack))
         else:
             self.n_stack_disc = n_stack_disc

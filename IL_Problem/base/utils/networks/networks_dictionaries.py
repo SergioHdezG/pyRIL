@@ -4,7 +4,8 @@ def irl_discriminator_net(state_conv_layers=None, state_kernel_num=None, state_k
                           action_dense_lay=None, action_n_neurons=None, action_dense_activation=None,
                           common_dense_lay=None, common_n_neurons=None, common_dense_activation=None,
                           use_custom_network=None, state_custom_network=None, action_custom_network=False,
-                          common_custom_network=None, last_layer_activation=None, define_custom_output_layer=False):
+                          common_custom_network=None, last_layer_activation=None, define_custom_output_layer=False,
+                          tf_custom_model=None, use_tf_custom_model=False):
     """
     Here you can define the architecture of your model from input layer to last hidden layer. The output layer wil be
     created by the agent depending on the number of outputs and the algorithm used.
@@ -43,8 +44,20 @@ def irl_discriminator_net(state_conv_layers=None, state_kernel_num=None, state_k
                                     agents you have to return the network as a tensor flow graph. These models have to
                                     be an object returned by a function.
     :param define_custom_output_layer: True if the custom model defines the outputs layer for the discriminator in common_custom_network.
+    :param tf_custom_model:         Function to create the custom tensorflow model. The model must inherit from
+                                    RL_Agent.base.utils.networks.networks_interface.RLNetModel. The function must
+                                    receive the input shape of the model.
+    :param use_tf_custom_model:     boolean. Set True if you are going to use a custom external tensorflow model with
+                                    your own architecture inheriting from
+                                    RL_Agent.base.utils.networks.networks_interface.RLNetModel.
+                                    Use this together with tf_custom_model.
+                                    Default values = False
+                                    tf_custom_model and use_custom_network can not have True value at same time
     :return: dictionary
     """
+    if use_custom_network and use_tf_custom_model:
+        raise Exception("use_custom_network and use_tf_custom_model can not have True value at the same time. Please, "
+                        "set at least one of those to False.")
     net_architecture = {
            "state_conv_layers": state_conv_layers,
            "state_kernel_num": state_kernel_num,
@@ -69,6 +82,8 @@ def irl_discriminator_net(state_conv_layers=None, state_kernel_num=None, state_k
            "state_custom_network": state_custom_network,
            "action_custom_network": action_custom_network,
            "common_custom_network": common_custom_network,
-           "define_custom_output_layer": define_custom_output_layer if use_custom_network else False
+           "define_custom_output_layer": define_custom_output_layer if use_custom_network else False,
+           "tf_custom_model": tf_custom_model,
+           "use_tf_custom_model": use_tf_custom_model
            }
     return net_architecture

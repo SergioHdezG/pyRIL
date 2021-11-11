@@ -1,8 +1,8 @@
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Conv2D, Flatten
 # import tensorflow as tf
-import tensorflow.compat.v1 as tf
-tf.disable_v2_behavior()
+# import tensorflow.compat.v1 as tf
+# tf.disable_v2_behavior()
 from termcolor import colored
 
 
@@ -30,6 +30,8 @@ def read_disc_net_params(net_architecture):
     id_17 = 'action_custom_network'
     id_18 = 'common_custom_network'
     id_20 = 'define_custom_output_layer'
+    id_21 = 'tf_custom_model'
+    id_22 = 'use_tf_custom_model'
 
     if (id_1 and id_2 and id_3 and id_4 and id_5 in net_architecture) \
             and (net_architecture[id_1] and net_architecture[id_2] and net_architecture[id_3] and net_architecture[id_4]
@@ -132,14 +134,105 @@ def read_disc_net_params(net_architecture):
         print(colored('WARNING: Last layer activation function was not specified, sigmoid activation is selected by '
                       'default.', 'yellow'))
 
+    if (id_21 and id_22 in net_architecture) and (net_architecture[id_21] and net_architecture[id_22] is not None):
+        use_custom_net = net_architecture[id_22]
+        custom_net = net_architecture[id_21]
+
     return state_n_conv_layers, state_kernel_num, state_kernel_size, state_strides, state_conv_activation, \
            state_n_dense_layers, state_n_neurons, state_dense_activation, use_custom_net, action_n_dense_layers, \
            action_n_neurons, action_dense_activation, common_n_dense_layers, common_n_neurons, \
-           common_dense_activation, use_custom_net, state_custom_net, action_custom_net, common_custom_net, \
+           common_dense_activation, use_custom_net, custom_net, state_custom_net, action_custom_net, common_custom_net, \
            last_layer_activation, define_custom_output_layer
 
 
 def build_disc_nn_net(net_architecture, state_shape, n_actions, img_input=False, use_expert_actions=True):
+    state_n_conv_layers, state_kernel_num, state_kernel_size, state_strides, state_conv_activation, \
+    state_n_dense_layers, state_n_neurons, state_dense_activation, use_custom_net, action_n_dense_layers, \
+    action_n_neurons, action_dense_activation, common_n_dense_layers, common_n_neurons, \
+    common_dense_activation, use_custom_net, state_custom_net, action_custom_net, common_custom_net, \
+    last_layer_activation, define_custom_output_layer = read_disc_net_params(net_architecture)
+
+    if not img_input:
+        stack = len(state_shape) > 1
+    else:
+        stack = False
+
+    if use_custom_net:
+        if state_custom_net is not None:
+            state_model = state_custom_net(state_shape)
+            state_out_size = state_model.output.shape[-1]
+        else:
+            if stack:
+                state_model = Flatten(input_shape=state_shape)
+                state_out_size = state_shape[-2] * state_shape[-1]
+            else:
+                state_model = _dummy_model
+                state_out_size = state_shape[-1]
+        if use_expert_actions:
+            if action_custom_net is not None:
+                action_model = action_custom_net((n_actions,))
+                action_out_size = action_model.output.shape[-1]
+            else:
+                action_model = _dummy_model
+                action_out_size = n_actions
+            common_size = state_out_size + action_out_size
+        else:
+            action_model = None
+            common_size = state_out_size
+
+        common_model = common_custom_net((common_size,))
+    else:
+        if not stack and not img_input:
+            # Extract an integer from a tuple
+            state_shape = state_shape[0]
+
+        # build state network
+        state_model = Sequential()
+        if img_input:
+            state_model.add(Conv2D(state_kernel_num[0], kernel_size=state_kernel_size[0], input_shape=state_shape,
+                                   strides=(state_strides[0], state_strides[0]), padding='same',
+                                   activation=state_conv_activation[0]))
+            for i in range(1, state_n_conv_layers):
+                state_model.add(Conv2D(state_kernel_num[i], kernel_size=state_kernel_size[i],
+                                       strides=(state_strides[i], state_strides[i]), padding='same',
+                                       activation=state_conv_activation[i]))
+            state_model.add(Flatten())
+
+        elif stack:
+            state_model.add(Flatten(input_shape=state_shape))
+
+        state_model.add(Dense(state_n_neurons[0], input_dim=state_shape, activation=state_dense_activation[0],
+                              name='disc_state_dense_0'))
+
+        for i in range(1, state_n_dense_layers):
+            state_model.add(Dense(state_n_neurons[i], activation=state_dense_activation[i],
+                                  name='disc_state_dense_'+str(i)))
+
+        # build action network
+        if use_expert_actions:
+            action_model = Sequential()
+            action_model.add(Dense(state_n_neurons[0], input_dim=n_actions, activation=state_dense_activation[0],
+                                   name='disc_action_dense_0'))
+
+            for i in range(1, state_n_dense_layers):
+                action_model.add(Dense(state_n_neurons[i], activation=state_dense_activation[i],
+                                       name='disc_action_dense_'+str(i)))
+
+        # input_common = action_model.output.shape[-1] + state_model.output.shape[-1]
+        else:
+            action_model = None
+
+        # build common network
+        common_model = Sequential()
+        common_model.add(Dense(state_n_neurons[0], activation=state_dense_activation[0], name='disc_common_dense_0'))
+
+        for i in range(1, state_n_dense_layers):
+            common_model.add(Dense(state_n_neurons[i], activation=state_dense_activation[i],
+                                   name='disc_common_dense_'+str(i)))
+
+    return state_model, action_model, common_model, last_layer_activation, define_custom_output_layer
+
+def build_disc_nn_net_legacy(net_architecture, state_shape, n_actions, img_input=False, use_expert_actions=True):
     state_n_conv_layers, state_kernel_num, state_kernel_size, state_strides, state_conv_activation, \
     state_n_dense_layers, state_n_neurons, state_dense_activation, use_custom_net, action_n_dense_layers, \
     action_n_neurons, action_dense_activation, common_n_dense_layers, common_n_neurons, \
