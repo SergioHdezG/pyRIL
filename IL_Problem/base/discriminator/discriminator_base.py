@@ -12,7 +12,8 @@ import numbers
 
 class DiscriminatorBase(object):
     def __init__(self, scope, state_size, n_actions, n_stack=1, img_input=False, use_expert_actions=True,
-                 learning_rate=1e-3, batch_size=5, epochs=5, val_split=0.15, discrete=False, preprocess=None):
+                 learning_rate=1e-3, batch_size=5, epochs=5, val_split=0.15, discrete=False, preprocess=None,
+                 tensorboard_dir=None):
 
         self.use_expert_actions = use_expert_actions
 
@@ -31,6 +32,8 @@ class DiscriminatorBase(object):
         self.discrete_actions = discrete
         self.preprocess = preprocess
         self.global_epochs = 0
+        self.tensorboard_dir = tensorboard_dir
+        self.discriminator_builded = False
 
     def _build_model(self, net_architecture):
         # Neural Net for Deep-Q learning Model
@@ -41,6 +44,7 @@ class DiscriminatorBase(object):
         else:
             state_size = (self.state_size,)
 
+        self.discriminator_builded = True
         return self._build_net(state_size, net_architecture)
 
     def _build_net(self, state_size, net_architecture):
@@ -52,7 +56,8 @@ class DiscriminatorBase(object):
                 # If not one hot encoded
                 onehot = False
                 if hasattr(action[0], 'shape'):
-                    onehot = action[0].shape[0] > 1
+                    if len(action[0].shape) > 0:
+                        onehot = action[0].shape[0] > 1
                 if not onehot:
                     action_matrix = np.array([np.zeros(self.n_actions) for a in action])
                     for a, a_m in zip(action, action_matrix):
@@ -83,7 +88,7 @@ class DiscriminatorBase(object):
             else:
                 # If inputs are stacked but nor the discriminator, select the las one input from each stack
                 if len(obs.shape) > 2:
-                    obs = obs[:, -1, :]
+                    obs = obs[:, -1, :]  # cambiar por obs[:, -1] si funciona para más formas de datos
                 obs = np.array(obs)
 
             reward = self.predict(obs, action)
@@ -233,7 +238,7 @@ class DiscriminatorBase(object):
             agent_traj_a = np.array(agent_traj_a)[agent_traj_index]
 
             if self.discrete_actions:
-                # If not one hot encoded
+                # If agent actions are not one hot encoded
                 if len(agent_traj_a.shape) < 2:
                     one_hot_agent_a = []
                     for i in range(agent_traj_a.shape[0]):
@@ -242,7 +247,7 @@ class DiscriminatorBase(object):
                         one_hot_agent_a.append(action_matrix_agent)
                     agent_traj_a = np.array(one_hot_agent_a)
 
-                # If not one hot encoded
+                # If expert actions are not one hot encoded
                 if len(expert_traj_a.shape) < 2:
                     one_hot_expert_a = []
                     for i in range(expert_traj_a.shape[0]):

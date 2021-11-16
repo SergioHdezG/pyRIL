@@ -9,7 +9,6 @@ from tensorflow.keras.optimizers import Adam
 from RL_Agent.base.utils import net_building
 from RL_Agent.base.utils.networks.default_networks import ppo_net
 from RL_Agent.base.agent_base import AgentSuper
-from tutorials.transformers_models import RLNetModel as RLNetModelTransformers
 from RL_Agent.base.utils.networks.networks_interface import RLNetModel as RLNetModel
 import tensorflow as tf
 from RL_Agent.base.utils.networks.agent_networks import PPONet

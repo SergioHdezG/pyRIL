@@ -19,7 +19,7 @@ class DeepIRL(ILProblemSuper):
 
     def __init__(self, rl_problem, expert_traj, lr_disc=1e-4, batch_size_disc=128, epochs_disc=5, val_split_disc=0.2,
                  agent_collect_iter=15, agent_train_iter=100, n_stack_disc=False, net_architecture=None,
-                 use_expert_actions=True):
+                 use_expert_actions=True, tensorboard_dir=None):
         """
         :param rl_problem: (RLProblemSuper) RL problem with an agent and environment defined.
         :param expert_traj: (nd array) List of expert demonstrations consisting on observation or observations and
@@ -41,12 +41,13 @@ class DeepIRL(ILProblemSuper):
         # self._check_agent(rl_problem.agent)
         super().__init__(rl_problem=rl_problem, expert_traj=expert_traj, lr_disc=lr_disc,
                          batch_size_disc=batch_size_disc, epochs_disc=epochs_disc, val_split_disc=val_split_disc,
-                         n_stack_disc=n_stack_disc, net_architecture=net_architecture, use_expert_actions=use_expert_actions)
+                         n_stack_disc=n_stack_disc, net_architecture=net_architecture,
+                         use_expert_actions=use_expert_actions, tensorboard_dir=tensorboard_dir)
         self.agent_collect_iter = agent_collect_iter
         self.agent_train_iter = agent_train_iter
         # self.discriminator = self._build_discriminator(net_architecture)
 
-    def _build_discriminator(self, net_architecture):
+    def _build_discriminator(self, net_architecture, tensorboard_dir):
         """
         Create the discriminator.
         :param net_architecture: (dict) Define the net architecture. Is recommended use dicts from
@@ -58,12 +59,13 @@ class DeepIRL(ILProblemSuper):
             discrete_env = True
 
         n_stack = self.n_stack if self.n_stack_disc > 1 else 1
+
         return vdirl_discriminator.Discriminator("Discriminator", self.state_size, self.n_actions, n_stack=n_stack,
                                                  img_input=self.img_input, use_expert_actions=self.use_expert_actions,
                                                  learning_rate=self.lr_disc, batch_size=self.batch_size_disc,
                                                  epochs=self.epochs_disc, val_split=self.val_split_disc,
                                                  discrete=discrete_env, net_architecture=net_architecture,
-                                                 preprocess=self.preprocess)
+                                                 preprocess=self.preprocess, tensorboard_dir=tensorboard_dir)
 
     def solve(self, iterations, render=True, render_after=None, max_step_epi=None, skip_states=1,
               verbose=1, save_live_histogram=False):

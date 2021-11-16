@@ -42,12 +42,12 @@ class IRLNet(ILNetModel):
     def summary(self):
         pass
 
-    def predict(self, x, use_actions=False):
-        y_ = self._predict(x, use_actions)
+    def predict(self, x):
+        y_ = self._predict(x)
         return y_.numpy()
 
     # @tf.function(experimental_relax_shapes=True)
-    def _predict(self, x, use_actions=False):
+    def _predict(self, x):
         """ Predict the output sentence for a given input sentence
             Args:
                 test_source_text: input sentence (raw string)
@@ -59,13 +59,14 @@ class IRLNet(ILNetModel):
                 The input string array (input sentence split by ' ')
                 The output string array
             """
-        if use_actions:
-            y_ = self.actor_net(tf.cast(x[0], tf.float32), tf.cast(x[1], tf.float32), training=False)
-        else:
-            y_ = self.actor_net(tf.cast(x, tf.float32), training=False)
+        # if use_actions:
+        #     y_ = self.net(tf.cast(x[0], tf.float32), tf.cast(x[1], tf.float32), training=False)
+        # else:
+        #     y_ = self.net(tf.cast(x, tf.float32), training=False)
+        y_ = self.net(x, training=False)
         return y_
 
-    def train_step(self, x, y, use_actions=False):
+    def train_step(self, x, y):
         """
         Execute one training step (forward pass + backward pass)
         Args:
@@ -77,10 +78,10 @@ class IRLNet(ILNetModel):
             The loss value of the current pass
         """
 
-        return self._train_step(x, y, use_actions)
+        return self._train_step(x, y)
 
     # @tf.function(experimental_relax_shapes=True)
-    def _train_step(self, x, y, use_actions=False):
+    def _train_step(self, x, y):
         """
         Execute one training step (forward pass + backward pass)
         Args:
@@ -92,10 +93,11 @@ class IRLNet(ILNetModel):
             The loss value of the current pass
         """
         with tf.GradientTape() as tape:
-            if use_actions:
-                y_ = self.net(x[0], x[1], y, training=True)
-            else:
-                y_ = self.net(x, y, training=True)
+            # if use_actions:
+            #     y_ = self.net([tf.cast(x[0], tf.float32), tf.cast(x[1], tf.float32)], training=True)
+            # else:
+            #     y_ = self.net(tf.cast(x, tf.float32), training=True)
+            y_ = self.net(x, training=True)
             loss = self.loss_func(y, y_)
 
         self.metrics.update_state(y, y_)
@@ -119,16 +121,15 @@ class IRLNet(ILNetModel):
         # Generating the training set
         expert_label = np.ones((expert_traj_s.shape[0], 1))
         agent_label = np.zeros((agent_traj_s.shape[0], 1))
-        y = np.concatenate([expert_label, agent_label], axis=0)
+        labels = np.concatenate([expert_label, agent_label], axis=0)
 
         x_s = np.concatenate([expert_traj_s, agent_traj_s], axis=0)
         if agent_traj_a is not None and expert_traj_a is not None:
             x_a = np.concatenate([expert_traj_a, agent_traj_a], axis=0)
-            net_input = [x_s, x_a]
-            dataset = tf.data.Dataset.from_tensor_slices(((x_s, x_a), y))
+            dataset = tf.data.Dataset.from_tensor_slices(((tf.cast(x_s, tf.float32), tf.cast(x_a, tf.float32)), tf.cast(labels, tf.float32)))
             use_actions = True
         else:
-            dataset = tf.data.Dataset.from_tensor_slices((x_s, y))
+            dataset = tf.data.Dataset.from_tensor_slices((tf.cast(x_s, tf.float32), tf.cast(labels, tf.float32)))
             use_actions = False
 
         if shuffle:
@@ -141,32 +142,35 @@ class IRLNet(ILNetModel):
         start_time = time.time()
 
         for e in range(epochs):
-            loss = 0.
-            gradients = None
-            variables = None
+            loss_mean = []
+            metrics_mean = []
             for batch, (x, y) in enumerate(dataset.take(-1)):
-                loss, gradients, variables = self.train_step(x, y, use_actions)
-
-                if batch % int(batch_size / 5) == 0 and verbose == 1:
+                loss, gradients, variables = self.train_step(x, y)
+                loss_mean.append(loss)
+                metric = self.metrics.result()
+                metrics_mean.append(metric)
+                if batch % int(batch_size / 5) == 1 and verbose == 1:
                     print(
-                        'Epoch {}\t Batch {}\t Loss  {:.4f} Acc {:.4f} Elapsed time {:.2f}s'.format(
-                            e + 1, batch, loss.numpy(), self.metrics.result(),
+                        ('Epoch {}\t Batch {}\t Loss  {:.4f} ' + self.metrics.name + ' {:.4f} Elapsed time {:.2f}s').format(
+                            e + 1, batch, loss.numpy(), metric,
                             time.time() - start_time))
                     start_time = time.time()
+            loss_mean = np.mean(loss_mean)
+            metrics_mean = np.mean(metrics_mean)
+            if verbose >= 1:
+                print(('Epoch {}\t Loss  {:.4f} ' + self.metrics.name + ' {:.4f}').format(e + 1, loss_mean,
+                                                                                          metrics_mean))
 
             if self.train_summary_writer is not None:
                 with self.train_summary_writer.as_default():
-                    self.loss_sumaries([loss,
-                                        gradients,
-                                        variables],
-                                       ['discriminator_loss',
-                                        'discriminator_gradients',
-                                        'discriminator_variables'],
+                    self.loss_sumaries([loss_mean, metrics_mean],
+                                       ['discriminator_loss', self.metrics.name],
                                         self.total_epochs)
 
             self.total_epochs += 1
 
-            history.history['loss'].append(loss.numpy())
+            history.history['loss'].append(loss_mean)
+            history.history['acc'].append(metrics_mean)
 
             if callbacks is not None:
                 for cb in callbacks:

@@ -262,7 +262,7 @@ net_architecture = networks.actor_critic_net_architecture(
                     actor_dense_activation=['relu', 'relu'],        critic_dense_activation=['relu', 'relu'],
                     use_custom_network=True,
                     actor_custom_network=actor_custom_model,         critic_custom_network=critic_custom_model,
-                    define_custom_output_layer=True
+                    define_custom_output_layer=True,
                     )
 
 agent_cont = ppo_agent_continuous_tf.Agent(actor_lr=1e-5,

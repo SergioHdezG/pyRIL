@@ -3,6 +3,11 @@ from os import path
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
 import tensorflow as tf
+# Estas tres lineas resuelven algunos problemas con cuDNN en TF2 por los que no me permitía ejecutar en GPU
+physical_devices = tf.config.experimental.list_physical_devices('GPU')
+assert len(physical_devices) > 0, "Not enough GPU hardware devices available"
+config = tf.config.experimental.set_memory_growth(physical_devices[0], True)
+
 from RL_Problem import rl_problem
 # from IL_Problem.gail import GAIL
 from IL_Problem.deepirl import DeepIRL
@@ -22,7 +27,6 @@ environment = gym.make(environment)
 
 
 exp_path = "expert_demonstrations/Expert_LunarLander.pkl"
-
 
 # net_architecture = rl_networks.net_architecture(dense_layers=2,
 #                                            n_neurons=[256, 256],
@@ -66,23 +70,24 @@ net_architecture = rl_networks.actor_critic_net_architecture(use_custom_network=
 #                                                net_architecture=net_architecture,
 #                                                n_stack=3)
 
-agent = ppo_agent_discrete_parallel_tf.Agent(actor_lr=1e-3,
+agent = ppo_agent_discrete_parallel_tf.Agent(actor_lr=1e-4,
                                           critic_lr=1e-4,
                                           batch_size=128,
                                           epsilon=0.9,
-                                          epsilon_decay=0.99,
+                                          epsilon_decay=0.97,
                                           epsilon_min=0.15,
                                           memory_size=512,
                                           net_architecture=net_architecture,
-                                          n_stack=4)
+                                          n_stack=3)
 
 
 # agent = agent_saver.load('agent_ppo.json')
 rl_problem = rl_problem.Problem(environment, agent)
 # rl_problem.solve(render=False, episodes=300, skip_states=1, render_after=190)
+# rl_problem.test(n_iter=10)
 
-use_expert_actions = False
-discriminator_stack = 4
+use_expert_actions = True
+discriminator_stack = 3
 exp_memory = load_expert_memories(exp_path, load_action=use_expert_actions, n_stack=discriminator_stack)
 
 def one_layer_custom_model(input_shape):
@@ -95,15 +100,13 @@ def one_layer_custom_model(input_shape):
 
 
 irl_net_architecture = il_networks.irl_discriminator_net(use_custom_network=True,
-                                                    state_custom_network=None,
-                                                    action_custom_network=None,
-                                                    common_custom_network=one_layer_custom_model,
-                                                    last_layer_activation='sigmoid',
-                                                    define_custom_output_layer=True)
+                                                         common_custom_network=one_layer_custom_model,
+                                                         define_custom_output_layer=True,
+                                                         use_tf_custom_model=False)
 
-irl_problem = DeepIRL(rl_problem, exp_memory, lr_disc=1e-4, batch_size_disc=128, epochs_disc=5, val_split_disc=0.2,
-                      agent_collect_iter=50, agent_train_iter=100, n_stack_disc=discriminator_stack,
-                      net_architecture=irl_net_architecture, use_expert_actions=use_expert_actions)
+irl_problem = DeepIRL(rl_problem, exp_memory, lr_disc=1e-5, batch_size_disc=128, epochs_disc=2, val_split_disc=0.1,
+                      agent_collect_iter=10, agent_train_iter=25, n_stack_disc=discriminator_stack,
+                      net_architecture=irl_net_architecture, use_expert_actions=use_expert_actions, tensorboard_dir="logs")
 
 # irl_problem = GAIL(rl_problem, exp_memory, lr_disc=1e-5, batch_size_disc=128, epochs_disc=3, val_split_disc=0.2,
 #                    n_stack_disc=discriminator_stack, net_architecture=irl_net_architecture, use_expert_actions=use_expert_actions)

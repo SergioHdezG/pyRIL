@@ -2,9 +2,9 @@ import numpy as np
 from RL_Agent.base.PPO_base.ppo_agent_base_tf import PPOSuper
 from RL_Agent.base.utils import agent_globals
 import multiprocessing
-from tutorials.transformers_models import *
-from tutorials.transformers_models import RLNetModel as RLNetModelTransformers
-from RL_Agent.base.utils.networks.networks_interface import RLNetModel as RLNetModelTF
+# from tutorials.transformers_models import *
+# from tutorials.transformers_models import RLNetModel as RLNetModelTransformers
+# from RL_Agent.base.utils.networks.networks_interface import RLNetModel as RLNetModelTF
 from RL_Agent.base.utils.networks import losses
 import tensorflow as tf
 from RL_Agent.base.utils.networks import action_selection_options

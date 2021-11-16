@@ -17,7 +17,7 @@ class ILProblemSuper(object, metaclass=ABCMeta):
     """
 
     def __init__(self, rl_problem, expert_traj, lr_disc=1e-4, batch_size_disc=128, epochs_disc=5, val_split_disc=0.2,
-                 n_stack_disc=1, net_architecture=None, use_expert_actions=True):
+                 n_stack_disc=1, net_architecture=None, use_expert_actions=True, tensorboard_dir=None):
         """
         :param rl_problem: (RLProblemSuper) RL problem with and agent and environment defined.
         :param expert_traj: (nd array) List of expert demonstrations consisting on observation or observations and
@@ -83,9 +83,9 @@ class ILProblemSuper(object, metaclass=ABCMeta):
         self.batch_size_disc = batch_size_disc
         self.epochs_disc = epochs_disc
         self.val_split_disc = val_split_disc
+        self.loss_selected = None
 
-
-        self.discriminator = self._build_discriminator(net_architecture)
+        self.discriminator = self._build_discriminator(net_architecture, tensorboard_dir)
 
     @abstractmethod
     def _build_discriminator(self, net_architecture):

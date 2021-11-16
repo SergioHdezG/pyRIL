@@ -133,8 +133,12 @@ def format_obs(obs, action, get_action, done, n_stack=0):
             for i in range(obs.shape[0]):
                 # data.append(np.array([obs[i], [action[i]], reward[i], done[i]]))
                 data.append(np.array([obs[i], action[i]], dtype=object))
+                # data.append([obs[i], action[i]])
+
         else:
             data = []
             for i in range(obs.shape[0]):
-                data.append(np.array([obs[i]], dtype=object))
+                # data.append(np.array([obs[i]], dtype=object))
+                data.append(np.array([obs[i]], dtype=np.float32))
+
     return data
