@@ -17,7 +17,7 @@ def deepirl_loss(y, y_):
     # TODO: Probar con BinaryCrosentropy()
     #  return bce(y, y_)
 
-# @tf.function
+@tf.function
 def gail_loss(y_expert, y_agent):
     loss_expert = tf.reduce_mean(tf.math.log(tf.clip_by_value(y_expert, 0.01, 1)))
     loss_agent = tf.reduce_mean(tf.math.log(tf.clip_by_value(1 - y_agent, 0.01, 1)))

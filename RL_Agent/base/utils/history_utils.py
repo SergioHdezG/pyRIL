@@ -71,9 +71,16 @@ def write_history(rl_hist=False, il_hist=False, monitor_path=False):
             rl_data['epsilon'].append(float(rl_hist[-1][3]))
             rl_data['global_steps'].append(rl_hist[-1][4])
         if il_hist:
-            il_data['train_loss'].append(float(il_hist[0]))
-            il_data['val_loss'].append(float(il_hist[1]))
-            il_data['epochs'].append(il_hist[2])
+            if len(il_hist[0]) > 1 and len(il_hist[1]) > 1:
+                il_data['train_loss'].append(float(il_hist[0][0]))
+                il_data['val_loss'].append(float(il_hist[1][0]))
+                il_data['train_acc'].append(float(il_hist[0][1]))
+                il_data['val_acc'].append(float(il_hist[1][1]))
+                il_data['epochs'].append(il_hist[2])
+            else:
+                il_data['train_loss'].append(float(il_hist[0]))
+                il_data['val_loss'].append(float(il_hist[1]))
+                il_data['epochs'].append(il_hist[2])
     else:
         if rl_hist:
             rl_data = {
@@ -92,15 +99,26 @@ def write_history(rl_hist=False, il_hist=False, monitor_path=False):
                 'global_steps': []
             }
         if il_hist:
-            il_data = {
-                'train_loss': [float(il_hist[0])],
-                'val_loss': [float(il_hist[1])],
-                'epochs': [il_hist[2]]
-            }
+                if len(il_hist[0]) > 1 and len(il_hist[1]) > 1:
+                    il_data = {
+                        'train_loss': [float(il_hist[0][0])],
+                        'val_loss': [float(il_hist[1][0])],
+                        'train_acc': [float(il_hist[0][1])],
+                        'val_acc': [float(il_hist[1][1])],
+                        'epochs': [il_hist[2]]
+                    }
+                else:
+                    il_data = {
+                        'train_loss': [float(il_hist[0])],
+                        'val_loss': [float(il_hist[1])],
+                        'epochs': [il_hist[2]]
+                    }
         else:
             il_data = {
                 'train_loss': [],
                 'val_loss': [],
+                'train_acc': [],
+                'val_acc': [],
                 'epochs': []
             }
 

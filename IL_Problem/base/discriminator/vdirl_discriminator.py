@@ -75,8 +75,12 @@ class Discriminator(DiscriminatorBase):
         else:
             return self.model.predict(obs)
 
-    def fit(self, expert_traj_s, expert_traj_a, agent_traj_s, agent_traj_a, batch_size=128, epochs=10,
-            validation_split=0.10):
-        loss = self.model.fit(expert_traj_s, agent_traj_s, expert_traj_a, agent_traj_a, batch_size=batch_size, epochs=epochs, shuffle=True, verbose=2, validation_split=validation_split)
-
-        return [loss.history['loss'][-1], loss.history['acc'][-1]]
+    # def fit(self, expert_traj_s, expert_traj_a, agent_traj_s, agent_traj_a, batch_size=128, epochs=10,
+    #         validation_split=0.10):
+    #     loss = self.model.fit(expert_traj_s, agent_traj_s, expert_traj_a, agent_traj_a, batch_size=batch_size, epochs=epochs, shuffle=True, verbose=2, validation_split=validation_split)
+    #
+    #     if validation_split > 0.:
+    #         return [loss.history['loss'][-1], loss.history['acc'][-1],
+    #                 loss.history['val_loss'][-1], loss.history['val_acc'][-1]]
+    #     else:
+    #         return [loss.history['loss'][-1], loss.history['acc'][-1]]

@@ -134,7 +134,7 @@ def read_disc_net_params(net_architecture):
                       'default.', 'yellow'))
 
     if (id_21 and id_22 in net_architecture) and (net_architecture[id_21] and net_architecture[id_22] is not None):
-        use_custom_net_tf = net_architecture[id_22]
+        use_custom_net = use_custom_net_tf = net_architecture[id_22]
         common_custom_net = net_architecture[id_21]
     else:
         use_custom_net_tf = False

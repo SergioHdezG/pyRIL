@@ -18,6 +18,7 @@ from tensorflow.keras.layers import Dense, LSTM, Input
 from RL_Agent.base.utils import agent_saver
 from RL_Agent.base.utils.networks import networks as rl_networks
 from IL_Problem.base.utils.networks import networks_dictionaries as il_networks
+from IL_Problem.base.utils.networks.il_networks import GAILNet
 import gym
 a = tf.executing_eagerly()
 
@@ -86,9 +87,27 @@ rl_problem = rl_problem.Problem(environment, agent)
 # rl_problem.solve(render=False, episodes=300, skip_states=1, render_after=190)
 # rl_problem.test(n_iter=10)
 
-use_expert_actions = True
-discriminator_stack = 3
+use_expert_actions = False
+discriminator_stack = 1
 exp_memory = load_expert_memories(exp_path, load_action=use_expert_actions, n_stack=discriminator_stack)
+
+
+class gail_net(GAILNet):
+    def __init__(self, input_shape, tensorboard_dir=None):
+        net = self._build_gail_net(input_shape)
+        super(gail_net, self).__init__(net, chckpoint_path=None, chckpoints_to_keep=10, tensorboard_dir=tensorboard_dir)
+
+    def _build_gail_net(self, input_shape):
+        # lstm = LSTM(64, activation='tanh', input_shape=input_shape)
+        # flat = Flatten()
+        dense_1 = Dense(512, activation='relu')
+        dense_2 = Dense(256, activation='relu')
+        output = Dense(2, activation="tanh")
+
+        return tf.keras.models.Sequential([dense_1, dense_2, output])
+
+def custom_model_tf(input_shape):
+    return gail_net(input_shape=input_shape, tensorboard_dir='/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/gail/')
 
 def one_layer_custom_model(input_shape):
     x_input = Input(shape=input_shape, name='disc_s_input')
@@ -99,16 +118,17 @@ def one_layer_custom_model(input_shape):
     return model
 
 
-irl_net_architecture = il_networks.irl_discriminator_net(use_custom_network=True,
+irl_net_architecture = il_networks.irl_discriminator_net(use_custom_network=False,
                                                          common_custom_network=one_layer_custom_model,
-                                                         define_custom_output_layer=True,
-                                                         use_tf_custom_model=False)
+                                                         define_custom_output_layer=False,
+                                                         use_tf_custom_model=True,
+                                                         tf_custom_model=custom_model_tf)
 
 # irl_problem = DeepIRL(rl_problem, exp_memory, lr_disc=1e-5, batch_size_disc=128, epochs_disc=2, val_split_disc=0.1,
 #                       agent_collect_iter=10, agent_train_iter=25, n_stack_disc=discriminator_stack,
 #                       net_architecture=irl_net_architecture, use_expert_actions=use_expert_actions, tensorboard_dir="logs")
 
-irl_problem = GAIL(rl_problem, exp_memory, lr_disc=1e-4, batch_size_disc=128, epochs_disc=5, val_split_disc=0.1,
+irl_problem = GAIL(rl_problem, exp_memory, lr_disc=1e-4, batch_size_disc=128, epochs_disc=2, val_split_disc=0.1,
                    n_stack_disc=discriminator_stack, net_architecture=irl_net_architecture,
                    use_expert_actions=use_expert_actions, tensorboard_dir="logs")
 

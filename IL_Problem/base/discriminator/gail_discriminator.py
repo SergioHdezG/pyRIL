@@ -74,6 +74,7 @@ class Discriminator(DiscriminatorBase):
         if isinstance(discriminator_net, ILNetInterfaz):
             discriminator_model = discriminator_net
             optimizer = tf.keras.optimizers.RMSprop(self.learning_rate)
+            self.loss_selected = losses.gail_loss
             discriminator_model.compile(optimizer=optimizer, loss=self.loss_selected)
         else:
             if not define_output_layer:
@@ -94,11 +95,15 @@ class Discriminator(DiscriminatorBase):
         else:
             return self.model.predict(obs)
 
-    def fit(self, expert_traj_s, expert_traj_a, agent_traj_s, agent_traj_a, batch_size=128, epochs=10,
-            validation_split=0.10):
-        loss = self.model.fit(expert_traj_s, agent_traj_s, expert_traj_a, agent_traj_a, batch_size=batch_size, epochs=epochs, shuffle=True, verbose=2, validation_split=validation_split)
-
-        return [loss.history['loss'][-1], loss.history['acc'][-1]]
+    # def fit(self, expert_traj_s, expert_traj_a, agent_traj_s, agent_traj_a, batch_size=128, epochs=10,
+    #         validation_split=0.10):
+    #     loss = self.model.fit(expert_traj_s, agent_traj_s, expert_traj_a, agent_traj_a, batch_size=batch_size, epochs=epochs, shuffle=True, verbose=2, validation_split=validation_split)
+    #
+    #     if validation_split > 0.:
+    #         return [loss.history['loss'][-1], loss.history['acc'][-1],
+    #                 loss.history['val_loss'][-1], loss.history['val_acc'][-1]]
+    #     else:
+    #         return [loss.history['loss'][-1], loss.history['acc'][-1]]
 
     def _build_graph_legacy(self, net_architecture):
 
