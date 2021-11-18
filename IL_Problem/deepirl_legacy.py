@@ -1,12 +1,9 @@
 from IL_Problem.base.il_problem_super import ILProblemSuper
-# from pympler import muppy, summary
-# from memory_leaks import *
-# from IRL.utils.parse_utils import *
-# from src.IRL.Expert_Agent.expert import Expert
-# from src.IRL.utils import callbacks
 from IL_Problem.base.discriminator import vdirl_discriminator
 from RL_Agent.base.utils import agent_globals
 from RL_Agent.base.utils.history_utils import *
+
+
 class DeepIRL(ILProblemSuper):
     """Deep Inverse Reinforcement Learning problem.
 

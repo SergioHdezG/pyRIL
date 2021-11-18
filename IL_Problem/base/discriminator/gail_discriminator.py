@@ -1,10 +1,13 @@
-# import tensorflow as tf
-import tensorflow.compat.v1 as tf
-tf.disable_v2_behavior()
+import tensorflow as tf
+# import tensorflow.compat.v1 as tf
+# tf.disable_v2_behavior()
 from tensorflow.keras.layers import Dense, Concatenate
 from IL_Problem.base.discriminator.discriminator_base import DiscriminatorBase
 from IL_Problem.base.utils import discriminator_nn_building
 from RL_Agent.base.utils.networks.default_networks import irl_net
+from IL_Problem.base.utils.networks.il_networks import GAILNet
+from IL_Problem.base.utils.networks.networks_interface import ILNetInterfaz
+from IL_Problem.base.utils.networks import losses
 import numpy as np
 
 
@@ -20,7 +23,7 @@ def logit_bernoulli_entropy(logits):
 class Discriminator(DiscriminatorBase):
     def __init__(self, scope, state_size, n_actions, n_stack=1, img_input=False, use_expert_actions=False,
                  learning_rate=1e-3, batch_size=5, epochs=5, val_split=0.15, discrete=False, net_architecture=None,
-                 preprocess=None):
+                 preprocess=None, tensorboard_dir=None):
         """
         :param env:
         Output of this Discriminator is reward for learning agent. Not the cost.
@@ -28,15 +31,76 @@ class Discriminator(DiscriminatorBase):
         """
         super().__init__(scope=scope, state_size=state_size, n_actions=n_actions, n_stack=n_stack, img_input=img_input,
                          use_expert_actions=use_expert_actions, learning_rate=learning_rate, batch_size=batch_size,
-                         epochs=epochs, val_split=val_split, discrete=discrete, preprocess=preprocess)
+                         epochs=epochs, val_split=val_split, discrete=discrete, preprocess=preprocess,
+                         tensorboard_dir=tensorboard_dir)
 
         self.entropy_beta = 0.001
-        self._build_graph(net_architecture)
+        self.model = self._build_model(net_architecture)
 
-        self.sess = tf.Session()
-        self.sess.run(tf.global_variables_initializer())
+        # self._build_graph(net_architecture)
 
-    def _build_graph(self, net_architecture):
+        # self.sess = tf.Session()
+        # self.sess.run(tf.global_variables_initializer())
+
+    def _build_net(self, state_size, net_architecture, last_activation='sigmoid'):
+        # Neural Net for Deep-Q learning Model
+        if net_architecture is None:  # Standart architecture
+            net_architecture = irl_net
+            define_output_layer = False
+        else:
+            define_output_layer = net_architecture['define_custom_output_layer']
+
+        if self.img_input:
+            # state_model, action_model, common_model, last_layer_activation, define_output_layer = \
+            #     discriminator_nn_building.build_disc_nn_net(net_architecture, state_size, self.n_actions,
+            #                                                 img_input=True, use_expert_actions=self.use_expert_actions)
+            discriminator_net = discriminator_nn_building.build_disc_conv_net(net_architecture, state_size, self.n_actions,
+                                                            use_expert_actions=self.use_expert_actions)
+        elif self.stack:
+            # state_model, action_model, common_model, last_layer_activation, define_output_layer = \
+            #     discriminator_nn_building.build_disc_nn_net(net_architecture, state_size, self.n_actions,
+            #                                                 img_input=True, use_expert_actions=self.use_expert_actions)
+            discriminator_net = discriminator_nn_building.build_disc_stack_nn_net(net_architecture, state_size, self.n_actions,
+                                                            use_expert_actions=self.use_expert_actions)
+        else:
+            # state_model, action_model, common_model, last_layer_activation, define_output_layer = \
+            #         discriminator_nn_building.build_disc_nn_net(net_architecture, state_size, self.n_actions,
+            #                                                     use_expert_actions=self.use_expert_actions)
+
+            discriminator_net = discriminator_nn_building.build_disc_nn_net(net_architecture, state_size, self.n_actions,
+                                                            use_expert_actions=self.use_expert_actions)
+
+
+        if isinstance(discriminator_net, ILNetInterfaz):
+            discriminator_model = discriminator_net
+            optimizer = tf.keras.optimizers.RMSprop(self.learning_rate)
+            discriminator_model.compile(optimizer=optimizer, loss=self.loss_selected)
+        else:
+            if not define_output_layer:
+                output = Dense(1, name='output', activation=last_activation)(discriminator_net.output)
+                discriminator_net = tf.keras.models.Model(inputs=discriminator_net.inputs, outputs=output)
+                # discriminator_net.add(Dense(1, name='output', activation=last_activation))
+
+            discriminator_model = GAILNet(discriminator_net, tensorboard_dir=self.tensorboard_dir)
+
+            optimizer = tf.keras.optimizers.RMSprop(self.learning_rate)
+            self.loss_selected = losses.gail_loss
+            discriminator_model.compile(optimizer=optimizer, loss=self.loss_selected, metrics=tf.keras.metrics.BinaryAccuracy())
+        return discriminator_model
+
+    def predict(self, obs, action):
+        if self.use_expert_actions:
+            return self.model.predict([obs, action])
+        else:
+            return self.model.predict(obs)
+
+    def fit(self, expert_traj_s, expert_traj_a, agent_traj_s, agent_traj_a, batch_size=128, epochs=10,
+            validation_split=0.10):
+        loss = self.model.fit(expert_traj_s, agent_traj_s, expert_traj_a, agent_traj_a, batch_size=batch_size, epochs=epochs, shuffle=True, verbose=2, validation_split=validation_split)
+
+        return [loss.history['loss'][-1], loss.history['acc'][-1]]
+
+    def _build_graph_legacy(self, net_architecture):
 
         expert_net, agent_net = self._build_model(net_architecture)
 
@@ -75,8 +139,7 @@ class Discriminator(DiscriminatorBase):
         # self.reward = -tf.log(tf.clip_by_value(sig_agent_net, 1e-4, 1))  # log(P(expert|s,a)) larger is better for agent
         # self.reward = tf.log(1 - sig_agent_net + 1e-1)  # log(P(expert|s,a)) larger is better for agent
 
-
-    def _build_net(self, state_size, net_architecture):
+    def _build_net_legacy(self, state_size, net_architecture):
         # Neural Net for Deep-Q learning Model
         if net_architecture is None:  # Standart architecture
             net_architecture = irl_net
@@ -158,14 +221,13 @@ class Discriminator(DiscriminatorBase):
 
         return expert_net, agent_net
 
-    def predict(self, obs, action):
+    def predict_legacy(self, obs, action):
         if self.use_expert_actions:
             return self.sess.run(self.reward, feed_dict={self.agent_traj_s: obs, self.agent_traj_a: action})
         else:
             return self.sess.run(self.reward, feed_dict={self.agent_traj_s: obs})
 
-
-    def fit(self, expert_traj_s, expert_traj_a, agent_traj_s, agent_traj_a, batch_size=128, epochs=10, validation_split=0.2):
+    def fit_legacy(self, expert_traj_s, expert_traj_a, agent_traj_s, agent_traj_a, batch_size=128, epochs=10, validation_split=0.2):
         test_samples = np.int(validation_split * expert_traj_s.shape[0])
         train_samples = np.int(expert_traj_s.shape[0] - test_samples)
 

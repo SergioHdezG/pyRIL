@@ -4,12 +4,12 @@ sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
 import tensorflow as tf
 # Estas tres lineas resuelven algunos problemas con cuDNN en TF2 por los que no me permitía ejecutar en GPU
-physical_devices = tf.config.experimental.list_physical_devices('GPU')
-assert len(physical_devices) > 0, "Not enough GPU hardware devices available"
-config = tf.config.experimental.set_memory_growth(physical_devices[0], True)
+# physical_devices = tf.config.experimental.list_physical_devices('GPU')
+# assert len(physical_devices) > 0, "Not enough GPU hardware devices available"
+# config = tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 from RL_Problem import rl_problem
-# from IL_Problem.gail import GAIL
+from IL_Problem.gail import GAIL
 from IL_Problem.deepirl import DeepIRL
 from RL_Agent import ppo_agent_discrete_parallel_tf, dpg_agent_tf, ppo_agent_discrete_tf
 from IL_Problem.base.utils.callbacks import load_expert_memories, Callbacks
@@ -87,7 +87,7 @@ rl_problem = rl_problem.Problem(environment, agent)
 # rl_problem.test(n_iter=10)
 
 use_expert_actions = True
-discriminator_stack = 3
+discriminator_stack = 1
 exp_memory = load_expert_memories(exp_path, load_action=use_expert_actions, n_stack=discriminator_stack)
 
 def one_layer_custom_model(input_shape):
@@ -104,12 +104,13 @@ irl_net_architecture = il_networks.irl_discriminator_net(use_custom_network=True
                                                          define_custom_output_layer=True,
                                                          use_tf_custom_model=False)
 
-irl_problem = DeepIRL(rl_problem, exp_memory, lr_disc=1e-5, batch_size_disc=128, epochs_disc=2, val_split_disc=0.1,
-                      agent_collect_iter=10, agent_train_iter=25, n_stack_disc=discriminator_stack,
-                      net_architecture=irl_net_architecture, use_expert_actions=use_expert_actions, tensorboard_dir="logs")
+# irl_problem = DeepIRL(rl_problem, exp_memory, lr_disc=1e-5, batch_size_disc=128, epochs_disc=2, val_split_disc=0.1,
+#                       agent_collect_iter=10, agent_train_iter=25, n_stack_disc=discriminator_stack,
+#                       net_architecture=irl_net_architecture, use_expert_actions=use_expert_actions, tensorboard_dir="logs")
 
-# irl_problem = GAIL(rl_problem, exp_memory, lr_disc=1e-5, batch_size_disc=128, epochs_disc=3, val_split_disc=0.2,
-#                    n_stack_disc=discriminator_stack, net_architecture=irl_net_architecture, use_expert_actions=use_expert_actions)
+irl_problem = GAIL(rl_problem, exp_memory, lr_disc=1e-5, batch_size_disc=128, epochs_disc=1, val_split_disc=0.1,
+                   n_stack_disc=discriminator_stack, net_architecture=irl_net_architecture,
+                   use_expert_actions=use_expert_actions, tensorboard_dir="logs")
 
 print("Entrenamiento de agente con aprendizaje por imitación")
 # save_live_histories allows to record data for analysis in real time.
