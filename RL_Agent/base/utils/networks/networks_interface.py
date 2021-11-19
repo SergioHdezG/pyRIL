@@ -143,6 +143,7 @@ class RLNetModel(RLNetInterfaz):
         self._tensorboard_util(tensorboard_dir)
         self.loss_sumaries = tensor_board_loss_functions.loss_sumaries
         self.rl_sumaries = tensor_board_loss_functions.rl_sumaries
+        self.total_epochs = 0
 
     def _tensorboard_util(self, tensorboard_dir):
         if tensorboard_dir is not None:
@@ -161,6 +162,150 @@ class RLNetModel(RLNetInterfaz):
                     custom_globals[cust_key] = globs[key]
                     break
         return custom_globals
+
+    def bc_fit(self, x, y, epochs, batch_size,  validation_split=0., shuffle=True, verbose=1, callbacks=None,
+               kargs=[]):
+
+        if validation_split > 0.:
+            # Validation split for expert traj
+            n_val_split = int(x.shape[0] * validation_split)
+            val_idx = np.random.choice(x.shape[0], n_val_split, replace=False)
+            train_mask = np.array([False if i in val_idx else True for i in
+                                   range(x.shape[0])])
+
+            x_val = x[val_idx]
+            y_val = y[val_idx]
+
+            x_train = np.array(x[train_mask])
+            y_train = np.array(y[train_mask])
+        else:
+            x_train = np.array(x)
+            y_train = np.array(y)
+
+
+        dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
+        if validation_split > 0.:
+            val_dataset = tf.data.Dataset.from_tensor_slices((x_val, y_val))
+
+        if shuffle:
+            dataset = dataset.shuffle(x.shape[0], reshuffle_each_iteration=True).batch(batch_size)
+        else:
+            dataset = dataset.batch(batch_size)
+        if validation_split > 0.:
+            val_dataset = val_dataset.batch(batch_size)
+
+        history = TrainingHistory()
+
+        start_time = time.time()
+
+        for e in range(epochs):
+            loss_mean = []
+            metrics_mean = []
+            for batch, (x, y) in enumerate(dataset.take(-1)):
+                loss, gradients, variables = self.bc_train_step(x, y)
+                loss_mean.append(loss)
+                metric = self.metrics.result()
+                metrics_mean.append(metric)
+
+                if batch_size > 5:
+                    show_each = int(int((x_train.shape[0]/4))/batch_size)
+                else:
+                    show_each = 1
+                if batch % show_each == 0 and verbose == 1:
+                    print(('Epoch {}\t Batch {}\t Loss  {:.4f} ' + self.metrics.name +
+                           ' {:.4f} Elapsed time {:.2f}s').format(e + 1,
+                                                                  batch,
+                                                                  loss.numpy(),
+                                                                  metric,
+                                                                  time.time() - start_time))
+                    start_time = time.time()
+            loss_mean = np.mean(loss_mean)
+            metrics_mean = np.mean(metrics_mean)
+
+            if validation_split > 0.:
+                val_loss = []
+                val_metrics = []
+                for batch, (x, y) in enumerate(val_dataset.take(-1)):
+                    val_loss.append(self.bc_evaluate(x, y))
+                    val_metrics.append(self.metrics.result())
+                mean_val_loss = np.mean(val_loss)
+                val_metrics_mean = np.mean(val_metrics)
+
+            if verbose >= 1:
+                if validation_split > 0.:
+                    print(('epoch {}\t loss  {:.4f} ' + self.metrics.name + ' {:.4f}' +
+                           ' val_loss  {:.4f} val_' + self.metrics.name + ' {:.4f}').format(e + 1,
+                                                                                            loss_mean,
+                                                                                            metrics_mean,
+                                                                                            mean_val_loss,
+                                                                                            val_metrics_mean))
+                else:
+                    print(('Epoch {}\t Loss  {:.4f} ' + self.metrics.name + ' {:.4f}').format(e + 1,
+                                                                                              loss_mean,
+                                                                                              metrics_mean))
+            if self.train_summary_writer is not None:
+                with self.train_summary_writer.as_default():
+                    if validation_split > 0.:
+                        self.loss_sumaries([loss_mean, metrics_mean,
+                                            mean_val_loss, val_metrics_mean],
+                                           ['discriminator_loss', self.metrics.name,
+                                            'discriminator_val_loss',
+                                            'val_' + self.metrics.name],
+                                           self.total_epochs)
+                    else:
+                        self.loss_sumaries([loss_mean, metrics_mean],
+                                           ['discriminator_loss', self.metrics.name],
+                                           self.total_epochs)
+        self.total_epochs += 1
+
+        history.history['loss'].append(loss_mean)
+        history.history['acc'].append(metrics_mean)
+
+        if validation_split > 0.:
+            history.history['val_loss'].append(mean_val_loss)
+            history.history['val_acc'].append(val_metrics_mean)
+
+        if callbacks is not None:
+            for cb in callbacks:
+                cb.on_epoch_end(e)
+
+
+        return history
+
+    def bc_train_step(self, x, y):
+        """
+        Execute one training step (forward pass + backward pass)
+        Args:
+            source_seq: source sequences
+            target_seq_in: input target sequences (<start> + ...)
+            target_seq_out: output target sequences (... + <end>)
+
+        Returns:
+            The loss value of the current pass
+        """
+
+        return self._bc_train_step(x, y)
+
+    @tf.function(experimental_relax_shapes=True)
+    def _bc_train_step(self, x, y):
+       pass
+
+    def bc_evaluate(self, x, y):
+        """
+        Execute one training step (forward pass + backward pass)
+        Args:
+            source_seq: source sequences
+            target_seq_in: input target sequences (<start> + ...)
+            target_seq_out: output target sequences (... + <end>)
+
+        Returns:
+            The loss value of the current pass
+        """
+        return self._bc_evaluate(x, y)
+
+    @tf.function(experimental_relax_shapes=True)
+    def _bc_evaluate(self, x, y):
+        pass
 
 class TrainingHistory():
     def __init__(self):
@@ -228,7 +373,7 @@ class RLSequentialModel(object):
     def evaluate(self, x, y, batch_size=32, verbose=0):
         dataset = tf.data.Dataset.from_tensor_slices((x, y))
 
-        dataset = dataset.shuffle(len(x)).batch(batch_size)
+        dataset = dataset.shuffle(len(x), reshuffle_each_iteration=True).batch(batch_size)
 
         loss = 0.
         acc = 0.
@@ -299,7 +444,7 @@ class RLSequentialModel(object):
         dataset = tf.data.Dataset.from_tensor_slices((train_input_data, train_target_data))
 
         if shuffle:
-            dataset = dataset.shuffle(len(train_input_data)).batch(batch_size)
+            dataset = dataset.shuffle(len(train_input_data), reshuffle_each_iteration=True).batch(batch_size)
         else:
             dataset = dataset.batch(batch_size)
 

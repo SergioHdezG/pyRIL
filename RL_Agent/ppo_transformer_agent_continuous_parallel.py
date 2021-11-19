@@ -694,7 +694,7 @@ class Transformer:
         dataset = tf.data.Dataset.from_tensor_slices(
             (source_seq, target_seq_in, target_seq_out))
 
-        dataset = dataset.shuffle(len(source_seq)).batch(batch_size)
+        dataset = dataset.shuffle(len(source_seq), reshuffle_each_iteration=True).batch(batch_size)
 
         loss = 0.
         for batch, (source_seq, target_seq_in, target_seq_out) in enumerate(dataset.take(-1)):

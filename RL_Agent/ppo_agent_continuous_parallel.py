@@ -75,8 +75,7 @@ class Agent(PPOSuper):
         """
         obs = self._format_obs_act_parall(obs)
         p = self.actor.predict([obs, self.dummy_value, self.dummy_action, self.dummy_value, self.dummy_value])
-        dist = np.random.normal(loc=0., scale=self.exploration_noise * self.epsilon, size=p.shape)
-        action = action_matrix = p + dist
+        action = action_matrix = p + np.random.normal(loc=0, scale=self.exploration_noise*self.epsilon, size=p.shape)
         value = self.critic.predict(obs)
         return action, action_matrix, p, value
 
@@ -89,6 +88,5 @@ class Agent(PPOSuper):
         obs = self._format_obs_act(obs)
 
         p = self.actor.predict([obs, self.dummy_value, self.dummy_action, self.dummy_value, self.dummy_value])
-        # dist = np.random.normal(loc=0., scale=0.3, size=p.shape)
         action = p[0]
         return action

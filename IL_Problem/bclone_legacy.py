@@ -8,8 +8,6 @@ from IL_Problem.base.discriminator import vdirl_discriminator
 from RL_Agent.base.utils import agent_globals
 from tensorflow.keras.optimizers import Adam
 from RL_Problem import rl_problem
-import tensorflow as tf
-
 
 class BehaviorClone:
     """
@@ -31,7 +29,7 @@ class BehaviorClone:
         :param action_bounds: ([float]) [min, max]. If action space is continuous set the max and min limit values for
             actions.
         """
-        # self._check_agent(agent)
+        self._check_agent(agent)
         self.agent = agent
         if not agent.agent_builded:
             if action_bounds is None:
@@ -42,9 +40,8 @@ class BehaviorClone:
 
 
 
-    def solve(self, expert_traj_s, expert_traj_a, epochs, batch_size, shuffle=False, learning_rate=1e-3,
-              optimizer=Adam(), loss='mse', metrics=tf.keras.metrics.MeanSquaredError(), validation_split=0.15,
-              verbose=1):
+    def solve(self, expert_traj, epochs, batch_size, shuffle=False, learning_rate=1e-3, optimizer=Adam(), loss='mse',
+            validation_split=0.15):
         """
         Behavioral cloning training procedure for the neural network.
         :param expert_traj: (nd array) Expert demonstrations.
@@ -56,9 +53,8 @@ class BehaviorClone:
         :param loss: (keras loss id) Loss metrics for the training procedure.
         :param validation_split: (float) Percentage of expert_traj used for validation.
         """
-        self.agent.bc_fit(expert_traj_s, expert_traj_a, epochs, batch_size, shuffle=shuffle, learning_rate=learning_rate,
-                          optimizer=optimizer, loss=loss, metrics=metrics, validation_split=validation_split,
-                          verbose=verbose)
+        self.agent.bc_fit(expert_traj, epochs, batch_size, shuffle=shuffle, learning_rate=learning_rate,
+                          optimizer=optimizer, loss=loss, validation_split=validation_split)
         return self.agent
 
     def _check_agent(self, agent):

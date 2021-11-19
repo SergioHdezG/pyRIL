@@ -214,7 +214,7 @@ class AgentSuper(AgentInterface):
         else:
             obs = np.array(obs).reshape(-1, self.state_size)
 
-        return obs
+        return obs.astype(np.float32)
 
     def set_batch_size(self, batch_size):
         """

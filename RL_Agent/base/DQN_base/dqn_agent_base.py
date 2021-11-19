@@ -9,12 +9,11 @@ from RL_Agent.base.utils.parse_utils import *
 from RL_Agent.base.utils.Memory.deque_memory import Memory
 import tensorflow.keras.callbacks as callbacks
 from tensorflow.keras.models import model_from_json
-from tensorflow.keras.optimizers import Adam
 from RL_Agent.base.agent_base import AgentSuper
 from tensorflow.keras.optimizers import Adam
 from RL_Agent.base.utils.networks.networks_interface import RLNetModel as RLNetModelTF
 from RL_Agent.base.utils.networks import action_selection_options
-
+import tensorflow as tf
 
 class DQNAgentSuper(AgentSuper):
     """
@@ -260,16 +259,14 @@ class DQNAgentSuper(AgentSuper):
     def memory_size(self, size):
         self.memory.memory.maxlen = size
 
-    def bc_fit(self, expert_traj, epochs, batch_size, learning_rate=1e-3, shuffle=False, optimizer=Adam(), loss='mse',
-               validation_split=0.15):
+    def bc_fit(self, expert_traj_s, expert_traj_a, epochs, batch_size, learning_rate=1e-3, shuffle=False,
+               optimizer=Adam(), loss='mse', metrics=tf.metrics.MeanSquaredError(), validation_split=0., verbose=1):
 
-        expert_traj_s = np.array([x[0] for x in expert_traj])
-        expert_traj_a = np.array([x[1] for x in expert_traj])
         expert_traj_a = self._actions_to_onehot(expert_traj_a)
         optimizer.lr = learning_rate
-        self.model.compile(optimizer=optimizer, loss=loss)
-        self.model.fit(expert_traj_s, expert_traj_a, batch_size=batch_size, shuffle=shuffle, epochs=epochs, verbose=2,
-                       validation_split=validation_split)
+        self.model.compile(optimizer=[optimizer], loss=[loss], metrics=metrics)
+        self.model.bc_fit(expert_traj_s, expert_traj_a, batch_size=batch_size, shuffle=shuffle, epochs=epochs,
+                       validation_split=validation_split, verbose=verbose)
 
 
     def _actions_to_onehot(self, actions):

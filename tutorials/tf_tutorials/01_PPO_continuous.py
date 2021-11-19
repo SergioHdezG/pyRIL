@@ -167,7 +167,7 @@ class ActorNet(RLNetModel):
                                                       np.float32(advantages)))
 
         if shuffle:
-            dataset = dataset.shuffle(len(obs)).batch(batch_size)
+            dataset = dataset.shuffle(len(obs), reshuffle_each_iteration=True).batch(batch_size)
         else:
             dataset = dataset.batch(batch_size)
 
@@ -279,11 +279,11 @@ agent_cont = ppo_agent_continuous_tf.Agent(actor_lr=1e-5,
                                              loss_critic_discount=0.001,
                                              loss_entropy_beta=0.001,
                                              exploration_noise=1.0,
-                                             tensorboard_dir='/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/tf_tutorials/tensorboard_logs/')
+                                             tensorboard_dir='/home/serch/TFM/CAPOIRL-TF2/tutorials/tf_tutorials/saved_agentes/')
 
 # Descomentar para ejecutar el ejemplo continuo
 # agent_cont = agent_saver.load('agent_ppo', agent=ppo_agent_continuous_tf.Agent(), overwrite_attrib=False)
-agent_cont = agent_saver.load('agent_ppo', agent=agent_cont, overwrite_attrib=True)
+# agent_cont = agent_saver.load('agent_ppo', agent=agent_cont, overwrite_attrib=True)
 
 problem_cont = rl_problem.Problem(environment_cont, agent_cont)
 
@@ -291,10 +291,10 @@ problem_cont = rl_problem.Problem(environment_cont, agent_cont)
 
 # agent_cont.actor.extract_variable_summaries = extract_variable_summaries
 
-problem_cont.solve(20, render=False, max_step_epi=512, render_after=2090, skip_states=1)
+problem_cont.solve(100, render=False, max_step_epi=512, render_after=2090, skip_states=1)
 problem_cont.test(render=True, n_iter=10)
 #
 # hist = problem_cont.get_histogram_metrics()
 # history_utils.plot_reward_hist(hist, 10)
 #
-# agent_saver.save(agent_cont, 'agent_ppo')
+agent_saver.save(agent_cont, 'agent_ppo')

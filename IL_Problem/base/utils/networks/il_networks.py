@@ -125,10 +125,10 @@ class IRLNet(ILNetModel):
     def _evaluate(self, x, y):
         y_ = self.net(x, training=False)
 
-        loss = self.loss_func(x, y)
+        loss = self.loss_func(y, y_)
 
         # TODO: las métricas convencionales no valen
-        self.metrics.update_state(x, y)
+        self.metrics.update_state(y, y_)
 
         return loss
 
@@ -177,7 +177,7 @@ class IRLNet(ILNetModel):
             use_actions = False
 
         if shuffle:
-            dataset = dataset.shuffle(expert_traj_s.shape[0]).batch(batch_size)
+            dataset = dataset.shuffle(expert_traj_s.shape[0], reshuffle_each_iteration=True).batch(batch_size)
         else:
             dataset = dataset.batch(batch_size)
         if validation_split > 0.:
@@ -195,7 +195,12 @@ class IRLNet(ILNetModel):
                 loss_mean.append(loss)
                 metric = self.metrics.result()
                 metrics_mean.append(metric)
-                if batch % int(batch_size / 5) == 1 and verbose == 1:
+
+                if batch_size > 5:
+                    show_each = int(int((np.array(x_s).shape[0]/5))/batch_size)
+                else:
+                    show_each = 1
+                if batch % show_each == 0 and verbose == 1:
                     print(
                         ('Epoch {}\t Batch {}\t Loss  {:.4f} ' + self.metrics.name + ' {:.4f} Elapsed time {:.2f}s').format(
                             e + 1, batch, loss.numpy(), metric,
@@ -613,7 +618,7 @@ class GAILNet(IRLNet):
             use_actions = False
 
         if shuffle:
-            dataset = dataset.shuffle(expert_traj_s.shape[0]).batch(batch_size)
+            dataset = dataset.shuffle(expert_traj_s.shape[0], reshuffle_each_iteration=True).batch(batch_size)
         else:
             dataset = dataset.batch(batch_size)
         if validation_split > 0.:

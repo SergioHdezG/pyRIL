@@ -4,9 +4,9 @@ sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
 import tensorflow as tf
 # Estas tres lineas resuelven algunos problemas con cuDNN en TF2 por los que no me permitía ejecutar en GPU
-physical_devices = tf.config.experimental.list_physical_devices('GPU')
-assert len(physical_devices) > 0, "Not enough GPU hardware devices available"
-config = tf.config.experimental.set_memory_growth(physical_devices[0], True)
+# physical_devices = tf.config.experimental.list_physical_devices('GPU')
+# assert len(physical_devices) > 0, "Not enough GPU hardware devices available"
+# config = tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 from RL_Problem import rl_problem
 from IL_Problem.gail import GAIL
@@ -88,26 +88,42 @@ rl_problem = rl_problem.Problem(environment, agent)
 # rl_problem.test(n_iter=10)
 
 use_expert_actions = False
-discriminator_stack = 1
+discriminator_stack = 3
 exp_memory = load_expert_memories(exp_path, load_action=use_expert_actions, n_stack=discriminator_stack)
 
 
 class gail_net(GAILNet):
-    def __init__(self, input_shape, tensorboard_dir=None):
-        net = self._build_gail_net(input_shape)
+    def __init__(self, input_shape, n_actions, tensorboard_dir=None):
+        net = self._build_gail_net(input_shape, n_actions)
         super(gail_net, self).__init__(net, chckpoint_path=None, chckpoints_to_keep=10, tensorboard_dir=tensorboard_dir)
 
-    def _build_gail_net(self, input_shape):
-        # lstm = LSTM(64, activation='tanh', input_shape=input_shape)
-        # flat = Flatten()
-        dense_1 = Dense(512, activation='relu')
-        dense_2 = Dense(256, activation='relu')
-        output = Dense(2, activation="tanh")
+    def _build_gail_net(self, input_shape, n_actions):
+        s_input = tf.keras.layers.Input(input_shape)
+        a_input = tf.keras.layers.Input(n_actions)
 
-        return tf.keras.models.Sequential([dense_1, dense_2, output])
+        lstm_s = LSTM(64, activation='tanh')(s_input)
+
+        dense_s = Dense(128, activation='relu')(lstm_s)
+        dense_a = Dense(128, activation='relu')(a_input)
+        concat = tf.keras.layers.Concatenate()([dense_s, dense_a])
+        dense_1 = Dense(64, activation='relu')(concat)
+        dense_2 = Dense(64, activation='relu')(dense_1)
+        output = Dense(1, activation="sigmoid")(dense_2)
+
+
+        return tf.keras.models.Model(inputs=[s_input, a_input], outputs=output)
+
+    # def _build_gail_net(self, input_shape):
+    #     lstm = LSTM(64, activation='tanh', input_shape=input_shape)
+    #     # flat = Flatten()
+    #     dense_1 = Dense(512, activation='relu')
+    #     dense_2 = Dense(256, activation='relu')
+    #     output = Dense(1, activation="sigmoid")
+    #
+    #     return tf.keras.models.Sequential([dense_1, dense_2, output])
 
 def custom_model_tf(input_shape):
-    return gail_net(input_shape=input_shape, tensorboard_dir='/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/gail/')
+    return gail_net(input_shape=input_shape[0], n_actions=input_shape[1], tensorboard_dir='logs/gail/')
 
 def one_layer_custom_model(input_shape):
     x_input = Input(shape=input_shape, name='disc_s_input')
@@ -118,17 +134,17 @@ def one_layer_custom_model(input_shape):
     return model
 
 
-irl_net_architecture = il_networks.irl_discriminator_net(use_custom_network=False,
+irl_net_architecture = il_networks.irl_discriminator_net(use_custom_network=True,
                                                          common_custom_network=one_layer_custom_model,
                                                          define_custom_output_layer=False,
-                                                         use_tf_custom_model=True,
+                                                         use_tf_custom_model=False,
                                                          tf_custom_model=custom_model_tf)
 
 # irl_problem = DeepIRL(rl_problem, exp_memory, lr_disc=1e-5, batch_size_disc=128, epochs_disc=2, val_split_disc=0.1,
 #                       agent_collect_iter=10, agent_train_iter=25, n_stack_disc=discriminator_stack,
 #                       net_architecture=irl_net_architecture, use_expert_actions=use_expert_actions, tensorboard_dir="logs")
 
-irl_problem = GAIL(rl_problem, exp_memory, lr_disc=1e-4, batch_size_disc=128, epochs_disc=2, val_split_disc=0.1,
+irl_problem = GAIL(rl_problem, exp_memory, lr_disc=1e-5, batch_size_disc=128, epochs_disc=2, val_split_disc=0.1,
                    n_stack_disc=discriminator_stack, net_architecture=irl_net_architecture,
                    use_expert_actions=use_expert_actions, tensorboard_dir="logs")
 

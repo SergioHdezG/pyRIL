@@ -132,7 +132,7 @@ class ActorNet(RLNetModel):
                                                       target))
 
         if shuffle:
-            dataset = dataset.shuffle(len(obs)).batch(batch_size)
+            dataset = dataset.shuffle(len(obs), reshuffle_each_iteration=True).batch(batch_size)
         else:
             dataset = dataset.batch(batch_size)
 

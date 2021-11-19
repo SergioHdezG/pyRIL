@@ -188,7 +188,7 @@ class PPONet(RLNetModel):
                                                       tf.cast(advantages, tf.float32)))
 
         if shuffle:
-            dataset = dataset.shuffle(len(obs)).batch(batch_size)
+            dataset = dataset.shuffle(len(obs), reshuffle_each_iteration=True).batch(batch_size)
         else:
             dataset = dataset.batch(batch_size)
 
@@ -584,7 +584,7 @@ class DQNNet(RLNetModel):
                                                       pred))
 
         if shuffle:
-            dataset = dataset.shuffle(len(obs)).batch(batch_size)
+            dataset = dataset.shuffle(len(obs), reshuffle_each_iteration=True).batch(batch_size)
         else:
             dataset = dataset.batch(batch_size)
 
@@ -619,6 +619,40 @@ class DQNNet(RLNetModel):
                     cb.on_epoch_end(e)
 
         return history
+
+    @tf.function(experimental_relax_shapes=True)
+    def _bc_train_step(self, x, y):
+        """
+        Execute one training step (forward pass + backward pass)
+        Args:
+            source_seq: source sequences
+            target_seq_in: input target sequences (<start> + ...)
+            target_seq_out: output target sequences (... + <end>)
+
+        Returns:
+            The loss value of the current pass
+        """
+        with tf.GradientTape() as tape:
+            y_ = self.net(x, training=True)
+            loss = self.loss_func(y, y_)
+
+        self.metrics.update_state(y, y_)
+
+        variables = self.net.trainable_variables
+        gradients = tape.gradient(loss, variables)
+        self.optimizer.apply_gradients(zip(gradients, variables))
+
+        return loss, gradients, variables
+
+    @tf.function(experimental_relax_shapes=True)
+    def _bc_evaluate(self, x, y):
+        y_ = self.net(x, training=False)
+
+        loss = self.loss_func(y, y_)
+
+        self.metrics.update_state(y, y_)
+
+        return loss
 
     def save(self, path):
         # Serializar función calculate_advanteges
@@ -766,7 +800,7 @@ class DDQNNet(DQNNet):
                                                       pred))
 
         if shuffle:
-            dataset = dataset.shuffle(len(obs)).batch(batch_size)
+            dataset = dataset.shuffle(len(obs), reshuffle_each_iteration=True).batch(batch_size)
         else:
             dataset = dataset.batch(batch_size)
 
@@ -896,7 +930,7 @@ class DPGNet(RLNetModel):
                                                       np.float32(returns)))
 
         if shuffle:
-            dataset = dataset.shuffle(len(obs)).batch(batch_size)
+            dataset = dataset.shuffle(len(obs), reshuffle_each_iteration=True).batch(batch_size)
         else:
             dataset = dataset.batch(batch_size)
 
@@ -1166,7 +1200,7 @@ class DDPGNet(RLNetModel):
                                                       rewards))
 
         if shuffle:
-            dataset = dataset.shuffle(len(obs)).batch(batch_size)
+            dataset = dataset.shuffle(len(obs), reshuffle_each_iteration=True).batch(batch_size)
         else:
             dataset = dataset.batch(batch_size)
 
@@ -1483,7 +1517,7 @@ class A2CNetDiscrete(RLNetModel):
                                                       np.float32(returns)))
 
         if shuffle:
-            dataset = dataset.shuffle(len(obs)).batch(batch_size)
+            dataset = dataset.shuffle(len(obs), reshuffle_each_iteration=True).batch(batch_size)
         else:
             dataset = dataset.batch(batch_size)
 
@@ -1749,7 +1783,7 @@ class A2CNetContinuous(A2CNetDiscrete):
                                                       np.float32(returns)))
 
         if shuffle:
-            dataset = dataset.shuffle(len(obs)).batch(batch_size)
+            dataset = dataset.shuffle(len(obs), reshuffle_each_iteration=True).batch(batch_size)
         else:
             dataset = dataset.batch(batch_size)
 
@@ -1832,7 +1866,7 @@ class A2CNetQueueDiscrete(A2CNetDiscrete):
                                                       np.float32(returns)))
 
         if shuffle:
-            dataset = dataset.shuffle(len(obs)).batch(batch_size)
+            dataset = dataset.shuffle(len(obs), reshuffle_each_iteration=True).batch(batch_size)
         else:
             dataset = dataset.batch(batch_size)
 
@@ -1908,7 +1942,7 @@ class A2CNetQueueContinuous(A2CNetContinuous):
                                                       np.float32(returns)))
 
         if shuffle:
-            dataset = dataset.shuffle(len(obs)).batch(batch_size)
+            dataset = dataset.shuffle(len(obs), reshuffle_each_iteration=True).batch(batch_size)
         else:
             dataset = dataset.batch(batch_size)
 
