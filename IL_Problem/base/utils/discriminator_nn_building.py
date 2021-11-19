@@ -4,6 +4,7 @@ import tensorflow as tf
 # import tensorflow.compat.v1 as tf
 # tf.disable_v2_behavior()
 from termcolor import colored
+import numpy as np
 
 def read_disc_net_params(net_architecture):
     id_1 = 'state_conv_layers'
@@ -134,8 +135,10 @@ def read_disc_net_params(net_architecture):
                       'default.', 'yellow'))
 
     if (id_21 and id_22 in net_architecture) and (net_architecture[id_21] and net_architecture[id_22] is not None):
-        use_custom_net = use_custom_net_tf = net_architecture[id_22]
-        common_custom_net = net_architecture[id_21]
+        use_custom_net_tf = net_architecture[id_22]
+        if use_custom_net_tf:
+            use_custom_net = True
+            common_custom_net = net_architecture[id_21]
     else:
         use_custom_net_tf = False
 
@@ -293,14 +296,17 @@ def build_disc_conv_net(net_architecture, input_shape, n_actions, use_expert_act
 
     if use_custom_net:
         if use_custom_net_tf:
-            return common_custom_net((input_shape))
+            if use_expert_actions:
+                return common_custom_net([input_shape, n_actions])
+            else:
+                return common_custom_net((input_shape))
         else:
             if state_custom_net is not None:
                 state_model = state_custom_net(input_shape)
-                state_out_size = state_model.output.shape[-1]
+                state_out_size = [int(x) for x in state_model.output.shape[1:].dims]
             else:
-                state_model = _dummy_model(input_shape)
-                state_out_size = input_shape[-1]
+                state_model = Flatten(input_shape=input_shape)
+                state_out_size = [input_shape[-3] * input_shape[-2] * input_shape[-1]]
             if use_expert_actions:
                 if action_custom_net is not None:
                     action_model = action_custom_net((n_actions,))
@@ -312,7 +318,7 @@ def build_disc_conv_net(net_architecture, input_shape, n_actions, use_expert_act
                 state_input = tf.keras.layers.Input(input_shape)
                 action_input = tf.keras.layers.Input(n_actions)
 
-                common_size = state_out_size + action_out_size
+                common_size = state_out_size[0] + action_out_size
                 common_model = common_custom_net((common_size,))
 
                 concat = tf.keras.layers.Concatenate(axis=1, name='disc_concatenate')([state_model(state_input), action_model(action_input)])
@@ -321,7 +327,7 @@ def build_disc_conv_net(net_architecture, input_shape, n_actions, use_expert_act
 
             else:
                 state_input = tf.keras.layers.Input(input_shape)
-                common_model = common_custom_net((state_out_size,))
+                common_model = common_custom_net(state_out_size)
                 output = common_model(state_model(state_input))
                 model = tf.keras.models.Model(inputs=state_input, outputs=output)
 
@@ -388,11 +394,14 @@ def build_disc_stack_nn_net(net_architecture, input_shape, n_actions, use_expert
 
     if use_custom_net:
         if use_custom_net_tf:
-            return common_custom_net((input_shape))
+            if use_expert_actions:
+                return common_custom_net([input_shape, n_actions])
+            else:
+                return common_custom_net((input_shape))
         else:
             if state_custom_net is not None:
                 state_model = state_custom_net(input_shape)
-                state_out_size = state_model.output.shape[-1]
+                state_out_size = tuple([int(x) for x in state_model.output.shape[1:].dims])
             else:
                 state_model = Flatten(input_shape=input_shape)
                 state_out_size = input_shape[-2] * input_shape[-1]
@@ -476,7 +485,11 @@ def build_disc_nn_net(net_architecture, input_shape, n_actions, use_expert_actio
 
     if use_custom_net:
         if use_custom_net_tf:
-            return common_custom_net((input_shape))
+            if use_expert_actions:
+                return common_custom_net([input_shape, n_actions])
+            else:
+                return common_custom_net((input_shape))
+
         else:
             if state_custom_net is not None:
                 state_model = state_custom_net(input_shape)

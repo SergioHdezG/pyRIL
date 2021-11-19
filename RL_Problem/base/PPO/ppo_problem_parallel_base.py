@@ -200,7 +200,7 @@ class PPOProblemParallelBase(PPOProblemBase):
                                 predicted_action, action_matrix):
 
         done, next_obs, reward, epochs = self.frame_skipping(action, done, next_obs, reward, skip_states, epochs)
-
+        # TODO: aplicar frame skiping con paralelización
         # Con este método de paralelización no se puede aplicar frame-skipping
         mask = np.logical_not(done)
 

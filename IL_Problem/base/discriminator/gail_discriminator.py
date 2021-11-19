@@ -75,7 +75,7 @@ class Discriminator(DiscriminatorBase):
             discriminator_model = discriminator_net
             optimizer = tf.keras.optimizers.RMSprop(self.learning_rate)
             self.loss_selected = losses.gail_loss
-            discriminator_model.compile(optimizer=optimizer, loss=self.loss_selected)
+            discriminator_model.compile(optimizer=optimizer, loss=self.loss_selected, metrics=tf.keras.metrics.MeanSquaredError())
         else:
             if not define_output_layer:
                 output = Dense(1, name='output', activation=last_activation)(discriminator_net.output)
@@ -86,7 +86,7 @@ class Discriminator(DiscriminatorBase):
 
             optimizer = tf.keras.optimizers.RMSprop(self.learning_rate)
             self.loss_selected = losses.gail_loss
-            discriminator_model.compile(optimizer=optimizer, loss=self.loss_selected, metrics=tf.keras.metrics.BinaryAccuracy())
+            discriminator_model.compile(optimizer=optimizer, loss=self.loss_selected, metrics=tf.keras.metrics.MeanSquaredError())
         return discriminator_model
 
     def predict(self, obs, action):

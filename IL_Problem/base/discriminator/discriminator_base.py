@@ -72,10 +72,7 @@ class DiscriminatorBase(object):
                     else:
                         obs = np.array(obs)
                 else:
-                    aaa = np.array(obs[0]).shape
-                    eee = self.state_size
                     if np.array(obs[0]).shape != self.state_size:
-                        # obs = np.array([obs[:, :, -self.state_size[-1]]])
                         obs = np.array(obs[:, :, :, -self.state_size[-1]])
                         if self.state_size[-1] == 1:
                             obs = obs[:, :, :, np.newaxis]
@@ -189,24 +186,21 @@ class DiscriminatorBase(object):
                 if self.stack:
                     expert_traj_s = [np.dstack(x) for x in expert_traj]
 
-                    # eee = expert_traj_s[0].shape
-                    # aaa = agent_traj[0][0].shape
-                    if expert_traj_s[0].shape != agent_traj[0][0].shape:
+                    if expert_traj_s[0].shape != agent_traj[0].shape:
                         agent_traj_s = [np.dstack(x[0]) for x in agent_traj]
                     else:
-                        agent_traj_s = [x[0] for x in agent_traj]
+                        agent_traj_s = agent_traj
                 else:
                     expert_traj_s = np.array(expert_traj)
-                    # eee = expert_traj_s[0].shape
-                    # aaa = agent_traj[0][0].shape
-                    if expert_traj_s[0].shape != agent_traj[0][0].shape:
+
+                    if expert_traj_s[0].shape != agent_traj[0].shape:
                         if self.state_size[-1] > 1:
-                            agent_traj_s = [np.array(x[0][:, :, -self.state_size[-1]]) for x in agent_traj]
+                            agent_traj_s = [np.array(x[:, :, -self.state_size[-1]]) for x in agent_traj]
                         else:
-                            agent_traj_s = [np.array(x[0][:, :, -self.state_size[-1]])[:, :, np.newaxis] for x in
+                            agent_traj_s = [np.array(x[:, :, -self.state_size[-1]])[:, :, np.newaxis] for x in
                                             agent_traj]
                     else:
-                        agent_traj_s = [np.array(x[0]) for x in agent_traj]
+                        agent_traj_s = np.array(agent_traj)
 
             elif self.stack:
                 expert_traj_s = np.array(expert_traj)
