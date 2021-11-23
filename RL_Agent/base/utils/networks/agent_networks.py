@@ -271,6 +271,40 @@ class PPONet(RLNetModel):
 
         return history_actor, history_critic
 
+    @tf.function(experimental_relax_shapes=True)
+    def _bc_train_step(self, x, y):
+        """
+        Execute one training step (forward pass + backward pass)
+        Args:
+            source_seq: source sequences
+            target_seq_in: input target sequences (<start> + ...)
+            target_seq_out: output target sequences (... + <end>)
+
+        Returns:
+            The loss value of the current pass
+        """
+        with tf.GradientTape() as tape:
+            y_ = self.actor_net(x, training=True)
+            loss = self.bc_loss_func(y, y_)
+
+        self.bc_metrics.update_state(y, y_)
+
+        variables = self.actor_net.trainable_variables
+        gradients = tape.gradient(loss, variables)
+        self.bc_optimizer.apply_gradients(zip(gradients, variables))
+
+        return loss, gradients, variables
+
+    @tf.function(experimental_relax_shapes=True)
+    def _bc_evaluate(self, x, y):
+        y_ = self.actor_net(x, training=False)
+
+        loss = self.bc_loss_func(y, y_)
+
+        self.bc_metrics.update_state(y, y_)
+
+        return loss
+
     def save(self, path):
         # Serializar función calculate_advanteges
         calculate_advantages_globals = dill.dumps(self.calculate_advantages.__globals__)
@@ -634,13 +668,13 @@ class DQNNet(RLNetModel):
         """
         with tf.GradientTape() as tape:
             y_ = self.net(x, training=True)
-            loss = self.loss_func(y, y_)
+            loss = self.bc_loss_func(y, y_)
 
-        self.metrics.update_state(y, y_)
+        self.bc_metrics.update_state(y, y_)
 
         variables = self.net.trainable_variables
         gradients = tape.gradient(loss, variables)
-        self.optimizer.apply_gradients(zip(gradients, variables))
+        self.bc_optimizer.apply_gradients(zip(gradients, variables))
 
         return loss, gradients, variables
 
@@ -648,9 +682,9 @@ class DQNNet(RLNetModel):
     def _bc_evaluate(self, x, y):
         y_ = self.net(x, training=False)
 
-        loss = self.loss_func(y, y_)
+        loss = self.bc_loss_func(y, y_)
 
-        self.metrics.update_state(y, y_)
+        self.bc_metrics.update_state(y, y_)
 
         return loss
 
@@ -969,6 +1003,40 @@ class DPGNet(RLNetModel):
                     cb.on_epoch_end(e)
         return history
 
+    @tf.function(experimental_relax_shapes=True)
+    def _bc_train_step(self, x, y):
+        """
+        Execute one training step (forward pass + backward pass)
+        Args:
+            source_seq: source sequences
+            target_seq_in: input target sequences (<start> + ...)
+            target_seq_out: output target sequences (... + <end>)
+
+        Returns:
+            The loss value of the current pass
+        """
+        with tf.GradientTape() as tape:
+            y_ = self.net(x, training=True)
+            loss = self.bc_loss_func(y, y_)
+
+        self.bc_metrics.update_state(y, y_)
+
+        variables = self.net.trainable_variables
+        gradients = tape.gradient(loss, variables)
+        self.bc_optimizer.apply_gradients(zip(gradients, variables))
+
+        return loss, gradients, variables
+
+    @tf.function(experimental_relax_shapes=True)
+    def _bc_evaluate(self, x, y):
+        y_ = self.net(x, training=False)
+
+        loss = self.bc_loss_func(y, y_)
+
+        self.bc_metrics.update_state(y, y_)
+
+        return loss
+
     def save(self, path):
         # Serializar función calculate_advanteges
         # calculate_advantages_globals = dill.dumps(self.calculate_advantages.__globals__)
@@ -1281,6 +1349,40 @@ class DDPGNet(RLNetModel):
         with open(os.path.join(path, 'model_data.json'), 'w') as f:
             json.dump(data, f)
 
+    @tf.function(experimental_relax_shapes=True)
+    def _bc_train_step(self, x, y):
+        """
+        Execute one training step (forward pass + backward pass)
+        Args:
+            source_seq: source sequences
+            target_seq_in: input target sequences (<start> + ...)
+            target_seq_out: output target sequences (... + <end>)
+
+        Returns:
+            The loss value of the current pass
+        """
+        with tf.GradientTape() as tape:
+            y_ = self.actor_net(x, training=True)
+            loss = self.bc_loss_func(y, y_)
+
+        self.bc_metrics.update_state(y, y_)
+
+        variables = self.actor_net.trainable_variables
+        gradients = tape.gradient(loss, variables)
+        self.bc_optimizer.apply_gradients(zip(gradients, variables))
+
+        return loss, gradients, variables
+
+    @tf.function(experimental_relax_shapes=True)
+    def _bc_evaluate(self, x, y):
+        y_ = self.actor_net(x, training=False)
+
+        loss = self.bc_loss_func(y, y_)
+
+        self.bc_metrics.update_state(y, y_)
+
+        return loss
+
     def save_checkpoint(self, path=None):
         if path is None:
             # Save a checkpoint
@@ -1580,6 +1682,40 @@ class A2CNetDiscrete(RLNetModel):
                     cb.on_epoch_end(e)
         return history_actor, history_critic
 
+    @tf.function(experimental_relax_shapes=True)
+    def _bc_train_step(self, x, y):
+        """
+        Execute one training step (forward pass + backward pass)
+        Args:
+            source_seq: source sequences
+            target_seq_in: input target sequences (<start> + ...)
+            target_seq_out: output target sequences (... + <end>)
+
+        Returns:
+            The loss value of the current pass
+        """
+        with tf.GradientTape() as tape:
+            y_ = self.actor_net(x, training=True)
+            loss = self.bc_loss_func(y, y_)
+
+        self.bc_metrics.update_state(y, y_)
+
+        variables = self.actor_net.trainable_variables
+        gradients = tape.gradient(loss, variables)
+        self.bc_optimizer.apply_gradients(zip(gradients, variables))
+
+        return loss, gradients, variables
+
+    @tf.function(experimental_relax_shapes=True)
+    def _bc_evaluate(self, x, y):
+        y_ = self.actor_net(x, training=False)
+
+        loss = self.bc_loss_func(y, y_)
+
+        self.bc_metrics.update_state(y, y_)
+
+        return loss
+
     def save(self, path):
         # Serializar función calculate_advanteges
         # calculate_advantages_globals = dill.dumps(self.calculate_advantages.__globals__)
@@ -1727,7 +1863,7 @@ class A2CNetContinuous(A2CNetDiscrete):
         y_ = np.random.normal(y_[0].numpy(), y_[1].numpy())
         return y_
 
-    # @tf.function(experimental_relax_shapes=True)
+    @tf.function(experimental_relax_shapes=True)
     def train_step(self, x, y, returns, entropy_beta=0.001):
         """
         Execute one training step (forward pass + backward pass)
@@ -1752,7 +1888,8 @@ class A2CNetContinuous(A2CNetDiscrete):
             loss_actor, [act_comp_loss, entropy_comp_loss] = self.loss_func_actor(log_prob, td, entropy_beta, entropy)
             loss_critic = self.loss_func_critic(returns, values)
 
-        self.metrics.update_state(y, y_)
+        y_sampled = normal_dist.sample((1,))[0]
+        self.metrics.update_state(y, y_sampled)
 
         variables_actor = self.actor_net.trainable_variables
         variables_critic = self.critic_net.trainable_variables
@@ -1849,6 +1986,64 @@ class A2CNetContinuous(A2CNetDiscrete):
                 for cb in callbacks:
                     cb.on_epoch_end(e)
         return history_actor, history_critic
+
+    def bc_train_step(self, x, y):
+        """
+        Execute one training step (forward pass + backward pass)
+        Args:
+            source_seq: source sequences
+            target_seq_in: input target sequences (<start> + ...)
+            target_seq_out: output target sequences (... + <end>)
+
+        Returns:
+            The loss value of the current pass
+        """
+        stddev = tf.math.reduce_std(y, axis=0)
+        stddev = np.array([stddev for i in range(y.shape[0])])
+        y = np.array([y, stddev])
+        return self._bc_train_step(x, y)
+
+    @tf.function(experimental_relax_shapes=True)
+    def _bc_train_step(self, x, y):
+        """
+        Execute one training step (forward pass + backward pass)
+        Args:
+            source_seq: source sequences
+            target_seq_in: input target sequences (<start> + ...)
+            target_seq_out: output target sequences (... + <end>)
+
+        Returns:
+            The loss value of the current pass
+        """
+        with tf.GradientTape() as tape:
+            y_ = self.actor_net(x, training=True)
+            loss = self.bc_loss_func(y, y_)
+
+        self.bc_metrics.update_state(y, y_)
+
+        variables = self.actor_net.trainable_variables
+        gradients = tape.gradient(loss, variables)
+        self.bc_optimizer.apply_gradients(zip(gradients, variables))
+
+        return loss, gradients, variables
+
+    def bc_evaluate(self, x, y):
+        stddev = tf.math.reduce_std(y, axis=0)
+        stddev = np.array([stddev for i in range(y.shape[0])])
+        y = np.array([y, stddev])
+
+        return self._bc_evaluate(x, y)
+
+    @tf.function(experimental_relax_shapes=True)
+    def _bc_evaluate(self, x, y):
+        y_ = self.actor_net(x, training=False)
+
+        loss = self.bc_loss_func(y, y_)
+
+        self.bc_metrics.update_state(y, y_)
+
+        return loss
+
 
 class A2CNetQueueDiscrete(A2CNetDiscrete):
     def fit(self, obs, next_obs, actions, rewards, done, epochs, batch_size, validation_split=0.,

@@ -60,6 +60,6 @@ def gaussian_noise(act_pred, n_actions, epsilon=0., n_env=1, exploration_noise=1
     action = act_pred + np.random.normal(loc=0, scale=exploration_noise*epsilon, size=act_pred.shape)
     return action
 
-def random_normal(act_pred, n_actions, epsilon=0., n_env=1, exploration_noise=1.0):
-    action = np.random.normal(act_pred, 0.5)
+def random_normal(act_pred, n_actions, epsilon=0., n_env=1, exploration_noise=0.5):
+    action = np.random.normal(act_pred, np.clip(exploration_noise, 0., exploration_noise))
     return action

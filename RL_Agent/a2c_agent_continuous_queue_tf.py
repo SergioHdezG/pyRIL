@@ -99,11 +99,10 @@ class Agent(A2CQueueSuper):
             if not define_output_layer:
                 action_mu = Dense(self.n_actions, activation=last_activation, kernel_initializer=RandomNormal(mean=0., stddev=0.01, seed=None))(
                     actor_net.output)
-                action_std = Dense(self.n_actions, kernel_initializer=RandomNormal(mean=-0.3, stddev=0.01))(
-                    actor_net.output)
+                action_std = Dense(self.n_actions, activation='relu',
+                                   kernel_initializer=RandomNormal(mean=-0.3, stddev=0.01))(actor_net.output)
                 action_std = tf.keras.activations.sigmoid(action_std)
                 action_std = tf.math.add(action_std, 0.1)
-                actor_net = tf.keras.models.Model(inputs=actor_net.input, outputs=[action_mu, action_std])
                 actor_net = tf.keras.models.Model(inputs=actor_net.input, outputs=[action_mu, action_std])
             if not define_output_layer:
                 critic_model.add(Dense(1))

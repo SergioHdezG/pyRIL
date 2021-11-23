@@ -105,7 +105,7 @@ data_fr_out = tf.keras.preprocessing.sequence.pad_sequences(data_fr_out,
 BATCH_SIZE = 64
 dataset = tf.data.Dataset.from_tensor_slices(
     (data_en, data_fr_in, data_fr_out))
-dataset = dataset.shuffle(len(data_en)).batch(BATCH_SIZE)
+dataset = dataset.shuffle(len(data_en), reshuffle_each_iteration=True).batch(BATCH_SIZE)
 
 """## Create the Positional Embedding"""
 

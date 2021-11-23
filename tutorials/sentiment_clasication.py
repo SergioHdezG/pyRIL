@@ -54,7 +54,7 @@ class NetworkModel:
     def evaluate(self, x, y, batch_size=32, verbose=0):
         dataset = tf.data.Dataset.from_tensor_slices((x, y))
 
-        dataset = dataset.shuffle(len(x)).batch(batch_size)
+        dataset = dataset.shuffle(len(x), reshuffle_each_iteration=True).batch(batch_size)
 
         loss = 0.
         acc = 0.
@@ -181,7 +181,7 @@ class NetworkModel:
         dataset = tf.data.Dataset.from_tensor_slices((train_input_data, train_target_data))
 
         if shuffle:
-            dataset = dataset.shuffle(len(train_input_data)).batch(batch_size)
+            dataset = dataset.shuffle(len(train_input_data), reshuffle_each_iteration=True).batch(batch_size)
         else:
             dataset = dataset.batch(batch_size)
 

@@ -402,7 +402,7 @@ class Transformer:
         dataset = tf.data.Dataset.from_tensor_slices(
             (source_seq, target_seq_in, target_seq_out))
 
-        dataset = dataset.shuffle(len(source_seq)).batch(batch_size)
+        dataset = dataset.shuffle(len(source_seq), reshuffle_each_iteration=True).batch(batch_size)
 
         loss = 0.
         for batch, (source_seq, target_seq_in, target_seq_out) in enumerate(dataset.take(-1)):
@@ -547,7 +547,7 @@ class Transformer:
             (train_input_data, train_decoder_input_data, train_target_data))
 
         if shuffle:
-            dataset = dataset.shuffle(len(train_input_data)).batch(batch_size)
+            dataset = dataset.shuffle(len(train_input_data), reshuffle_each_iteration=True).batch(batch_size)
 
         starttime = time.time()
         for e in range(epochs):
@@ -867,7 +867,7 @@ transformer.fit(data_en, data_fr_in, data_fr_out, batch_size=BATCH_SIZE, epochs=
 # dataset = tf.data.Dataset.from_tensor_slices(
 #             (data_en, data_fr_in, data_fr_out))
 #
-# dataset = dataset.shuffle(len(data_en)).batch(BATCH_SIZE)
+# dataset = dataset.shuffle(len(data_en), reshuffle_each_iteration=True).batch(BATCH_SIZE)
 #
 # for e in range(NUM_EPOCHS):
 #     for batch, (source_seq, target_seq_in, target_seq_out) in enumerate(dataset.take(-1)):

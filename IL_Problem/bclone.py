@@ -42,23 +42,31 @@ class BehaviorClone:
 
 
 
-    def solve(self, expert_traj_s, expert_traj_a, epochs, batch_size, shuffle=False, learning_rate=1e-3,
-              optimizer=Adam(), loss='mse', metrics=tf.keras.metrics.MeanSquaredError(), validation_split=0.15,
-              verbose=1):
+    def solve(self, expert_traj_s, expert_traj_a, epochs, batch_size, shuffle=False,
+              optimizer=Adam(), loss='mse', metrics=tf.keras.metrics.Accuracy(), validation_split=0.15,
+              verbose=1, one_hot_encode_actions=False):
         """
         Behavioral cloning training procedure for the neural network.
-        :param expert_traj: (nd array) Expert demonstrations.
+        :param expert_traj_s: (nd array) observations from expert demonstrations.
+        :param expert_traj_a: (nd array) actions from expert demonstrations.
         :param epochs: (int) Training epochs.
         :param batch_size: (int) Training batch size.
         :param shuffle: (bool) Shuffle or not the examples on expert_traj.
-        :param learning_rate: (float) Training learning rate.
-        :param optimizer: (keras optimizer o keras optimizer id) Optimizer use for the training procedure.
-        :param loss: (keras loss id) Loss metrics for the training procedure.
-        :param validation_split: (float) Percentage of expert_traj used for validation.
+        :param optimizer: (keras optimizer o keras optimizer id) Optimizer to be used in training procedure.
+        :param loss: (keras loss id, keras loss or custom loss based on keras losses interface) Loss metrics for the
+                     training procedure.
+        :param loss: (keras metric or custom metric based on keras metrics interface) Metrics for the
+                     training procedure.
+        :param validation_split: (float in [0., 1.]) Fraction of data to be used for validation.
+        :param verbose: (int [0, 2]) Set verbosity of the function. 0 -> no verbosity.
+                                                                    1 -> batch level verbosity.
+                                                                    2 -> epoch level verbosity.
+        :param one_hot_encode_actions: (bool) If True, expert_traj_a will be transformed into one hot encoding.
+                                              If False, expert_traj_a will be no altered. Useful for discrete actions.
         """
-        self.agent.bc_fit(expert_traj_s, expert_traj_a, epochs, batch_size, shuffle=shuffle, learning_rate=learning_rate,
+        self.agent.bc_fit(expert_traj_s, expert_traj_a, epochs, batch_size, shuffle=shuffle,
                           optimizer=optimizer, loss=loss, metrics=metrics, validation_split=validation_split,
-                          verbose=verbose)
+                          verbose=verbose, one_hot_encode_actions=one_hot_encode_actions)
         return self.agent
 
     def _check_agent(self, agent):

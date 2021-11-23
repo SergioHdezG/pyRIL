@@ -73,6 +73,22 @@ class RLNetInterfaz(object, metaclass=ABCMeta):
         :return: serialized data
         """
 
+    @abstractmethod
+    def bc_compile(self, loss, optimizer, metrics=None):
+        """
+        Compile the neural network. Usually used for define loss function, optimizer and metrics.
+        :param loss: Loss function from tensorflow, keras or user defined.
+        :param optimizer:  Optimizer from tensorflow, keras or user defined.
+        :param metrics: Metrics from tensorflow, keras or user defined.
+        """
+
+    @abstractmethod
+    def bc_fit(self, x, y, epochs, batch_size,  validation_split=0., shuffle=True, verbose=1, callbacks=None,
+               kargs=[]):
+        """
+        :return:
+        """
+
     def get_weights(self):
         """
         Returns the weights of all neural network variables in a numpy nd array. This method must be implemented when
@@ -112,6 +128,7 @@ class RLNetInterfaz(object, metaclass=ABCMeta):
             target_layer.set_weights(net_layer.get_weights())
         ###########################################
         """
+
 
     # @abstractmethod
     # def save_weights(self, path):
@@ -204,7 +221,7 @@ class RLNetModel(RLNetInterfaz):
             for batch, (x, y) in enumerate(dataset.take(-1)):
                 loss, gradients, variables = self.bc_train_step(x, y)
                 loss_mean.append(loss)
-                metric = self.metrics.result()
+                metric = self.bc_metrics.result()
                 metrics_mean.append(metric)
 
                 if batch_size > 5:
@@ -212,7 +229,7 @@ class RLNetModel(RLNetInterfaz):
                 else:
                     show_each = 1
                 if batch % show_each == 0 and verbose == 1:
-                    print(('Epoch {}\t Batch {}\t Loss  {:.4f} ' + self.metrics.name +
+                    print(('Epoch {}\t Batch {}\t Loss  {:.4f} ' + self.bc_metrics.name +
                            ' {:.4f} Elapsed time {:.2f}s').format(e + 1,
                                                                   batch,
                                                                   loss.numpy(),
@@ -227,20 +244,20 @@ class RLNetModel(RLNetInterfaz):
                 val_metrics = []
                 for batch, (x, y) in enumerate(val_dataset.take(-1)):
                     val_loss.append(self.bc_evaluate(x, y))
-                    val_metrics.append(self.metrics.result())
+                    val_metrics.append(self.bc_metrics.result())
                 mean_val_loss = np.mean(val_loss)
                 val_metrics_mean = np.mean(val_metrics)
 
             if verbose >= 1:
                 if validation_split > 0.:
-                    print(('epoch {}\t loss  {:.4f} ' + self.metrics.name + ' {:.4f}' +
-                           ' val_loss  {:.4f} val_' + self.metrics.name + ' {:.4f}').format(e + 1,
+                    print(('epoch {}\t loss  {:.4f} ' + self.bc_metrics.name + ' {:.4f}' +
+                           ' val_loss  {:.4f} val_' + self.bc_metrics.name + ' {:.4f}').format(e + 1,
                                                                                             loss_mean,
                                                                                             metrics_mean,
                                                                                             mean_val_loss,
                                                                                             val_metrics_mean))
                 else:
-                    print(('Epoch {}\t Loss  {:.4f} ' + self.metrics.name + ' {:.4f}').format(e + 1,
+                    print(('Epoch {}\t Loss  {:.4f} ' + self.bc_metrics.name + ' {:.4f}').format(e + 1,
                                                                                               loss_mean,
                                                                                               metrics_mean))
             if self.train_summary_writer is not None:
@@ -248,9 +265,9 @@ class RLNetModel(RLNetInterfaz):
                     if validation_split > 0.:
                         self.loss_sumaries([loss_mean, metrics_mean,
                                             mean_val_loss, val_metrics_mean],
-                                           ['discriminator_loss', self.metrics.name,
+                                           ['discriminator_loss', self.bc_metrics.name,
                                             'discriminator_val_loss',
-                                            'val_' + self.metrics.name],
+                                            'val_' + self.bc_metrics.name],
                                            self.total_epochs)
                     else:
                         self.loss_sumaries([loss_mean, metrics_mean],
@@ -302,6 +319,17 @@ class RLNetModel(RLNetInterfaz):
             The loss value of the current pass
         """
         return self._bc_evaluate(x, y)
+
+    def bc_compile(self, loss, optimizer, metrics=None):
+        """
+        Compile the neural network. Usually used for define loss function, optimizer and metrics.
+        :param loss: Loss function from tensorflow, keras or user defined.
+        :param optimizer:  Optimizer from tensorflow, keras or user defined.
+        :param metrics: Metrics from tensorflow, keras or user defined.
+        """
+        self.bc_loss_func = loss[0]
+        self.bc_optimizer = optimizer[0]
+        self.bc_metrics = metrics
 
     @tf.function(experimental_relax_shapes=True)
     def _bc_evaluate(self, x, y):
@@ -383,7 +411,7 @@ class RLSequentialModel(object):
             acc += self.metrics.result()
         return loss / (batch + 1), acc / (batch + 1)
 
-    # @tf.function
+    @tf.function
     def validate_step(self, x, y):
         """ Execute one training step (forward pass + backward pass)
         Args:

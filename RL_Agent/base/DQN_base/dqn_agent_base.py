@@ -65,6 +65,7 @@ class DQNAgentSuper(AgentSuper):
         # super().compile()
         # self.model.compile(loss='mse', optimizer=self.optimizer(lr=self.learning_rate))
         pass
+
     def _build_model(self, net_achitecture):
         """ Build the neural network"""
         pass
@@ -258,24 +259,6 @@ class DQNAgentSuper(AgentSuper):
 
     def memory_size(self, size):
         self.memory.memory.maxlen = size
-
-    def bc_fit(self, expert_traj_s, expert_traj_a, epochs, batch_size, learning_rate=1e-3, shuffle=False,
-               optimizer=Adam(), loss='mse', metrics=tf.metrics.MeanSquaredError(), validation_split=0., verbose=1):
-
-        expert_traj_a = self._actions_to_onehot(expert_traj_a)
-        optimizer.lr = learning_rate
-        self.model.compile(optimizer=[optimizer], loss=[loss], metrics=metrics)
-        self.model.bc_fit(expert_traj_s, expert_traj_a, batch_size=batch_size, shuffle=shuffle, epochs=epochs,
-                       validation_split=validation_split, verbose=verbose)
-
-
-    def _actions_to_onehot(self, actions):
-        action_matrix = []
-        for action in actions:
-            action_aux = np.zeros(self.n_actions)
-            action_aux[action] = 1
-            action_matrix.append(action_aux)
-        return np.array(action_matrix)
 
 class lr_reducer(callbacks.Callback):
     """

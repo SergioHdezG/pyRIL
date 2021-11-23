@@ -3,7 +3,9 @@ from os import path
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
 import gym
-from RL_Agent import ddpg_agent_tf, dqn_agent_tf
+from RL_Agent import ddpg_agent_tf, dqn_agent_tf, dpg_agent_tf, a2c_agent_discrete_queue_tf, ppo_agent_discrete_tf, \
+    ppo_agent_discrete_parallel_tf, dpg_agent_continuous_tf, a2c_agent_continuous_queue_tf, ppo_agent_continuous_tf,\
+    ppo_agent_continuous_parallel_tf, a2c_agent_continuous_tf
 from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.layers import Dense, LSTM, Input
 from RL_Agent.base.utils.networks import networks
@@ -14,19 +16,19 @@ from tensorflow.keras.optimizers import Adam
 import tensorflow as tf
 import numpy as np
 
-# environment = "LunarLanderContinuous-v2"
-# exp_path = "expert_demonstrations/Expert_LunarLanderContinuous.pkl"
+environment = "LunarLanderContinuous-v2"
+exp_path = "expert_demonstrations/Expert_LunarLanderContinuous.pkl"
 
-environment = "LunarLander-v2"
-exp_path = "expert_demonstrations/Expert_LunarLander.pkl"
+# environment = "LunarLander-v2"
+# exp_path = "expert_demonstrations/Expert_LunarLander.pkl"
 
 environment = gym.make(environment)
 
-net_architecture = networks.net_architecture(dense_layers=2,
-                                           n_neurons=[256, 256],
-                                           dense_activation=['relu', 'relu'])
-# net_architecture = None
-
+# net_architecture = networks.net_architecture(dense_layers=2,
+#                                            n_neurons=[256, 256],
+#                                            dense_activation=['relu', 'relu'])
+# # net_architecture = None
+#
 # expert = dpg_agent.Agent(learning_rate=5e-4,
 #                          batch_size=32,
 #                          net_architecture=net_architecture)
@@ -58,73 +60,109 @@ def lstm_custom_model(input_shape):
     actor_model.add(Dense(128, activation='relu'))
     return actor_model
 
-# net_architecture = networks.actor_critic_net_architecture(use_custom_network=True,
-#                                                         actor_custom_network=lstm_custom_model,
-#                                                         critic_custom_network=lstm_custom_model
-#                                                         )
+net_architecture = networks.actor_critic_net_architecture(use_custom_network=True,
+                                                        actor_custom_network=lstm_custom_model,
+                                                        critic_custom_network=lstm_custom_model
+                                                        )
 
-net_architecture = networks.dqn_net(use_custom_network=True,
-                                    custom_network=lstm_custom_model)
+# net_architecture = networks.dqn_net(use_custom_network=True,
+#                                     custom_network=lstm_custom_model)
 # net_architecture = None
 use_action = True
 n_stack = 5
 exp_memory = load_expert_memories(exp_path, load_action=use_action, n_stack=n_stack)
-
-# agent = ppo_agent_discrete.Agent(actor_lr=1e-4,
-#                                  critic_lr=1e-3,
+#
+# agent = ppo_agent_discrete_tf.Agent(actor_lr=1e-5,
+#                                  critic_lr=1e-4,
 #                                  batch_size=128,
+#                                  epsilon=0.4,
+#                                  epsilon_decay=0.9999,
+#                                  epsilon_min=0.15,
 #                                  memory_size=512,
 #                                  net_architecture=net_architecture,
 #                                  n_stack=n_stack)
 
-agent = dqn_agent_tf.Agent(learning_rate=1e-6,
-                        batch_size=128,
-                        epsilon=0.6,
-                        epsilon_decay=0.99999,
-                        epsilon_min=0.15,
-                        n_stack=n_stack,
-                        net_architecture=net_architecture)
+# agent = ppo_agent_discrete_parallel_tf.Agent(actor_lr=1e-5,
+#                                  critic_lr=1e-4,
+#                                  batch_size=128,
+#                                  epsilon=0.4,
+#                                  epsilon_decay=0.995,
+#                                  epsilon_min=0.15,
+#                                  memory_size=512,
+#                                  net_architecture=net_architecture,
+#                                  n_stack=n_stack)
 
-# agent = dpg_agent.Agent(learning_rate=1e-3,
+
+# agent = dqn_agent_tf.Agent(learning_rate=1e-5,
+#                         batch_size=128,
+#                         epsilon=0.6,
+#                         epsilon_decay=0.9999,
+#                         epsilon_min=0.15,
+#                         n_stack=n_stack,
+#                         net_architecture=net_architecture)
+
+# agent = dpg_agent_tf.Agent(learning_rate=1e-6,
 #                         batch_size=64,
 #                         net_architecture=net_architecture,
 #                         n_stack=n_stack)
-#
-# agent = ddpg_agent_tf.Agent(actor_lr=1e-4,
-#                          critic_lr=1e-3,
+
+# agent = dpg_agent_continuous_tf.Agent(learning_rate=1e-5,
+#                         batch_size=64,
+#                         net_architecture=net_architecture,
+#                         n_stack=n_stack)
+
+# agent = ddpg_agent_tf.Agent(actor_lr=1e-5,
+#                          critic_lr=1e-4,
 #                          batch_size=64,
-#                          epsilon=0.9,
+#                          epsilon=0.5,
 #                          epsilon_decay=0.9999,
 #                          epsilon_min=0.15,
 #                          net_architecture=net_architecture,
 #                          n_stack=n_stack)
 
-# agent = a2c_agent_discrete_queue.Agent(actor_lr=1e-3,
-#                                        critic_lr=1e-4,
+# agent = a2c_agent_discrete_queue_tf.Agent(actor_lr=1e-5,
+#                                        critic_lr=1e-5,
 #                                        batch_size=32,
-#                                        epsilon=0.7,
+#                                        epsilon=0.0,
 #                                        epsilon_decay=0.9999,
 #                                        epsilon_min=0.15,
 #                                        n_step_return=15,
 #                                        net_architecture=net_architecture,
 #                                        n_stack=n_stack)
 
-# agent = a2c_agent_continuous_queue.Agent(actor_lr=1e-3,
-#                                         critic_lr=1e-4,
+# agent = a2c_agent_continuous_queue_tf.Agent(actor_lr=1e-5,
+#                                         critic_lr=1e-5,
 #                                         batch_size=64,
 #                                         n_step_return=15,
 #                                         net_architecture=net_architecture,
 #                                         n_stack=n_stack)
 
-# agent = ppo_agent_continuous.Agent(actor_lr=1e-6,
+agent = a2c_agent_continuous_tf.Agent(actor_lr=1e-5,
+                                        critic_lr=1e-5,
+                                        batch_size=64,
+                                        n_step_return=15,
+                                        net_architecture=net_architecture,
+                                        n_stack=n_stack)
+
+# agent = ppo_agent_continuous_tf.Agent(actor_lr=1e-6,
 #                                  critic_lr=1e-6,
 #                                  batch_size=128,
-#                                  memory_size=1024,
+#                                  memory_size=512,
 #                                  net_architecture=net_architecture,
 #                                  n_stack=n_stack,
 #                                  epsilon=0.4,
-#                                  epsilon_decay=0.9,
+#                                  epsilon_decay=0.999,
 #                                  epsilon_min=0.15)
+
+# agent = ppo_agent_continuous_parallel_tf.Agent(actor_lr=1e-6,
+#                                              critic_lr=1e-6,
+#                                              batch_size=128,
+#                                              memory_size=512,
+#                                              net_architecture=net_architecture,
+#                                              n_stack=n_stack,
+#                                              epsilon=0.4,
+#                                              epsilon_decay=0.95,
+#                                              epsilon_min=0.15)
 
 # agent = a3c_agent_discrete.Agent(actor_lr=1e-4,
 #                                   critic_lr=1e-4,
@@ -144,22 +182,30 @@ agent = dqn_agent_tf.Agent(learning_rate=1e-6,
 #                                     net_architecture=net_architecture,
 #                                     n_stack=n_stack)
 
-bc = BehaviorClone(agent, state_size=(n_stack, environment.observation_space.shape[0]), n_actions=environment.action_space.n,
-                    n_stack=n_stack)
+# bc = BehaviorClone(agent, state_size=(n_stack, environment.observation_space.shape[0]), n_actions=environment.action_space.n,
+#                     n_stack=n_stack)
 # (n_stack, environment.observation_space.shape[0])
-# bc = BehaviorClone(agent, state_size=environment.observation_space.shape[0], n_actions=environment.action_space.shape[0],
-#                     n_stack=n_stack, action_bounds=[-1., 1.])
+bc = BehaviorClone(agent, state_size=(n_stack, environment.observation_space.shape[0]), n_actions=environment.action_space.shape[0],
+                    n_stack=n_stack, action_bounds=[-1., 1.])
 
 states = np.array([x[0] for x in exp_memory])
 actions = np.array([x[1] for x in exp_memory])
 
 print("Entrenamiento por clonación de comportamiento")
-agent = bc.solve(states, actions, epochs=20, batch_size=128, shuffle=True, learning_rate=1e-4, optimizer=Adam(),
-                 loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True),
-                 metrics=tf.keras.metrics.CategoricalAccuracy(),
-                 validation_split=0.15)
+# agent = bc.solve(states, actions, epochs=10, batch_size=128, shuffle=True, optimizer=Adam(learning_rate=1e-4),
+#                  loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True),
+#                  metrics=tf.keras.metrics.CategoricalAccuracy(),
+#                  verbose=2,
+#                  validation_split=0.15, one_hot_encode_actions=True)
+
+agent = bc.solve(states, actions, epochs=10, batch_size=128, shuffle=True, optimizer=Adam(learning_rate=1e-4),
+                 loss=tf.keras.losses.MeanSquaredError(),
+                 metrics=tf.keras.metrics.MeanAbsoluteError(),
+                 verbose=2,
+                 validation_split=0.15, one_hot_encode_actions=False)
 
 problem = rl_problem.Problem(environment, agent)
-problem.test(render=True, n_iter=10)
-problem.solve(200, render=False, skip_states=1)
+problem.test(render=True, n_iter=2)
+
+problem.solve(100, render=False, skip_states=1, max_step_epi=500)
 problem.test(render=True, n_iter=10)

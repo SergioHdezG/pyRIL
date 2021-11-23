@@ -1,7 +1,14 @@
 import numpy as np
+import tensorflow as tf
 from RL_Agent.base.PPO_base.ppo_agent_base import PPOSuper
 from RL_Agent.base.utils import agent_globals
 import multiprocessing
+from RL_Agent.base.utils import net_building
+from RL_Agent.base.utils.default_networks import ppo_net
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Dense
+from tensorflow.keras import backend as K
+from tensorflow.keras.optimizers import Adam
 # import tensorflow as tf
 import tensorflow as tf
 import time
@@ -708,7 +715,7 @@ class Transformer:
         dataset = tf.data.Dataset.from_tensor_slices(
             (source_seq, target_seq_in, target_seq_out))
 
-        dataset = dataset.shuffle(len(source_seq)).batch(batch_size)
+        dataset = dataset.shuffle(len(source_seq), reshuffle_each_iteration=True).batch(batch_size)
 
         loss = 0.
         for batch, (source_seq, target_seq_in, target_seq_out) in enumerate(dataset.take(-1)):
@@ -1234,7 +1241,7 @@ class StableTransformer:
         dataset = tf.data.Dataset.from_tensor_slices(
             (source_seq, target_seq_in, target_seq_out))
 
-        dataset = dataset.shuffle(len(source_seq)).batch(batch_size)
+        dataset = dataset.shuffle(len(source_seq), reshuffle_each_iteration=True).batch(batch_size)
 
         loss = 0.
         for batch, (source_seq, target_seq_in, target_seq_out) in enumerate(dataset.take(-1)):

@@ -8,7 +8,7 @@ from tensorflow.keras.optimizers import Adam
 from RL_Agent.base.utils import net_building
 from RL_Agent.base.utils.networks.default_networks import ppo_net
 from RL_Agent.base.agent_base import AgentSuper
-# import tensorflow as tf
+import tensorflow as tf
 import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 
@@ -555,7 +555,7 @@ class PPOSuper(AgentSuper):
 
         return obs
 
-    def bc_fit(self, expert_traj, epochs, batch_size, learning_rate=1e-3, shuffle=False, optimizer=Adam(), loss='mse',
+    def bc_fit_legacy(self, expert_traj, epochs, batch_size, learning_rate=1e-3, shuffle=False, optimizer=Adam(), loss='mse',
         validation_split=0.15):
 
         expert_traj_s = np.array([x[0] for x in expert_traj])

@@ -4,7 +4,7 @@ sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
 import tensorflow as tf
 from RL_Problem import rl_problem
-from RL_Agent import ppo_transformer_agent_discrete_parallel
+from RL_Agent import ppo_transformer_agent_discrete_parallel, ppo_transformer_agent_descrete_parallel_2
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 import gym
@@ -13,10 +13,8 @@ from environments import translatorRL, gymTransformers
 import numpy as np
 
 teaching_force = False
-aaa = tf.executing_eagerly()
 # environment = translatorRL.Translate(teaching_force)
 environment = gymTransformers.gymTr("LunarLander-v2")
-aaa = tf.executing_eagerly()
 
 def lstm_custom_model(input_shape):
     actor_model = Sequential()
@@ -41,9 +39,8 @@ net_architecture = params.actor_critic_net_architecture(
                     actor_custom_network=lstm_custom_model,         critic_custom_network=lstm_custom_model
                     )
 
-
-agent_cont = ppo_transformer_agent_discrete_parallel.Agent(actor_lr=1e-5,
-                                                             critic_lr=1e-4,
+agent_cont = ppo_transformer_agent_discrete_parallel.Agent(actor_lr=None,
+                                                             critic_lr=1e-5,
                                                              batch_size=128,
                                                              memory_size=512,
                                                              epsilon=0.9,
@@ -60,15 +57,18 @@ agent_cont = ppo_transformer_agent_discrete_parallel.Agent(actor_lr=1e-5,
                                                              decoder_final_token=environment.final_token,
                                                              max_output_len=environment.action_space.seq2seq_n,
                                                              loss_critic_discount=0.01,
+                                                             loss_entropy_beta=0.0,
                                                              vocab_in_size=environment.vocab_in_size,
                                                              vocab_out_size=environment.vocab_out_size,
-                                                             do_embedging=False,
+                                                             do_embedding=False,
+                                                             do_pes=True,
                                                              processing_text=False,
                                                              )
 
+
 problem_cont = rl_problem.Problem(environment, agent_cont)
 aaa = tf.executing_eagerly()
-problem_cont.solve(5000, render=True, skip_states=1)
+problem_cont.solve(500, render=False, render_after=200, skip_states=3)
 problem_cont.test(render=True, n_iter=10)
 
 hist = problem_cont.get_historic_reward()

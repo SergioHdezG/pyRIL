@@ -275,7 +275,7 @@ class Agent(AgentSuper):
         print("Saved model to disk")
         print(datetime.datetime.now())
 
-    def bc_fit(self, expert_traj, epochs, batch_size, learning_rate=1e-3, shuffle=False, optimizer=None, loss='mse',
+    def bc_fit_legacy(self, expert_traj, epochs, batch_size, learning_rate=1e-3, shuffle=False, optimizer=None, loss='mse',
                validation_split=0.15):
         """
         Behavioral cloning training procedure for the neural network.

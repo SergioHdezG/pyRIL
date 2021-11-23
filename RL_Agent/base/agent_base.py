@@ -1,5 +1,7 @@
 import numpy as np
 from abc import ABCMeta, abstractmethod
+import tensorflow as tf
+
 
 class AgentInterface(object, metaclass=ABCMeta):
     """
@@ -75,6 +77,29 @@ class AgentInterface(object, metaclass=ABCMeta):
         """
         Save a tensorflow or keras model.
         :param path: (str) file name
+        """
+        pass
+
+    def bc_fit(self, expert_traj_s, expert_traj_a, epochs, batch_size, shuffle, optimizer, loss, metrics,
+               validation_split, verbose):
+        """
+        Behavioral cloning training procedure for the neural network.
+        :param expert_traj_s: (nd array) observations from expert demonstrations.
+        :param expert_traj_a: (nd array) actions from expert demonstrations.
+        :param epochs: (int) Training epochs.
+        :param batch_size: (int) Training batch size.
+        :param shuffle: (bool) Shuffle or not the examples on expert_traj.
+        :param optimizer: (keras optimizer o keras optimizer id) Optimizer to be used in training procedure.
+        :param loss: (keras loss id, keras loss or custom loss based on keras losses interface) Loss metrics for the
+                     training procedure.
+        :param loss: (keras metric or custom metric based on keras metrics interface) Metrics for the
+                     training procedure.
+        :param validation_split: (float in [0., 1.]) Fraction of data to be used for validation.
+        :param verbose: (int [0, 2]) Set verbosity of the function. 0 -> no verbosity.
+                                                                    1 -> batch level verbosity.
+                                                                    2 -> epoch level verbosity.
+        :param one_hot_encode_actions: (bool) If True, expert_traj_a will be transformed into one hot encoding.
+                                              If False, expert_traj_a will be no altered. Useful for discrete actions.
         """
         pass
 
@@ -243,3 +268,39 @@ class AgentSuper(AgentInterface):
         :param opt: (keras optimizer or keras optimizer id).
         """
         self.optimizer = opt
+
+    def bc_fit(self, expert_traj_s, expert_traj_a, epochs, batch_size, shuffle=False,
+               optimizer='adam', loss='mse', metrics=tf.metrics.MeanSquaredError(), validation_split=0., verbose=1,
+               one_hot_encode_actions=False):
+        """
+        Behavioral cloning training procedure for the neural network.
+        :param expert_traj_s: (nd array) observations from expert demonstrations.
+        :param expert_traj_a: (nd array) actions from expert demonstrations.
+        :param epochs: (int) Training epochs.
+        :param batch_size: (int) Training batch size.
+        :param shuffle: (bool) Shuffle or not the examples on expert_traj.
+        :param optimizer: (keras optimizer o keras optimizer id) Optimizer to be used in training procedure.
+        :param loss: (keras loss id, keras loss or custom loss based on keras losses interface) Loss metrics for the
+                     training procedure.
+        :param loss: (keras metric or custom metric based on keras metrics interface) Metrics for the
+                     training procedure.
+        :param validation_split: (float in [0., 1.]) Fraction of data to be used for validation.
+        :param verbose: (int [0, 2]) Set verbosity of the function. 0 -> no verbosity.
+                                                                    1 -> batch level verbosity.
+                                                                    2 -> epoch level verbosity.
+        :param one_hot_encode_actions: (bool) If True, expert_traj_a will be transformed into one hot encoding.
+                                              If False, expert_traj_a will be no altered. Useful for discrete actions.
+        """
+        if one_hot_encode_actions:
+            expert_traj_a = self._actions_to_onehot(expert_traj_a)
+        self.model.bc_compile(optimizer=[optimizer], loss=[loss], metrics=metrics)
+        self.model.bc_fit(expert_traj_s, expert_traj_a, batch_size=batch_size, shuffle=shuffle, epochs=epochs,
+                       validation_split=validation_split, verbose=verbose)
+
+    def _actions_to_onehot(self, actions):
+        action_matrix = []
+        for action in actions:
+            action_aux = np.zeros(self.n_actions)
+            action_aux[action] = 1
+            action_matrix.append(action_aux)
+        return np.array(action_matrix)
