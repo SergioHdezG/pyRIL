@@ -8,7 +8,7 @@ from IL_Problem.base.utils.callbacks import Callbacks, load_expert_memories
 from RL_Agent.legacy_agents import dddqn_agent
 from RL_Agent.base.utils import networks
 from RL_Problem import rl_problem as rl_p
-from IL_Problem.deepirl import DeepIRL
+from IL_Problem.legacy_il.deepirl_legacy import DeepIRL
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Conv2D, Flatten
 import numpy as np

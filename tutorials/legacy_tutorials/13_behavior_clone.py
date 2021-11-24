@@ -9,7 +9,7 @@ from tensorflow.keras.layers import Dense, LSTM, Input
 from RL_Agent.base.utils import agent_saver, networks
 from IL_Problem.base.utils.callbacks import load_expert_memories, Callbacks
 from RL_Problem import rl_problem
-from IL_Problem.bclone import BehaviorClone
+from IL_Problem.legacy_il.bclone_legacy import BehaviorClone
 from tensorflow.keras.optimizers import Adam
 
 environment = "LunarLanderContinuous-v2"
