@@ -52,7 +52,7 @@ class Agent(DQNAgentSuper):
                          train_action_selection_options=train_action_selection_options,
                          action_selection_options=action_selection_options
                          )
-        self.agent_name = agent_globals.names["dddqn_tf"]
+        self.agent_name = agent_globals.names["dddqn"]
 
     def build_agent(self, n_actions, state_size=4, batch_size=32, epsilon_min=0.1, epsilon_decay=0.999995,
                  learning_rate=1e-3, gamma=0.95, epsilon=1., stack=False, img_input=False,

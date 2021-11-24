@@ -52,7 +52,7 @@ class Agent(PPOSuper):
                          train_action_selection_options=train_action_selection_options,
                          action_selection_options=action_selection_options
                          )
-        self.agent_name = agent_globals.names["ppo_continuous_tf"]
+        self.agent_name = agent_globals.names["ppo_continuous"]
 
     def build_agent(self, state_size, n_actions, stack=False, action_bound=None):
         """

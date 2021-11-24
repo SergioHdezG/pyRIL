@@ -50,7 +50,7 @@ class Agent(AgentSuper):
                          train_action_selection_options=train_action_selection_options,
                          action_selection_options=action_selection_options
                          )
-        self.agent_name = agent_globals.names["ddpg_tf"]
+        self.agent_name = agent_globals.names["ddpg"]
 
     def build_agent(self, n_actions, state_size, stack, action_bound=None):
         """

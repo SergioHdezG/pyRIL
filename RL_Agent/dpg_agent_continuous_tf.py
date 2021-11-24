@@ -45,7 +45,7 @@ class Agent(DpgAgent):
                          train_action_selection_options=train_action_selection_options,
                          action_selection_options=action_selection_options
                          )
-        self.agent_name = agent_globals.names["dpg_continuous_tf"]
+        self.agent_name = agent_globals.names["dpg_continuous"]
 
     def build_agent(self, n_actions, state_size, stack=False,  action_bound=None):
         """

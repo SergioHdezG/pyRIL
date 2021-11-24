@@ -49,7 +49,7 @@ class Agent(PPOSuper):
                          tensorboard_dir=tensorboard_dir,
                          train_action_selection_options=train_action_selection_options,
                          action_selection_options=action_selection_options)
-        self.agent_name = agent_globals.names["ppo_discrete_tf"]
+        self.agent_name = agent_globals.names["ppo_discrete"]
 
     def build_agent(self, state_size, n_actions, stack):
         """

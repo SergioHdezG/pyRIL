@@ -60,7 +60,7 @@ class Agent(PPOSuper):
                          )
         if self.n_threads is None:
             self.n_threads = multiprocessing.cpu_count()
-        self.agent_name = agent_globals.names["ppo_discrete_multithread_tf"]
+        self.agent_name = agent_globals.names["ppo_discrete_multithread"]
 
     def build_agent(self, state_size, n_actions, stack):
         """
