@@ -12,7 +12,7 @@ config = tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 import os
 from RL_Problem import rl_problem
-from RL_Agent import ddqn_agent_tf
+from RL_Agent import ddqn_agent
 from tensorflow.keras.layers import Dense, LSTM, Flatten
 import gym
 from RL_Agent.base.utils.networks import networks
@@ -226,7 +226,7 @@ net_architecture = networks.dqn_net(dense_layers=2,
 
 
 
-agent = ddqn_agent_tf.Agent(learning_rate=1e-4,
+agent = ddqn_agent.Agent(learning_rate=1e-4,
                             batch_size=128,
                             epsilon=0.4,
                             epsilon_decay=0.999,
@@ -236,7 +236,7 @@ agent = ddqn_agent_tf.Agent(learning_rate=1e-4,
                             net_architecture=net_architecture,
                             tensorboard_dir='/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/tf_tutorials/tensorboard_logs/')
 
-# agent = agent_saver.load('agent_ddqn', agent=ddqn_agent_tf.Agent())
+# agent = agent_saver.load('agent_ddqn', agent=ddqn_agent.Agent())
 agent = agent_saver.load('agent_ddqn', agent=agent, overwrite_attrib=True)
 
 problem = rl_problem.Problem(environment, agent)

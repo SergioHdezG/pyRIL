@@ -12,7 +12,7 @@ import tensorflow as tf
 
 import os
 from RL_Problem import rl_problem
-from RL_Agent import dpg_agent_continuous_tf
+from RL_Agent import dpg_agent_continuous
 from tensorflow.keras.layers import Dense, LSTM, Flatten
 import gym
 from RL_Agent.base.utils.networks import networks
@@ -228,13 +228,13 @@ net_architecture = networks.dpg_net(dense_layers=2,
 
 
 
-agent = dpg_agent_continuous_tf.Agent(learning_rate=1e-3,
+agent = dpg_agent_continuous.Agent(learning_rate=1e-3,
                             batch_size=64,
                             n_stack=1,
                             net_architecture=net_architecture)
                                       # tensorboard_dir='/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/tf_tutorials/tensorboard_logs/')
 
-# agent = agent_saver.load('agent_dpg_cont', agent=dpg_agent_continuous_tf.Agent())
+# agent = agent_saver.load('agent_dpg_cont', agent=dpg_agent_continuous.Agent())
 # agent = agent_saver.load('agent_dpg_cont', agent=agent, overwrite_attrib=True)
 
 problem = rl_problem.Problem(environment, agent)

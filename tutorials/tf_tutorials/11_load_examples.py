@@ -6,7 +6,7 @@ import numpy as np
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
 from RL_Problem import rl_problem
-from RL_Agent import ppo_agent_continuous_parallel_tf, ppo_agent_continuous_tf
+from RL_Agent import ppo_agent_continuous_parallel, ppo_agent_continuous
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, Flatten
 import gym
@@ -271,7 +271,7 @@ net_architecture = networks.actor_critic_net_architecture(
 
 
 
-agent_cont = ppo_agent_continuous_parallel_tf.Agent(actor_lr=1e-5,
+agent_cont = ppo_agent_continuous_parallel.Agent(actor_lr=1e-5,
                                                  critic_lr=1e-5,
                                                  batch_size=256,
                                                  memory_size=1000,
@@ -297,7 +297,7 @@ agent_cont = ppo_agent_continuous_parallel_tf.Agent(actor_lr=1e-5,
 
 # Descomentar para ejecutar el ejemplo continuo
 # agent_cont = agent_saver.load('agent_ppo')
-# agent_cont = ppo_agent_continuous_parallel_tf.Agent()
+# agent_cont = ppo_agent_continuous_parallel.Agent()
 # agent_cont = agent_saver.load_from_protobuf('agent_ppo', agent_cont)
 # agent_cont = agent_saver.load('agent_ppo', agent_cont)
 

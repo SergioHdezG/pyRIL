@@ -3,9 +3,9 @@ from os import path
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
 import gym
-from RL_Agent import ddpg_agent_tf, dqn_agent_tf, dpg_agent_tf, a2c_agent_discrete_queue_tf, ppo_agent_discrete_tf, \
-    ppo_agent_discrete_parallel_tf, dpg_agent_continuous_tf, a2c_agent_continuous_queue_tf, ppo_agent_continuous_tf,\
-    ppo_agent_continuous_parallel_tf, a2c_agent_continuous_tf
+from RL_Agent import ddpg_agent, dqn_agent, dpg_agent, a2c_agent_discrete_queue, ppo_agent_discrete, \
+    ppo_agent_discrete_parallel, dpg_agent_continuous, a2c_agent_continuous_queue, ppo_agent_continuous,\
+    ppo_agent_continuous_parallel, a2c_agent_continuous
 from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.layers import Dense, LSTM, Input
 from RL_Agent.base.utils.networks import networks
@@ -33,7 +33,7 @@ environment = gym.make(environment)
 # #                          batch_size=32,
 # #                          net_architecture=net_architecture)
 #
-# expert = ddpg_agent_tf.Agent(actor_lr=1e-4,
+# expert = ddpg_agent.Agent(actor_lr=1e-4,
 #                          critic_lr=1e-3,
 #                          batch_size=64,
 #                          epsilon=0.95,
@@ -72,7 +72,7 @@ use_action = True
 n_stack = 5
 exp_memory = load_expert_memories(exp_path, load_action=use_action, n_stack=n_stack)
 #
-# agent = ppo_agent_discrete_tf.Agent(actor_lr=1e-5,
+# agent = ppo_agent_discrete.Agent(actor_lr=1e-5,
 #                                  critic_lr=1e-4,
 #                                  batch_size=128,
 #                                  epsilon=0.4,
@@ -82,7 +82,7 @@ exp_memory = load_expert_memories(exp_path, load_action=use_action, n_stack=n_st
 #                                  net_architecture=net_architecture,
 #                                  n_stack=n_stack)
 
-# agent = ppo_agent_discrete_parallel_tf.Agent(actor_lr=1e-5,
+# agent = ppo_agent_discrete_parallel.Agent(actor_lr=1e-5,
 #                                  critic_lr=1e-4,
 #                                  batch_size=128,
 #                                  epsilon=0.4,
@@ -93,7 +93,7 @@ exp_memory = load_expert_memories(exp_path, load_action=use_action, n_stack=n_st
 #                                  n_stack=n_stack)
 
 
-# agent = dqn_agent_tf.Agent(learning_rate=1e-5,
+# agent = dqn_agent.Agent(learning_rate=1e-5,
 #                         batch_size=128,
 #                         epsilon=0.6,
 #                         epsilon_decay=0.9999,
@@ -101,17 +101,17 @@ exp_memory = load_expert_memories(exp_path, load_action=use_action, n_stack=n_st
 #                         n_stack=n_stack,
 #                         net_architecture=net_architecture)
 
-# agent = dpg_agent_tf.Agent(learning_rate=1e-6,
+# agent = dpg_agent.Agent(learning_rate=1e-6,
 #                         batch_size=64,
 #                         net_architecture=net_architecture,
 #                         n_stack=n_stack)
 
-# agent = dpg_agent_continuous_tf.Agent(learning_rate=1e-5,
+# agent = dpg_agent_continuous.Agent(learning_rate=1e-5,
 #                         batch_size=64,
 #                         net_architecture=net_architecture,
 #                         n_stack=n_stack)
 
-# agent = ddpg_agent_tf.Agent(actor_lr=1e-5,
+# agent = ddpg_agent.Agent(actor_lr=1e-5,
 #                          critic_lr=1e-4,
 #                          batch_size=64,
 #                          epsilon=0.5,
@@ -120,7 +120,7 @@ exp_memory = load_expert_memories(exp_path, load_action=use_action, n_stack=n_st
 #                          net_architecture=net_architecture,
 #                          n_stack=n_stack)
 
-# agent = a2c_agent_discrete_queue_tf.Agent(actor_lr=1e-5,
+# agent = a2c_agent_discrete_queue.Agent(actor_lr=1e-5,
 #                                        critic_lr=1e-5,
 #                                        batch_size=32,
 #                                        epsilon=0.0,
@@ -130,21 +130,21 @@ exp_memory = load_expert_memories(exp_path, load_action=use_action, n_stack=n_st
 #                                        net_architecture=net_architecture,
 #                                        n_stack=n_stack)
 
-# agent = a2c_agent_continuous_queue_tf.Agent(actor_lr=1e-5,
+# agent = a2c_agent_continuous_queue.Agent(actor_lr=1e-5,
 #                                         critic_lr=1e-5,
 #                                         batch_size=64,
 #                                         n_step_return=15,
 #                                         net_architecture=net_architecture,
 #                                         n_stack=n_stack)
 
-agent = a2c_agent_continuous_tf.Agent(actor_lr=1e-5,
+agent = a2c_agent_continuous.Agent(actor_lr=1e-5,
                                         critic_lr=1e-5,
                                         batch_size=64,
                                         n_step_return=15,
                                         net_architecture=net_architecture,
                                         n_stack=n_stack)
 
-# agent = ppo_agent_continuous_tf.Agent(actor_lr=1e-6,
+# agent = ppo_agent_continuous.Agent(actor_lr=1e-6,
 #                                  critic_lr=1e-6,
 #                                  batch_size=128,
 #                                  memory_size=512,
@@ -154,7 +154,7 @@ agent = a2c_agent_continuous_tf.Agent(actor_lr=1e-5,
 #                                  epsilon_decay=0.999,
 #                                  epsilon_min=0.15)
 
-# agent = ppo_agent_continuous_parallel_tf.Agent(actor_lr=1e-6,
+# agent = ppo_agent_continuous_parallel.Agent(actor_lr=1e-6,
 #                                              critic_lr=1e-6,
 #                                              batch_size=128,
 #                                              memory_size=512,

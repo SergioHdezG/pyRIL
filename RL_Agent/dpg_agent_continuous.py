@@ -8,7 +8,7 @@ import numpy as np
    similar a una lista o una cola 
    que permite añadir o suprimir elementos por sus dos extremos. '''
 from tensorflow.keras.layers import Dense
-from RL_Agent.dpg_agent_tf import Agent as DpgAgent
+from RL_Agent.dpg_agent import Agent as DpgAgent
 from RL_Agent.base.utils.networks.default_networks import dpg_net
 from RL_Agent.base.utils import agent_globals, net_building
 from RL_Agent.base.utils.networks.networks_interface import RLNetModel

@@ -3,7 +3,7 @@ from os import path
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
 from RL_Problem import rl_problem
-from RL_Agent import dqn_agent_tf
+from RL_Agent import dqn_agent
 from RL_Agent.legacy_agents import dqn_agent
 
 import gym
@@ -16,7 +16,7 @@ import numpy as np
 environment = "CartPole-v1"
 environment = gym.make(environment)
 
-agent = dqn_agent_tf.Agent(learning_rate=1e-3,
+agent = dqn_agent.Agent(learning_rate=1e-3,
                         batch_size=128,
                         epsilon=0.4,
                         epsilon_decay=0.999,

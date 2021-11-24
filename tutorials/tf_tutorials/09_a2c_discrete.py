@@ -4,7 +4,7 @@ from os import path
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
 from RL_Problem import rl_problem
-from RL_Agent import a2c_agent_discrete_tf, a2c_agent_discrete_queue_tf
+from RL_Agent import a2c_agent_discrete, a2c_agent_discrete_queue
 import gym
 from RL_Agent.base.utils import agent_saver, history_utils
 from RL_Agent.base.utils.networks import networks
@@ -50,7 +50,7 @@ net_architecture = networks.actor_critic_net_architecture(
 # a2c_agent_discrete_queue)  y dos para acciones continuas (a2c_agent_continuous, a2c_agent_continuous_queue). Por
 # otro lado encontramos una versión de cada uno que utiliza una memoria de repetición de experiencias
 # (a2c_agent_discrete_queue, a2c_agent_continuous_queue)
-agent_disc = a2c_agent_discrete_queue_tf.Agent(actor_lr=1e-2,
+agent_disc = a2c_agent_discrete_queue.Agent(actor_lr=1e-2,
                                       critic_lr=1e-2,
                                       batch_size=128,
                                       epsilon=0.7,
@@ -61,7 +61,7 @@ agent_disc = a2c_agent_discrete_queue_tf.Agent(actor_lr=1e-2,
                                       net_architecture=net_architecture,
                                       tensorboard_dir='/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/tf_tutorials/tensorboard_logs/')
 
-# agent_disc = agent_saver.load('agent_a2c', agent=a2c_agent_discrete_queue_tf.Agent())
+# agent_disc = agent_saver.load('agent_a2c', agent=a2c_agent_discrete_queue.Agent())
 # agent_disc = agent_saver.load('agent_a2c', agent=agent_disc, overwrite_attrib=True)
 
 # Descomentar para ejecutar el ejemplo discreto

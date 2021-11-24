@@ -5,7 +5,7 @@ sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 import gym
 from gym.utils import play
 from IL_Problem.base.utils.callbacks import Callbacks, load_expert_memories
-from RL_Agent import dddqn_agent_tf, ppo_agent_discrete_parallel_tf
+from RL_Agent import dddqn_agent, ppo_agent_discrete_parallel
 from RL_Agent.base.utils.networks import networks
 from IL_Problem.base.utils.networks import networks_dictionaries as il_networks
 from RL_Problem import rl_problem as rl_p
@@ -90,7 +90,7 @@ net_architecture = networks.ppo_net(actor_conv_layers=2,
                                     critic_dense_activation=['relu', 'relu'],
                                     use_custom_network=False)
 
-agent = ppo_agent_discrete_parallel_tf.Agent(actor_lr=1e-4,
+agent = ppo_agent_discrete_parallel.Agent(actor_lr=1e-4,
                                               critic_lr=1e-4,
                                               batch_size=128,
                                               epsilon=0.9,

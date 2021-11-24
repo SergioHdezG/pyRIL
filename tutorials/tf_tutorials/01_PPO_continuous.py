@@ -6,7 +6,7 @@ import numpy as np
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
 from RL_Problem import rl_problem
-from RL_Agent import ppo_agent_continuous_parallel_tf, ppo_agent_continuous_tf
+from RL_Agent import ppo_agent_continuous_parallel, ppo_agent_continuous
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, Flatten
 import gym
@@ -265,7 +265,7 @@ net_architecture = networks.actor_critic_net_architecture(
                     define_custom_output_layer=True,
                     )
 
-agent_cont = ppo_agent_continuous_tf.Agent(actor_lr=1e-5,
+agent_cont = ppo_agent_continuous.Agent(actor_lr=1e-5,
                                              critic_lr=1e-5,
                                              batch_size=256,
                                              memory_size=1000,
@@ -282,7 +282,7 @@ agent_cont = ppo_agent_continuous_tf.Agent(actor_lr=1e-5,
                                              tensorboard_dir='/home/serch/TFM/CAPOIRL-TF2/tutorials/tf_tutorials/saved_agentes/')
 
 # Descomentar para ejecutar el ejemplo continuo
-# agent_cont = agent_saver.load('agent_ppo', agent=ppo_agent_continuous_tf.Agent(), overwrite_attrib=False)
+# agent_cont = agent_saver.load('agent_ppo', agent=ppo_agent_continuous.Agent(), overwrite_attrib=False)
 # agent_cont = agent_saver.load('agent_ppo', agent=agent_cont, overwrite_attrib=True)
 
 problem_cont = rl_problem.Problem(environment_cont, agent_cont)

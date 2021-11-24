@@ -10,7 +10,7 @@ config = tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 
 from RL_Problem import rl_problem
-from RL_Agent import dpg_agent_tf
+from RL_Agent import dpg_agent
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM
 import gym
@@ -39,7 +39,7 @@ def lstm_custom_model(input_shape):
 net_architecture = networks.dpg_net(use_custom_network=True,
                                     custom_network=lstm_custom_model)
 
-agent = dpg_agent_tf.Agent(learning_rate=1e-3,
+agent = dpg_agent.Agent(learning_rate=1e-3,
                         batch_size=64,
                         net_architecture=net_architecture,
                         n_stack=5)

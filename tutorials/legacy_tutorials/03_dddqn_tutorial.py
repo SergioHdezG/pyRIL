@@ -12,7 +12,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Conv2D, Flatten
 
 from RL_Problem import rl_problem
-from RL_Agent import dddqn_agent_tf
+from RL_Agent import dddqn_agent
 from RL_Agent.base.utils.Memory.deque_memory import Memory as deq_m
 import numpy as np
 import matplotlib.pylab as plt
@@ -91,7 +91,7 @@ plt.subplot(122)
 plt.imshow(aux_prep_obs.reshape(90, 80), cmap='gray')
 plt.show()
 
-agent = dddqn_agent_tf.Agent(learning_rate=1e-3,
+agent = dddqn_agent.Agent(learning_rate=1e-3,
                           batch_size=64,
                           epsilon=0.9,
                           epsilon_decay=0.999999,

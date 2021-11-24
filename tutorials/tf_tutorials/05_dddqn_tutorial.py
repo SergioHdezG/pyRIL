@@ -14,7 +14,7 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense, Lambda, subtract, add
 import os
 from RL_Problem import rl_problem
-from RL_Agent import dddqn_agent_tf
+from RL_Agent import dddqn_agent
 from tensorflow.keras.layers import Dense, LSTM, Flatten
 import gym
 from RL_Agent.base.utils.networks import networks
@@ -238,7 +238,7 @@ net_architecture = networks.dueling_dqn_net(common_dense_layers=1,
 
 
 
-agent = dddqn_agent_tf.Agent(learning_rate=5e-4,
+agent = dddqn_agent.Agent(learning_rate=5e-4,
                             batch_size=128,
                             epsilon=0.4,
                             epsilon_decay=0.999,
@@ -248,7 +248,7 @@ agent = dddqn_agent_tf.Agent(learning_rate=5e-4,
                             net_architecture=net_architecture,
                              tensorboard_dir='/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/tf_tutorials/tensorboard_logs/')
 
-agent = agent_saver.load('agent_dddqn', agent=dddqn_agent_tf.Agent())
+agent = agent_saver.load('agent_dddqn', agent=dddqn_agent.Agent())
 # agent = agent_saver.load('agent_dddqn', agent=agent, overwrite_attrib=False)
 
 problem = rl_problem.Problem(environment, agent)

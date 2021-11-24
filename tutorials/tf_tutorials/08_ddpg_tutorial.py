@@ -6,13 +6,13 @@ sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
 import tensorflow as tf
 # Estas tres lineas resuelven algunos problemas con cuDNN en TF2 por los que no me permitía ejecutar en GPU
-physical_devices = tf.config.experimental.list_physical_devices('GPU')
-assert len(physical_devices) > 0, "Not enough GPU hardware devices available"
-config = tf.config.experimental.set_memory_growth(physical_devices[0], True)
+# physical_devices = tf.config.experimental.list_physical_devices('GPU')
+# assert len(physical_devices) > 0, "Not enough GPU hardware devices available"
+# config = tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 import os
 from RL_Problem import rl_problem
-from RL_Agent import ddpg_agent_tf
+from RL_Agent import ddpg_agent
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, Flatten
 import gym
@@ -271,7 +271,7 @@ net_architecture = networks.actor_critic_net_architecture(
 
 
 
-agent = ddpg_agent_tf.Agent(actor_lr=1e-4,
+agent = ddpg_agent.Agent(actor_lr=1e-4,
                             critic_lr=1e-4,
                             batch_size=64,
                             epsilon=0.5,
@@ -281,7 +281,7 @@ agent = ddpg_agent_tf.Agent(actor_lr=1e-4,
                             net_architecture=net_architecture,
                             tensorboard_dir='/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/tf_tutorials/tensorboard_logs/')
 
-# agent = agent_saver.load('agent_ddpg', agent=ddpg_agent_tf.Agent())
+# agent = agent_saver.load('agent_ddpg', agent=ddpg_agent.Agent())
 # agent = agent_saver.load('agent_ddpg', agent=agent, overwrite_attrib=True)
 
 problem = rl_problem.Problem(environment, agent)

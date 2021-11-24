@@ -5,7 +5,7 @@ sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 import tensorflow as tf
 from RL_Problem import rl_problem
 # from RL_Agent import ppo_agent_continuous_parallel, ppo_agent_continuous, ppo_agent_discrete, ppo_agent_discrete_parallel,
-from RL_Agent import ppo_agent_discrete_parallel_tf, ppo_agent_continuous_parallel_tf
+from RL_Agent import ppo_agent_discrete_parallel, ppo_agent_continuous_parallel
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, Flatten
 import gym
@@ -247,7 +247,7 @@ state_size = None
 #                                       img_input=False,
 #                                       state_size=state_size)
 #
-# agent_disc = ppo_agent_discrete_parallel_tf.Agent(actor_lr=1e-4, ##WarmupThenDecaySchedule(256, warmup_steps=4000),
+# agent_disc = ppo_agent_discrete_parallel.Agent(actor_lr=1e-4, ##WarmupThenDecaySchedule(256, warmup_steps=4000),
 #                                                critic_lr=1e-4,  #WarmupThenDecaySchedule(256, warmup_steps=4000),
 #                                                batch_size=32,
 #                                                epsilon=0.8,
@@ -273,7 +273,7 @@ state_size = None
 #                                         state_size=state_size
 #                                         )
 
-agent_cont = ppo_agent_continuous_parallel_tf.Agent(actor_lr=1e-4,
+agent_cont = ppo_agent_continuous_parallel.Agent(actor_lr=1e-4,
                                                  critic_lr=1e-4,
                                                  batch_size=64,
                                                  memory_size=512,

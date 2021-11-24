@@ -3,7 +3,7 @@ from os import path
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
 from RL_Problem import rl_problem
-from RL_Agent import ddqn_agent_tf
+from RL_Agent import ddqn_agent
 import gym
 from RL_Agent.base.utils import agent_saver, history_utils, networks
 environment = "CartPole-v1"
@@ -32,7 +32,7 @@ net_architecture =  {"dense_lay": 3,
                     }
 """
 
-agent = ddqn_agent_tf.Agent(learning_rate=1e-3,
+agent = ddqn_agent.Agent(learning_rate=1e-3,
                          batch_size=128,
                          epsilon=0.4,
                          epsilon_decay=0.999,

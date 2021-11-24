@@ -3,7 +3,7 @@ from os import path
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
 from RL_Problem import rl_problem
-from RL_Agent import ppo_agent_discrete_parallel_tf, ppo_agent_discrete_tf
+from RL_Agent import ppo_agent_discrete_parallel, ppo_agent_discrete
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, Flatten
 import gym
@@ -258,7 +258,7 @@ net_architecture = networks.actor_critic_net_architecture(
                     define_custom_output_layer=True
                     )
 
-agent_cont = ppo_agent_discrete_parallel_tf.Agent(actor_lr=1e-4,
+agent_cont = ppo_agent_discrete_parallel.Agent(actor_lr=1e-4,
                                                  critic_lr=1e-4,
                                                  batch_size=128,
                                                  memory_size=1000,
@@ -275,7 +275,7 @@ agent_cont = ppo_agent_discrete_parallel_tf.Agent(actor_lr=1e-4,
                                                   tensorboard_dir='/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/tf_tutorials/tensorboard_logs/')
 
 # Descomentar para ejecutar el ejemplo continuo
-# agent_cont = agent_saver.load('agent_discrete_ppo', agent=ppo_agent_discrete_parallel_tf.Agent(), overwrite_attrib=False)
+# agent_cont = agent_saver.load('agent_discrete_ppo', agent=ppo_agent_discrete_parallel.Agent(), overwrite_attrib=False)
 agent_cont = agent_saver.load('agent_discrete_ppo', agent=agent_cont, overwrite_attrib=True)
 
 problem_cont = rl_problem.Problem(environment_disc, agent_cont)

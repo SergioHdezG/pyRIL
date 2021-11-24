@@ -11,7 +11,7 @@ import tensorflow as tf
 from RL_Problem import rl_problem
 from IL_Problem.gail import GAIL
 from IL_Problem.deepirl import DeepIRL
-from RL_Agent import ppo_agent_discrete_parallel_tf, dpg_agent_tf, ppo_agent_discrete_tf
+from RL_Agent import ppo_agent_discrete_parallel, dpg_agent, ppo_agent_discrete
 from IL_Problem.base.utils.callbacks import load_expert_memories, Callbacks
 from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.layers import Dense, LSTM, Input
@@ -33,7 +33,7 @@ exp_path = "expert_demonstrations/Expert_LunarLander.pkl"
 #                                            n_neurons=[256, 256],
 #                                            dense_activation=['relu', 'relu'])
 #
-# expert = dpg_agent_tf.Agent(learning_rate=5e-4,
+# expert = dpg_agent.Agent(learning_rate=5e-4,
 #                          batch_size=32,
 #                          net_architecture=net_architecture)
 #
@@ -71,7 +71,7 @@ net_architecture = rl_networks.actor_critic_net_architecture(use_custom_network=
 #                                                net_architecture=net_architecture,
 #                                                n_stack=3)
 
-agent = ppo_agent_discrete_parallel_tf.Agent(actor_lr=1e-4,
+agent = ppo_agent_discrete_parallel.Agent(actor_lr=1e-4,
                                           critic_lr=1e-4,
                                           batch_size=128,
                                           epsilon=0.9,
