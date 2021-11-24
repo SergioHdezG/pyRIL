@@ -3,7 +3,7 @@ from os import path
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
 from RL_Problem import rl_problem
-from RL_Agent import a2c_agent_continuous_queue, a2c_agent_discrete_queue
+from RL_Agent.legacy_agents import a2c_agent_continuous_queue, a2c_agent_discrete_queue
 import gym
 from RL_Agent.base.utils import agent_saver, history_utils, networks
 

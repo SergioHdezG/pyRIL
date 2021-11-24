@@ -5,7 +5,7 @@ sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 from RL_Problem import rl_problem
 from IL_Problem.gail import GAIL
 from IL_Problem.deepirl import DeepIRL
-from RL_Agent import ppo_agent_discrete_parallel, dpg_agent, ppo_agent_discrete
+from RL_Agent.legacy_agents import ppo_agent_discrete_parallel, dpg_agent, ppo_agent_discrete
 from IL_Problem.base.utils.callbacks import load_expert_memories, Callbacks
 from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.layers import Dense, LSTM, Input

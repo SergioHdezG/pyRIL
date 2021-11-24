@@ -5,7 +5,7 @@ sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 import gym
 from gym.utils import play
 from IL_Problem.base.utils.callbacks import Callbacks, load_expert_memories
-from RL_Agent import a2c_agent_discrete
+from RL_Agent.legacy_agents import a2c_agent_discrete
 from RL_Agent.base.utils import networks
 from RL_Problem import rl_problem as rl_p
 from IL_Problem.deepirl import DeepIRL

@@ -3,7 +3,9 @@ from os import path
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
 from RL_Problem import rl_problem
-from RL_Agent import dqn_agent, dqn_agent_tf
+from RL_Agent import dqn_agent_tf
+from RL_Agent.legacy_agents import dqn_agent
+
 import gym
 from RL_Agent.base.utils import agent_saver, history_utils
 import matplotlib.pyplot as plt

@@ -1,6 +1,6 @@
 from RL_Agent.base.utils.networks import *
 from IL_Problem.base.utils.networks import *
-from RL_Agent import dqn_agent, ddqn_agent, dddqn_agent, dpg_agent, ddpg_agent, a2c_agent_discrete, \
+from RL_Agent.legacy_agents import dqn_agent, ddqn_agent, dddqn_agent, dpg_agent, ddpg_agent, a2c_agent_discrete, \
     a2c_agent_continuous, a2c_agent_discrete_queue, a2c_agent_continuous_queue, a3c_agent_discrete, \
     a3c_agent_continuous, ppo_agent_discrete, ppo_agent_discrete_parallel, ppo_agent_continuous, \
     ppo_agent_continuous_parallel

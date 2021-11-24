@@ -3,7 +3,7 @@ from os import path
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
 import gym
-from RL_Agent import ppo_agent_discrete, ppo_agent_continuous, dqn_agent, ddqn_agent, dddqn_agent, dpg_agent, ddpg_agent, a3c_agent_discrete, a3c_agent_continuous, a2c_agent_continuous, a2c_agent_continuous_queue, a2c_agent_discrete, a2c_agent_discrete_queue
+from RL_Agent.legacy_agents import ppo_agent_discrete, ppo_agent_continuous, dqn_agent, ddqn_agent, dddqn_agent, dpg_agent, ddpg_agent, a3c_agent_discrete, a3c_agent_continuous, a2c_agent_continuous, a2c_agent_continuous_queue, a2c_agent_discrete, a2c_agent_discrete_queue
 from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.layers import Dense, LSTM, Input
 from RL_Agent.base.utils import agent_saver, networks

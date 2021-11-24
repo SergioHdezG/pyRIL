@@ -4,7 +4,7 @@ sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
 from environments.env_base import EnvInterface, ActionSpaceInterface
 from RL_Problem import rl_problem
-from RL_Agent import dqn_agent
+from RL_Agent.legacy_agents import dqn_agent
 from RL_Agent.base.utils import networks
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM

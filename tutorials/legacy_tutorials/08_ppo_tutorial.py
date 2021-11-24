@@ -4,7 +4,7 @@ sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
 import tensorflow as tf
 from RL_Problem import rl_problem
-from RL_Agent import ppo_agent_continuous_parallel, ppo_agent_continuous, ppo_agent_discrete, ppo_agent_discrete_parallel
+from RL_Agent.legacy_agents import ppo_agent_continuous_parallel, ppo_agent_continuous, ppo_agent_discrete, ppo_agent_discrete_parallel
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, Flatten
 import gym
