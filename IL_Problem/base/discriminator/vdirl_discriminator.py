@@ -12,10 +12,29 @@ import tensorflow as tf
 
 # Network for the Actor Critic
 class Discriminator(DiscriminatorBase):
-    def __init__(self, scope, state_size, n_actions, n_stack=False, img_input=False, use_expert_actions=False,
+    def __init__(self, state_size, n_actions, n_stack=False, img_input=False, use_expert_actions=False,
                  learning_rate=1e-3, batch_size=5, epochs=5, val_split=0.15, discrete=False, net_architecture=None,
                  preprocess=None, tensorboard_dir=None):
-        super().__init__(scope=scope, state_size=state_size, n_actions=n_actions, n_stack=n_stack, img_input=img_input,
+        """
+        :param state_size: (tuple of ints) State size. Shape of the state that must match network's inputs. This shape
+            must include the number of stacked states.
+        :param n_actions: (int) Number of action of the agent.
+        :param n_stack: (int) Number of time steps stacked on the state.
+        :param img_input: (bool)  Flag for using a images as states. If True, the states are supposed to be images (3D
+            array).
+        :param use_expert_actions: (bool) If True, the discriminator will use the states and the actions related to each
+            state as input. If False, the discriminator only use states as inputs.
+        :param learning_rate: (float) Learning rate for training the neural network.
+        :param batch_size: (int) Size of training batches.
+        :param epochs: (int) Number of epochs for training the discriminator in each iteration of the algorithm.
+        :param val_split: (float in [0., 1.]) Fraction of data to be used for validation in discriminator training.
+        :param discrete: (bool) Set to True when discrete action spaces are used. Set to False when continuous action
+            spaces are used.
+        :param preprocess: (function) Function for preprocessing the states. Signature shape: preprocess(state). Must
+            return a nd array of the selected state_size.
+        :param tensorboard_dir: (str) path to store tensorboard summaries.
+        """
+        super().__init__(state_size=state_size, n_actions=n_actions, n_stack=n_stack, img_input=img_input,
                          use_expert_actions=use_expert_actions, learning_rate=learning_rate, batch_size=batch_size,
                          epochs=epochs, val_split=val_split, discrete=discrete, preprocess=preprocess,
                          tensorboard_dir=tensorboard_dir)
@@ -24,7 +43,15 @@ class Discriminator(DiscriminatorBase):
 
 
     def _build_net(self, state_size, net_architecture, last_activation='sigmoid'):
-        # Neural Net for Deep-Q learning Model
+        """
+        Build the neural network
+
+        :param state_size: (tuple of ints) State size. Shape of the state that must match network's inputs. This shape
+            must include the number of stacked states.
+        :param net_architecture: (dict) Define the net architecture. Is recommended use dicts from
+            IL_Problem.base.utils.networks.networks_dictionaries.py.
+        :par
+        """
         if net_architecture is None:  # Standart architecture
             net_architecture = irl_net
             define_output_layer = False
@@ -70,6 +97,12 @@ class Discriminator(DiscriminatorBase):
         return discriminator_model
 
     def predict(self, obs, action):
+        """
+        Given the inputs, run the discriminator to return a reward value.
+
+        :param obs: (ndarray) Input states.
+        :param action: (ndarray) Input actions.
+        """
         if self.use_expert_actions:
             return self.model.predict([obs, action])
         else:

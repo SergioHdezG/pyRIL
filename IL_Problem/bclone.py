@@ -11,27 +11,27 @@ from RL_Problem import rl_problem
 import tensorflow as tf
 
 
-class BehaviorClone:
+class BehaviorCloning:
     """
-    Behavioral Cloning problem.
+    Behavioral Cloning class.
 
-    This class represent the behavioral cloning problem with the aim of allow pretraining the RL agents over experts
-    demonstrations and the run RL or other IL algorithm over a pretrained agent. A behavioral Cloning problem consist on
-    a supervised deep learning problem and can be applied to agents that propose directly the actions (Policy
-    Gradient or Actor-Critic agents) excluding the value based agents as DQN and it variations. For using this method
-    only is necessary an RL agent and a set of expert demonstrations.
+    This class implements the behavioral cloning problem with the aim of allow the pretraining the RL agents over
+    experts demonstrations. A behavioral Cloning problem consist on a supervised deep learning problem and can be
+    applied specifically to agents that propose actions (Policy Gradient or Actor-Critic agents), with the value based
+    agents as DQN and its variations is applicable but may not produce the expected results. Use this algorithm requires
+    a RL agent and a set of expert demonstrations.
     """
 
     def __init__(self, agent, state_size, n_actions, n_stack, action_bounds=None):
         """
-        :param agent: (AgentInterface) Reinforcement learning agent.
-        :param state_size: (tuple of ints) State size. Shape of the observation that must match network inputs.
-        :param n_actions: (int) Number of action the agent can do.
-        :param n_stack: (int) Number of time steps stacked on the state (observation stacked).
+        :param agent: (AgentInterface instance) Reinforcement learning agent.
+        :param state_size: (tuple of ints) State size. Shape of the state that must match network's inputs. This shape
+            must include the number of stacked states.
+        :param n_actions: (int) Number of action of the agent.
+        :param n_stack: (int) Number of time steps stacked on the state.
         :param action_bounds: ([float]) [min, max]. If action space is continuous set the max and min limit values for
             actions.
         """
-        # self._check_agent(agent)
         self.agent = agent
         if not agent.agent_builded:
             if action_bounds is None:
@@ -47,20 +47,21 @@ class BehaviorClone:
               verbose=1, one_hot_encode_actions=False):
         """
         Behavioral cloning training procedure for the neural network.
-        :param expert_traj_s: (nd array) observations from expert demonstrations.
-        :param expert_traj_a: (nd array) actions from expert demonstrations.
-        :param epochs: (int) Training epochs.
-        :param batch_size: (int) Training batch size.
-        :param shuffle: (bool) Shuffle or not the examples on expert_traj.
-        :param optimizer: (keras optimizer o keras optimizer id) Optimizer to be used in training procedure.
-        :param loss: (keras loss id, keras loss or custom loss based on keras losses interface) Loss metrics for the
-                     training procedure.
+        :param expert_traj_s: (nd array) states from expert demonstrations. Shape must match the state_size value.
+        :param expert_traj_a: (nd array) actions from expert demonstrations. Shape must match the n_actions value.
+        :param epochs: (int) Number of training epochs.
+        :param batch_size: (int) Size of training batches.
+        :param shuffle: (bool) Shuffle or not the examples on expert_traj_s and expert_traj_a. If True, the data will be
+            shuffled.
+        :param optimizer: (keras optimizer o keras optimizer str id) Optimizer to be used in training procedure.
+        :param loss: (keras loss, keras loss str id or custom loss based on keras losses interface) Loss metrics for the
+            training procedure.
         :param loss: (keras metric or custom metric based on keras metrics interface) Metrics for the
-                     training procedure.
+            training procedure.
         :param validation_split: (float in [0., 1.]) Fraction of data to be used for validation.
-        :param verbose: (int [0, 2]) Set verbosity of the function. 0 -> no verbosity.
-                                                                    1 -> batch level verbosity.
-                                                                    2 -> epoch level verbosity.
+        :param verbose: (int in [0, 2]) Set verbosity of the function.  0 -> no verbosity.
+                                                                        1 -> batch level verbosity.
+                                                                        2 -> epoch level verbosity.
         :param one_hot_encode_actions: (bool) If True, expert_traj_a will be transformed into one hot encoding.
                                               If False, expert_traj_a will be no altered. Useful for discrete actions.
         """
@@ -68,37 +69,3 @@ class BehaviorClone:
                           optimizer=optimizer, loss=loss, metrics=metrics, validation_split=validation_split,
                           verbose=verbose, one_hot_encode_actions=one_hot_encode_actions)
         return self.agent
-
-    def _check_agent(self, agent):
-        """
-        Checking if selected agent is supported for this imitation learning algorithm.
-        Behavioral Cloning support all Policy based and Actor-Critics agent in this library.
-        """
-        valid_agent = agent.agent_name == agent_globals.names["dpg"] or \
-                      agent.agent_name == agent_globals.names["ddpg"] or \
-                      agent.agent_name == agent_globals.names["a2c_discrete"] or \
-                      agent.agent_name == agent_globals.names["a2c_continuous"] or \
-                      agent.agent_name == agent_globals.names["a2c_discrete_queue"] or \
-                      agent.agent_name == agent_globals.names["a2c_continuous_queue"] or \
-                      agent.agent_name == agent_globals.names["a3c_discrete"] or \
-                      agent.agent_name == agent_globals.names["a3c_continuous"] or \
-                      agent.agent_name == agent_globals.names["ppo_discrete"] or \
-                      agent.agent_name == agent_globals.names["ppo_continuous"] or \
-                      agent.agent_name == agent_globals.names["ppo_discrete_multithread"] or \
-                      agent.agent_name == agent_globals.names["ppo_continuous_multithread"]
-
-        if not valid_agent:
-            raise Exception(str(agent.agent_name) + ' rl agent was selected but Deep IRL algorithm only works with the '
-                                                    'following rl agents: \n' +
-                            agent_globals.names["dpg"] + '\n' +
-                            agent_globals.names["ddpg"] + '\n' +
-                            agent_globals.names["a2c_discrete"] + '\n' +
-                            agent_globals.names["a2c_continuous"] + '\n' +
-                            agent_globals.names["a2c_discrete_queue"] + '\n' +
-                            agent_globals.names["a2c_continuous_queue"] + '\n' +
-                            agent_globals.names["a3c_discrete"] + '\n' +
-                            agent_globals.names["a3c_continuous"] + '\n' +
-                            agent_globals.names["ppo_discrete"] + '\n' +
-                            agent_globals.names["ppo_continuous"] + '\n' +
-                            agent_globals.names["ppo_discrete_multithread"] + '\n' +
-                            agent_globals.names["ppo_continuous_multithread"])

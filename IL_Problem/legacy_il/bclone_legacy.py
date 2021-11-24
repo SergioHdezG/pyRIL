@@ -9,7 +9,7 @@ from RL_Agent.base.utils import agent_globals
 from tensorflow.keras.optimizers import Adam
 from RL_Problem import rl_problem
 
-class BehaviorClone:
+class BehaviorCloning:
     """
     Behavioral Cloning problem.
 

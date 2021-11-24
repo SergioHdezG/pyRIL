@@ -11,7 +11,7 @@ from tensorflow.keras.layers import Dense, LSTM, Input
 from RL_Agent.base.utils.networks import networks
 from IL_Problem.base.utils.callbacks import load_expert_memories, Callbacks
 from RL_Problem import rl_problem
-from IL_Problem.bclone import BehaviorClone
+from IL_Problem.bclone import BehaviorCloning
 from tensorflow.keras.optimizers import Adam
 import tensorflow as tf
 import numpy as np
@@ -182,10 +182,10 @@ agent = a2c_agent_continuous.Agent(actor_lr=1e-5,
 #                                     net_architecture=net_architecture,
 #                                     n_stack=n_stack)
 
-# bc = BehaviorClone(agent, state_size=(n_stack, environment.observation_space.shape[0]), n_actions=environment.action_space.n,
+# bc = BehaviorCloning(agent, state_size=(n_stack, environment.observation_space.shape[0]), n_actions=environment.action_space.n,
 #                     n_stack=n_stack)
 # (n_stack, environment.observation_space.shape[0])
-bc = BehaviorClone(agent, state_size=(n_stack, environment.observation_space.shape[0]), n_actions=environment.action_space.shape[0],
+bc = BehaviorCloning(agent, state_size=(n_stack, environment.observation_space.shape[0]), n_actions=environment.action_space.shape[0],
                     n_stack=n_stack, action_bounds=[-1., 1.])
 
 states = np.array([x[0] for x in exp_memory])

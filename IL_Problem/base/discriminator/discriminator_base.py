@@ -1,20 +1,34 @@
-# import tensorflow as tf
-# import tensorflow.compat.v1 as tf
-# tf.disable_v2_behavior()
-from tensorflow.keras.models import Sequential, Model
-from tensorflow.keras.layers import Dense, Conv2D, Conv1D, Flatten, MaxPooling2D, Dropout, Lambda, Input, Concatenate, Reshape, BatchNormalization, SimpleRNN, LSTM
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras import backend as K
 import numpy as np
-import random
 import numbers
 
 
 class DiscriminatorBase(object):
-    def __init__(self, scope, state_size, n_actions, n_stack=1, img_input=False, use_expert_actions=True,
+    """ Discriminator base class.
+    This class implements the basic functionalities of the discriminator for a Imitation Learning algorithm.
+    """
+    def __init__(self, state_size, n_actions, n_stack=1, img_input=False, use_expert_actions=True,
                  learning_rate=1e-3, batch_size=5, epochs=5, val_split=0.15, discrete=False, preprocess=None,
                  tensorboard_dir=None):
+        """
+        :param state_size: (tuple of ints) State size. Shape of the state that must match network's inputs. This shape
+            must include the number of stacked states.
+        :param n_actions: (int) Number of action of the agent.
+        :param n_stack: (int) Number of time steps stacked on the state.
+        :param img_input: (bool)  Flag for using a images as states. If True, the states are supposed to be images (3D
+            array).
+        :param use_expert_actions: (bool) If True, the discriminator will use the states and the actions related to each
+            state as input. If False, the discriminator only use states as inputs.
+        :param learning_rate: (float) Learning rate for training the neural network.
+        :param batch_size: (int) Size of training batches.
+        :param epochs: (int) Number of epochs for training the discriminator in each iteration of the algorithm.
+        :param val_split: (float in [0., 1.]) Fraction of data to be used for validation in discriminator training.
+        :param discrete: (bool) Set to True when discrete action spaces are used. Set to False when continuous action
+            spaces are used.
+        :param preprocess: (function) Function for preprocessing the states. Signature shape: preprocess(state). Must
+            return a nd array of the selected state_size.
+        :param tensorboard_dir: (str) path to store tensorboard summaries.
 
+        """
         self.use_expert_actions = use_expert_actions
 
         self.state_size = state_size
@@ -36,7 +50,9 @@ class DiscriminatorBase(object):
         self.discriminator_builded = False
 
     def _build_model(self, net_architecture):
-        # Neural Net for Deep-Q learning Model
+        """
+        Give the state size the correct format and call _build_net method.
+        """
         if self.img_input:
             state_size = (*self.state_size[:2], self.state_size[-1] * self.n_stack)
         elif self.n_stack is not None and self.n_stack > 1:
@@ -48,9 +64,19 @@ class DiscriminatorBase(object):
         return self._build_net(state_size, net_architecture)
 
     def _build_net(self, state_size, net_architecture):
+        """
+        Build the neural network
+        """
         pass
 
     def get_reward(self, obs, action, multithread=False):
+        """
+        Given an array of states and an array of actions return the reward calculated by the discriminator.
+
+        :param obs: (nd array) List of states.
+        :param action (nd array) List of actions.
+        :param multithread: Set to True when using a multithread agent.
+        """
         if multithread:
             if self.discrete_actions:
                 # If not one hot encoded
@@ -141,6 +167,14 @@ class DiscriminatorBase(object):
 
     # def train(self, expert_s, expert_a, agent_s, agent_a):
     def train(self, expert_traj, agent_traj):
+        """
+        Prepare data and train the discriminator neural network.
+
+        :param expert_traj: (ndarray) List of expert trajectories. Trajectories an be a list of states ([states]) or a
+            list of states and actions ([states, actions]).
+        :param expert_traj: (ndarray) List of agent trajectories. Trajectories an be a list of states ([states]) or a
+            list of states and actions ([states, actions]).
+        """
         print("Training discriminator")
 
         # Formating network input
@@ -256,6 +290,18 @@ class DiscriminatorBase(object):
 
     def fit(self, expert_traj_s, expert_traj_a, agent_traj_s, agent_traj_a, batch_size=128, epochs=10,
             validation_split=0.10):
+        """
+        Call the fit method of the corresponding network model.
+
+        :param expert_traj_s: (ndarray) List of states from expert trajectories.
+        :param expert_traj_a: (ndarray) List of actions from expert trajectories.
+        :param agent_traj_s: (ndarray) List of states from agent trajectories.
+        :param agent_traj_a: (ndarray) List of actions from agent trajectories.
+        :param batch_size: (int) Size of  training batches.
+        :param epochs: (int) Number of training epochs.
+        :param validation_split: (float in [0., 1.]) Fraction of data to be used for validation in discriminator
+            training.
+        """
         loss = self.model.fit(expert_traj_s, agent_traj_s, expert_traj_a, agent_traj_a, batch_size=batch_size,
                               epochs=epochs, shuffle=True, verbose=2, validation_split=validation_split)
 

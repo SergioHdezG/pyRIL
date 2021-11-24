@@ -6,7 +6,7 @@ from RL_Agent.legacy_agents import dqn_agent, ddqn_agent, dddqn_agent, dpg_agent
     ppo_agent_continuous_parallel
 from IL_Problem.gail import GAIL
 from IL_Problem.deepirl import DeepIRL
-from IL_Problem.bclone import BehaviorClone
+from IL_Problem.bclone import BehaviorCloning
 
 def get_net_architecture(config, network_config):
     """
@@ -364,10 +364,10 @@ def config_il(agent, rl_problem, environment, expert_memories, config, net_archi
 
 
         if config["discrete_actions"]:
-            il_problem = BehaviorClone(agent, state_size=state_size, n_actions=n_actions, n_stack=config['n_stack'])
+            il_problem = BehaviorCloning(agent, state_size=state_size, n_actions=n_actions, n_stack=config['n_stack'])
         elif config["continuous_actions"]:
             action_bounds = agent.action_bounds
-            il_problem = BehaviorClone(agent, state_size=state_size, n_actions=n_actions,
+            il_problem = BehaviorCloning(agent, state_size=state_size, n_actions=n_actions,
                                n_stack=config['n_stack'], action_bounds=action_bounds)
 
     return il_problem

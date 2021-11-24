@@ -123,15 +123,13 @@ class ILProblemSuper(object, metaclass=ABCMeta):
     def agent_play(self, n_iter, render=False):
         """
         Run the agent in exploitation mode on the environment and record its experiences.
+
+        :param n_iter: (int) number of iterations.
+        :param render: (bool) If True, the environment will be rendered.
         """
         # Callback to save in memory agent trajectories
         callback = Callbacks()
         self.rl_problem.test(render=render, n_iter=n_iter, callback=callback.remember_callback)
         return callback.get_memory(self.use_expert_actions, self.discriminator.n_stack)
 
-    # def _preprocess(self, obs):
-    #     return obs
-    #
-    # def _clip_norm_reward(self, rew):
-    #     return rew
 
