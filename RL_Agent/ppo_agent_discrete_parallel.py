@@ -47,7 +47,7 @@ class Agent(PPOSuper):
                          net_architecture=net_architecture)
         if self.n_threads is None:
             self.n_threads = multiprocessing.cpu_count()
-        self.agent_name = agent_globals.names["ppo_discrete_parallel"]
+        self.agent_name = agent_globals.names["ppo_discrete_multithread"]
 
     def build_agent(self, state_size, n_actions, stack):
         """
@@ -60,8 +60,8 @@ class Agent(PPOSuper):
 
         self.loss_selected = self.proximal_policy_optimization_loss_discrete
         self.actor, self.critic = self._build_model(self.net_architecture, last_activation='softmax')
-        self.dummy_action, self.dummy_value = self.dummies_parallel(self.n_threads)
-        self.remember = self.remember_parallel
+        self.dummy_action, self.dummy_value = self.dummies_multithread(self.n_threads)
+        self.remember = self.remember_multithread
 
 
     def act_train(self, obs):

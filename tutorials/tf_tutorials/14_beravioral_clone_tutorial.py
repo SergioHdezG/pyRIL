@@ -29,9 +29,9 @@ environment = gym.make(environment)
 #                                            dense_activation=['relu', 'relu'])
 # # net_architecture = None
 #
-# expert = dpg_agent.Agent(learning_rate=5e-4,
-#                          batch_size=32,
-#                          net_architecture=net_architecture)
+# # expert = dpg_agent.Agent(learning_rate=5e-4,
+# #                          batch_size=32,
+# #                          net_architecture=net_architecture)
 #
 # expert = ddpg_agent_tf.Agent(actor_lr=1e-4,
 #                          critic_lr=1e-3,

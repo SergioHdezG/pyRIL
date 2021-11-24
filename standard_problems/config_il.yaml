@@ -21,7 +21,7 @@ a2c: no
 a2c_queue: no
 a3c: no
 ppo: no
-ppo_parallel: no
+ppo_multithread: no
 
 # Imitation learning method selection, If more than one "yes" then it selects the first one.
 deepirl: yes

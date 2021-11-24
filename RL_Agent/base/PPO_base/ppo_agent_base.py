@@ -165,7 +165,7 @@ class PPOSuper(AgentSuper):
     def dummies_sequential(self):
         return np.zeros((1, self.n_actions)), np.zeros((1, 1))
 
-    def dummies_parallel(self, n_threads):
+    def dummies_multithread(self, n_threads):
         return np.zeros((n_threads, self.n_actions)), np.zeros((n_threads, 1))
 
     def remember(self, obs, action, pred_act, rewards, values, mask):
@@ -200,7 +200,7 @@ class PPOSuper(AgentSuper):
         self.memory = [obs[index], action[index], pred_act[index], returns[index], rewards[index], values[index],
                        mask[index], advantages[index]]
 
-    def remember_parallel(self, obs, action, pred_act, rewards, values, mask):
+    def remember_multithread(self, obs, action, pred_act, rewards, values, mask):
         """
         Store a memory in a list of memories
         :param obs: Current Observation (State)

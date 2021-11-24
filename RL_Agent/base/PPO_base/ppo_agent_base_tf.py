@@ -72,7 +72,7 @@ class PPOSuper(AgentSuper):
         index = range(len(obs))
         self.memory = [obs, action, pred_act, rewards, mask]
 
-    def remember_parallel(self, obs, action, pred_act, rewards, mask):
+    def remember_multithread(self, obs, action, pred_act, rewards, mask):
         """
         Store a memory in a list of memories
         :param obs: Current Observation (State)

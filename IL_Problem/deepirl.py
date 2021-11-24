@@ -125,8 +125,8 @@ class DeepIRL(ILProblemSuper):
                       agent.agent_name == agent_globals.names["a2c_continuous_queue"] or \
                       agent.agent_name == agent_globals.names["ppo_discrete"] or \
                       agent.agent_name == agent_globals.names["ppo_continuous"] or \
-                      agent.agent_name == agent_globals.names["ppo_discrete_parallel"] or \
-                      agent.agent_name == agent_globals.names["ppo_continuous_parallel"]
+                      agent.agent_name == agent_globals.names["ppo_discrete_multithread"] or \
+                      agent.agent_name == agent_globals.names["ppo_continuous_multithread"]
 
         if not valid_agent:
             raise Exception(str(agent.agent_name) + ' rl agent was selected but Deep IRL algorithm only works with the '
@@ -142,5 +142,5 @@ class DeepIRL(ILProblemSuper):
                             agent_globals.names["a2c_continuous_queue"] + '\n' +
                             agent_globals.names["ppo_discrete"] + '\n' +
                             agent_globals.names["ppo_continuous"] + '\n' +
-                            agent_globals.names["ppo_discrete_parallel"] + '\n' +
-                            agent_globals.names["ppo_continuous_parallel"])
+                            agent_globals.names["ppo_discrete_multithread"] + '\n' +
+                            agent_globals.names["ppo_continuous_multithread"])

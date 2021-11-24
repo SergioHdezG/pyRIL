@@ -49,7 +49,7 @@ class Agent(PPOSuper):
                          net_architecture=net_architecture)
         if self.n_threads is None:
             self.n_threads = multiprocessing.cpu_count()
-        self.agent_name = agent_globals.names["ppo_continuous_parallel_transformer_tf"]
+        self.agent_name = agent_globals.names["ppo_continuous_multithread_transformer_tf"]
         self.use_tr_last_hidden_out = use_tr_last_hidden_out
 
     def build_agent(self, state_size, n_actions, stack, action_bound=None):
@@ -64,8 +64,8 @@ class Agent(PPOSuper):
         self.action_bound = action_bound
         self.loss_selected = self.proximal_policy_optimization_loss_continuous
         self.actor, self.critic = self._build_model(self.net_architecture, last_activation='tanh')
-        self.dummy_action, self.dummy_value = self.dummies_parallel(self.n_threads)
-        self.remember = self.remember_parallel
+        self.dummy_action, self.dummy_value = self.dummies_multithread(self.n_threads)
+        self.remember = self.remember_multithread
 
     def act_train(self, obs):
         """
@@ -113,7 +113,7 @@ class Agent(PPOSuper):
         action = np.squeeze(p, axis=-1)[0]
         return action
 
-    def remember_parallel(self, obs, action, pred_act, rewards, values, mask):
+    def remember_multithread(self, obs, action, pred_act, rewards, values, mask):
         """
         Store a memory in a list of memories
         :param obs: Current Observation (State)

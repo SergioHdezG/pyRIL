@@ -1,7 +1,7 @@
-from RL_Problem.base.PPO.ppo_problem_parallel_base import PPOProblemParallelBase
+from RL_Problem.base.PPO.ppo_problem_parallel_base import PPOProblemMultithreadBase
 
 
-class PPOProblem(PPOProblemParallelBase):
+class PPOProblem(PPOProblemMultithreadBase):
     """
     Proximal Policy Optimization.
     """

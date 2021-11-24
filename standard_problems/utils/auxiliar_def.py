@@ -110,7 +110,7 @@ def get_net_architecture(config, network_config):
                                    critic_n_neurons=network_config['critic_n_neurons'],
                                    actor_dense_activation=network_config['actor_dense_activation'],
                                    critic_dense_activation=network_config['critic_dense_activation'])
-    elif config["ppo"] or config["ppo_parallel"]:
+    elif config["ppo"] or config["ppo_multithread"]:
         net_architecture = ppo_net(actor_conv_layers=network_config['actor_conv_layers'],
                                    critic_conv_layers=network_config['critic_conv_layers'],
                                    actor_kernel_num=network_config['actor_kernel_num'],
@@ -307,7 +307,7 @@ def config_agent(config, net_architecture):
                                                train_steps=config["step_train_epochs"])
         else:
             print("Action space type not selected")
-    elif config["ppo_parallel"]:
+    elif config["ppo_"]:
         if config["discrete_actions"]:
             agent = ppo_agent_discrete_parallel.Agent(actor_lr=float(config["learning_rate"]),
                                                       critic_lr=float(config["learning_rate"]) * 0.1,

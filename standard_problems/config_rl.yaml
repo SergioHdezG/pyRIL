@@ -18,7 +18,7 @@ a2c: no
 a2c_queue: no
 a3c: no
 ppo: no
-ppo_parallel: no
+ppo_multithread: no
 
 # Select a discrete or continuous action space. If more than one "yes" then it selects the first one.
 discrete_actions: yes

@@ -64,22 +64,22 @@ def Problem(environment, agent):
     elif agent.agent_name == agent_globals.names["ppo_continuous"]:
         from RL_Problem.base.PPO import ppo_problem_continuous
         problem = ppo_problem_continuous.PPOProblem(environment, agent)
-    elif agent.agent_name == agent_globals.names["ppo_continuous_parallel"]:
+    elif agent.agent_name == agent_globals.names["ppo_continuous_multithread"]:
         from RL_Problem.base.PPO import ppo_problem_continuous_parallel
         problem = ppo_problem_continuous_parallel.PPOProblem(environment, agent)
     elif agent.agent_name == agent_globals.names["ppo_discrete"]:
         from RL_Problem.base.PPO import ppo_problem_discrete
         problem = ppo_problem_discrete.PPOProblem(environment, agent)
-    elif agent.agent_name == agent_globals.names["ppo_discrete_parallel"]:
+    elif agent.agent_name == agent_globals.names["ppo_discrete_multithread"]:
         from RL_Problem.base.PPO import ppo_problem_discrete_parallel
         problem = ppo_problem_discrete_parallel.PPOProblem(environment, agent)
-    elif agent.agent_name == agent_globals.names["ppo_s2s_continuous_parallel"]:
+    elif agent.agent_name == agent_globals.names["ppo_s2s_continuous_multithread"]:
         from RL_Problem.base.PPO import ppo_problem_continuous_parallel
         problem = ppo_problem_continuous_parallel.PPOProblem(environment, agent)
-    elif agent.agent_name == agent_globals.names["ppo_transformer_agent_continuous_parallel"]:
+    elif agent.agent_name == agent_globals.names["ppo_transformer_agent_continuous_multithread"]:
         from RL_Problem.base.PPO import ppo_problem_continuous_parallel
         problem = ppo_problem_continuous_parallel.PPOProblem(environment, agent)
-    elif agent.agent_name == agent_globals.names["ppo_transformer_agent_discrete_parallel"]:
+    elif agent.agent_name == agent_globals.names["ppo_transformer_agent_discrete_multithread"]:
         from RL_Problem.base.PPO import ppo_problem_discrete_parallel
         problem = ppo_problem_discrete_parallel.PPOProblem(environment, agent)
     elif agent.agent_name == agent_globals.names["ppo_discrete_tf"]:
@@ -88,13 +88,13 @@ def Problem(environment, agent):
     elif agent.agent_name == agent_globals.names["ppo_continuous_tf"]:
         from RL_Problem.base.PPO import ppo_problem_continuous
         problem = ppo_problem_continuous.PPOProblem(environment, agent)
-    elif agent.agent_name == agent_globals.names["ppo_discrete_parallel_tf"]:
+    elif agent.agent_name == agent_globals.names["ppo_discrete_multithread_tf"]:
         from RL_Problem.base.PPO import ppo_problem_discrete_parallel
         problem = ppo_problem_discrete_parallel.PPOProblem(environment, agent)
-    elif agent.agent_name == agent_globals.names["ppo_continuous_parallel_tf"]:
+    elif agent.agent_name == agent_globals.names["ppo_continuous_multithread_tf"]:
         from RL_Problem.base.PPO import ppo_problem_continuous_parallel
         problem = ppo_problem_continuous_parallel.PPOProblem(environment, agent)
-    elif agent.agent_name == agent_globals.names["ppo_continuous_parallel_transformer_tf"]:
+    elif agent.agent_name == agent_globals.names["ppo_continuous_multithread_transformer_tf"]:
         from RL_Problem.base.PPO import ppo_problem_continuous_parallel
         problem = ppo_problem_continuous_parallel.PPOProblem(environment, agent)
 

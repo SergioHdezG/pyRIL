@@ -50,8 +50,8 @@ class DiscriminatorBase(object):
     def _build_net(self, state_size, net_architecture):
         pass
 
-    def get_reward(self, obs, action, parallel=False):
-        if parallel:
+    def get_reward(self, obs, action, multithread=False):
+        if multithread:
             if self.discrete_actions:
                 # If not one hot encoded
                 onehot = False

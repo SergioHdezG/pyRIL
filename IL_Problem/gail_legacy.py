@@ -88,8 +88,8 @@ class GAIL(ILProblemSuper):
         """
         valid_agent = agent.agent_name == agent_globals.names["ppo_discrete"] or \
                       agent.agent_name == agent_globals.names["ppo_continuous"] or \
-                      agent.agent_name == agent_globals.names["ppo_discrete_parallel"] or \
-                      agent.agent_name == agent_globals.names["ppo_continuous_parallel"]
+                      agent.agent_name == agent_globals.names["ppo_discrete_multithread"] or \
+                      agent.agent_name == agent_globals.names["ppo_continuous_multithread"]
 
         if not valid_agent:
             raise Exception('GAIL algorithm only works with ppo rl agents but ' + str(agent.agent_name)

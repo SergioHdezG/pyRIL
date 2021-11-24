@@ -887,13 +887,13 @@ def create_new_agent(att):
     elif att["agent_name"] == agent_globals.names["ppo_discrete"]:
         from RL_Agent import ppo_agent_discrete
         agent = ppo_agent_discrete.Agent()
-    elif att["agent_name"] == agent_globals.names["ppo_discrete_parallel"]:
+    elif att["agent_name"] == agent_globals.names["ppo_discrete_multithread"]:
         from RL_Agent import ppo_agent_discrete_parallel
         agent = ppo_agent_discrete_parallel.Agent()
     elif att["agent_name"] == agent_globals.names["ppo_continuous"]:
         from RL_Agent import ppo_agent_continuous
         agent = ppo_agent_continuous.Agent()
-    elif att["agent_name"] == agent_globals.names["ppo_continuous_parallel"]:
+    elif att["agent_name"] == agent_globals.names["ppo_continuous_multithread"]:
         from RL_Agent import ppo_agent_continuous_parallel
         agent = ppo_agent_continuous_parallel.Agent()
     set_agent_attributes(att, agent)

@@ -60,7 +60,7 @@ class Agent(PPOSuper):
                          )
         if self.n_threads is None:
             self.n_threads = multiprocessing.cpu_count()
-        self.agent_name = agent_globals.names["ppo_discrete_parallel_tf"]
+        self.agent_name = agent_globals.names["ppo_discrete_multithread_tf"]
 
     def build_agent(self, state_size, n_actions, stack):
         """
@@ -74,7 +74,7 @@ class Agent(PPOSuper):
         # self.loss_selected = self.proximal_policy_optimization_loss_discrete
         self.loss_selected = [losses.ppo_loss_discrete, losses.mse]
         self.model = self._build_model(self.net_architecture, last_activation='softmax')
-        self.remember = self.remember_parallel
+        self.remember = self.remember_multithread
 
     def act_train(self, obs):
         # TODO: exportar a otros algoritmos la ejecución cuando se usan seq2seq
