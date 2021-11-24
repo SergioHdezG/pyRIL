@@ -538,7 +538,7 @@ class PPOSuper(AgentSuper):
         adv = np.array(returns) - values[:-1]
         return returns, (adv - np.mean(adv)) / (np.std(adv) + 1e-10)
 
-    def _format_obs_act_parall(self, obs):
+    def _format_obs_act_multithread(self, obs):
         if self.img_input:
             if self.stack:
                 obs = np.array([np.dstack(o) for o in obs])

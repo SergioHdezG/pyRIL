@@ -86,7 +86,7 @@ class Agent(PPOSuper):
         :return: ([[int]], [[int]], [[float]], [float]) list of action, list of one hot action, list of action
             probabilities, list of state value .
         """
-        obs = self._format_obs_act_parall(obs)
+        obs = self._format_obs_act_multithread(obs)
         act_pred = self.model.predict(obs)
         action = self.train_action_selection_options(act_pred, self.n_actions, epsilon=self.epsilon, n_env=self.n_threads, exploration_noise=self.exploration_noise)
 

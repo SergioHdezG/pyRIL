@@ -122,7 +122,7 @@ class Agent(PPOSuper):
         :return: ([[floats]], [[floats]], [[float]], [float]) list of action, list of one hot action, list of action
             probabilities, list of state value
         """
-        obs = self._format_obs_act_parall(obs)
+        obs = self._format_obs_act_multithread(obs)
 
         if self.seq2seq:
             action, p = self.actor_model.predict(obs)

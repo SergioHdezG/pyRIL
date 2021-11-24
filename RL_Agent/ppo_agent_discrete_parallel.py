@@ -71,7 +71,7 @@ class Agent(PPOSuper):
         :return: ([[int]], [[int]], [[float]], [float]) list of action, list of one hot action, list of action
             probabilities, list of state value .
         """
-        obs = self._format_obs_act_parall(obs)
+        obs = self._format_obs_act_multithread(obs)
         p = self.actor.predict([obs, self.dummy_value, self.dummy_action, self.dummy_value, self.dummy_value])
         if np.random.rand() <= self.epsilon:
             action = [np.random.choice(self.n_actions) for i in range(self.n_threads)]

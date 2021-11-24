@@ -74,7 +74,7 @@ class Agent(PPOSuper):
         :return: ([[int]], [[int]], [[float]], [float]) list of action, list of one hot action, list of action
             probabilities, list of state value .
         """
-        obs = self._format_obs_act_parall(obs)
+        obs = self._format_obs_act_multithread(obs)
         if isinstance(self.actor, RLNetModel):
             p = self.actor.predict(obs, return_last_hidden=self.use_tr_last_hidden_out)
         else:

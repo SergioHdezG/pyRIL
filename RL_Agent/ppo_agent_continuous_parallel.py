@@ -73,7 +73,7 @@ class Agent(PPOSuper):
         :return: ([[floats]], [[floats]], [[float]], [float]) list of action, list of one hot action, list of action
             probabilities, list of state value
         """
-        obs = self._format_obs_act_parall(obs)
+        obs = self._format_obs_act_multithread(obs)
         p = self.actor.predict([obs, self.dummy_value, self.dummy_action, self.dummy_value, self.dummy_value])
         action = action_matrix = p + np.random.normal(loc=0, scale=self.exploration_noise*self.epsilon, size=p.shape)
         value = self.critic.predict(obs)

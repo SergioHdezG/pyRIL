@@ -129,7 +129,7 @@ class Agent(PPOSuper):
         if self.teacher_forcing:
             obs = np.array([np.array(o) for o in obs[:, 0]])
 
-        obs = self._format_obs_act_parall(obs)
+        obs = self.multithread(obs)
 
         if self.seq2seq:
             action, p, value = self.actor_model.predict(obs)
