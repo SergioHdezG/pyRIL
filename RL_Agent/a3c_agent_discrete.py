@@ -19,7 +19,7 @@ class Agent(AgentSuper):
     tf.disable_v2_behavior()
     def __init__(self, actor_lr=1e-4, critic_lr=1e-3, batch_size=64, epsilon=0.9, epsilon_decay=0.9999, epsilon_min=0.1,
                  gamma=0.95, n_stack=1, n_step_return=15, train_steps=1, img_input=False, state_size=None,
-                 n_parallel_envs=None, net_architecture=None):
+                 n_threads=None, net_architecture=None):
         """
         Asynchronous Advantage Actor-Critic (A3C) for discrete action spaces agent class.
         :param actor_lr: (float) learning rate for training the actor NN.
@@ -36,7 +36,7 @@ class Agent(AgentSuper):
         :param train_steps: (int) Train epoch for each training iteration.
         :param img_input: (bool) Flag for using a images as states. True state are images (3D array).
         :param state_size: State size. Needed if the original state size is modified by any preprocessing.
-        :param n_parallel_envs: (int) or None. Number of parallel environments to use during training. If None will
+        :param n_threads: (int) or None. Number of parallel environments to use during training. If None will
             select by default the number of cpu kernels.
         :param net_architecture: (dict) Define the net architecture. Is recommended use dicts from
             RL_Agent.base.utils.networks
@@ -44,9 +44,9 @@ class Agent(AgentSuper):
         super().__init__(actor_lr=actor_lr, critic_lr=critic_lr, batch_size=batch_size, epsilon=epsilon,
                          epsilon_decay=epsilon_decay, epsilon_min=epsilon_min, gamma=gamma, n_step_return=n_step_return,
                          train_steps=train_steps, n_stack=n_stack, img_input=img_input, state_size=state_size,
-                         n_parallel_envs=n_parallel_envs, net_architecture=net_architecture)
-        if self.n_parallel_envs is None:
-            self.n_parallel_envs = multiprocessing.cpu_count()
+                         n_threads=n_threads, net_architecture=net_architecture)
+        if self.n_threads is None:
+            self.n_threads = multiprocessing.cpu_count()
         self.agent_name = agent_globals.names["a3c_discrete"]
         self.workers = None
         self.sess = None
@@ -78,7 +78,7 @@ class Agent(AgentSuper):
             self.saver = tf.train.Saver()
             self.workers = []
             # Create workers
-            for i in range(self.n_parallel_envs):
+            for i in range(self.n_threads):
                 i_name = 'W_%i' % i  # worker name
                 self.workers.append(
                     Worker(i_name, self.global_ac, self.sess, state_size, n_actions,

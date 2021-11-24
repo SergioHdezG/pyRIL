@@ -457,7 +457,7 @@ def actor_critic_net_architecture(actor_conv_layers=None, actor_kernel_num=None,
 # def algotirhm_hyperparams(learning_rate=1e-3, batch_size=32, epsilon=1., epsilon_decay=0.9999, epsilon_min=0.1,
 #                           n_step_return=10, n_steps_update=10, buffer_size=2048, gamma=0.95, tau=0.001,
 #                           loss_clipping=0.2, critic_discount=0.5, entropy_beta=0.001, ppo_lmbda=0.95,
-#                           ppo_train_epochs=10, exploration_noise=1.0, n_parallel_envs=multiprocessing.cpu_count()):
+#                           ppo_train_epochs=10, exploration_noise=1.0, n_threads=multiprocessing.cpu_count()):
 #     """
 #     :param learning_rate:   float, for example 1e-3. NN training learning rate.
 #     :param lr_decay:        float, for example 1e-3. Learning rate decay for training.
@@ -484,7 +484,7 @@ def actor_critic_net_architecture(actor_conv_layers=None, actor_kernel_num=None,
 #         "lmbda": ppo_lmbda,
 #         "ppo_train_epochs": ppo_train_epochs,
 #         "exploration_noise": exploration_noise,
-#         "n_parallel_envs": n_parallel_envs,
+#         "n_threads": n_threads,
 #         "tau": tau,
 #     }
 #     return model_params

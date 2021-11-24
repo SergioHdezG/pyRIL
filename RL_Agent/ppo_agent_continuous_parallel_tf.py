@@ -13,7 +13,7 @@ class Agent(PPOSuper):
     def __init__(self, actor_lr=1e-4, critic_lr=1e-3, batch_size=32, epsilon=1.0, epsilon_decay=0.9999, epsilon_min=0.1,
                  gamma=0.95, n_step_return=10, memory_size=512, loss_clipping=0.2, loss_critic_discount=0.5,
                  loss_entropy_beta=0.001, lmbda=0.95, train_steps=10, exploration_noise=1.0, n_stack=1,
-                 img_input=False, state_size=None, n_parallel_envs=None,tensorboard_dir=None, net_architecture=None,
+                 img_input=False, state_size=None, n_threads=None,tensorboard_dir=None, net_architecture=None,
                  train_action_selection_options=action_selection_options.gaussian_noise,
                  action_selection_options=action_selection_options.identity, loads_saved_params=True
                  ):
@@ -41,7 +41,7 @@ class Agent(PPOSuper):
         :param n_stack: (int) Number of time steps stacked on the state (observation stacked).
         :param img_input: (bool) Flag for using a images as states. True state are images (3D array).
         :param state_size: State size. Needed if the original state size is modified by any preprocessing.
-        :param n_parallel_envs: (int) or None. Number of parallel environments to use during training. If None will
+        :param n_threads: (int) or None. Number of parallel environments to use during training. If None will
             select by default the number of cpu kernels.
         :param net_architecture: (dict) Define the net architecture. Is recommended use dicts from
             RL_Agent.base.utils.networks
@@ -54,12 +54,12 @@ class Agent(PPOSuper):
                          n_step_return=n_step_return, memory_size=memory_size, loss_clipping=loss_clipping,
                          loss_critic_discount=loss_critic_discount, loss_entropy_beta=loss_entropy_beta, lmbda=lmbda,
                          train_steps=train_steps, exploration_noise=exploration_noise, n_stack=n_stack,
-                         img_input=img_input, state_size=state_size, n_parallel_envs=n_parallel_envs,
+                         img_input=img_input, state_size=state_size, n_threads=n_threads,
                          tensorboard_dir=tensorboard_dir, net_architecture=net_architecture,
                          train_action_selection_options=train_action_selection_options,
                          action_selection_options=action_selection_options, loads_saved_params=loads_saved_params)
-        if self.n_parallel_envs is None:
-            self.n_parallel_envs = multiprocessing.cpu_count()
+        if self.n_threads is None:
+            self.n_threads = multiprocessing.cpu_count()
         self.agent_name = agent_globals.names["ppo_continuous_parallel_tf"]
 
     def build_agent(self, state_size, n_actions, stack, action_bound=None):
@@ -88,7 +88,7 @@ class Agent(PPOSuper):
         """
         obs = self._format_obs_act_parall(obs)
         act_pred = self.model.predict(obs)
-        action = self.train_action_selection_options(act_pred, self.n_actions, epsilon=self.epsilon, n_env=self.n_parallel_envs, exploration_noise=self.exploration_noise)
+        action = self.train_action_selection_options(act_pred, self.n_actions, epsilon=self.epsilon, n_env=self.n_threads, exploration_noise=self.exploration_noise)
 
         # action = action_matrix = p + np.random.normal(loc=0, scale=self.exploration_noise*self.epsilon, size=p.shape)
         action_matrix = action

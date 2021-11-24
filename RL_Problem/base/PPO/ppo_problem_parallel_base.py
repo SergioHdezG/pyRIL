@@ -26,9 +26,9 @@ class PPOProblemParallelBase(PPOProblemBase):
 
         # Copiamos el entorno creado en rl_problem_super para que lo almacene env_test
         self.env_test = self.env
-        self.n_parallel_envs = self.agent.n_parallel_envs
+        self.n_threads = self.agent.n_threads
         # Creamos n copias del entorno
-        env = [self.make_env() for i in range(self.n_parallel_envs)]
+        env = [self.make_env() for i in range(self.n_threads)]
         self.env = SubprocVecEnv(env)
         self.run_test = True
 
@@ -55,8 +55,8 @@ class PPOProblemParallelBase(PPOProblemBase):
         self.masks_batch = []
         # Stacking inputs
         if self.n_stack is not None and self.n_stack > 1:
-            obs_queue = [deque(maxlen=self.n_stack) for i in range(self.n_parallel_envs)]
-            obs_next_queue = [deque(maxlen=self.n_stack) for i in range(self.n_parallel_envs)]
+            obs_queue = [deque(maxlen=self.n_stack) for i in range(self.n_threads)]
+            obs_next_queue = [deque(maxlen=self.n_stack) for i in range(self.n_threads)]
         else:
             obs_queue = None
             obs_next_queue = None
@@ -134,7 +134,7 @@ class PPOProblemParallelBase(PPOProblemBase):
 
         rew_mean = [np.mean(self.rew_mean_list[i]) for i in range(len(self.rew_mean_list))]
         # Print log on scream
-        for i_print in range(self.n_parallel_envs):
+        for i_print in range(self.n_threads):
             self.histogram_metrics.append([self.total_episodes, episodic_reward[i_print], epochs, self.agent.epsilon, self.global_steps])
             # rew_mean_list = [rew[i_print] for rew in self.rew_mean_list]
             self._feedback_print(self.total_episodes, episodic_reward[i_print], epochs, verbose, rew_mean)
@@ -162,7 +162,7 @@ class PPOProblemParallelBase(PPOProblemBase):
 
             o = obs[0]
             a = action[0]
-            for i in range(1, self.n_parallel_envs):
+            for i in range(1, self.n_threads):
                 o = np.concatenate((o, obs[i]), axis=0)
                 a = np.concatenate((a, action[i]), axis=0)
 

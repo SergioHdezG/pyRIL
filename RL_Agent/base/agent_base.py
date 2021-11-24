@@ -119,7 +119,7 @@ class AgentSuper(AgentInterface):
     def __init__(self, learning_rate=None, actor_lr=None, critic_lr=None, batch_size=None, epsilon=None,
                  epsilon_decay=None, epsilon_min=None, gamma=None, tau=None, n_step_return=None, memory_size=None,
                  loss_clipping=None, loss_critic_discount=None, loss_entropy_beta=None, lmbda=None, train_steps=None,
-                 exploration_noise=None, n_stack=None, img_input=None, state_size=None, n_parallel_envs=None,
+                 exploration_noise=None, n_stack=None, img_input=None, state_size=None, n_threads=None,
                  tensorboard_dir=None, net_architecture=None, train_action_selection_options=None,
                  action_selection_options=None, loads_saved_params=None):
         """
@@ -150,7 +150,7 @@ class AgentSuper(AgentInterface):
         :param img_input: (bool) Flag for using a images as states. True state are images (3D array).
         :param state_size: (tuple of ints) State size. Needed if the original environment state size is modified by any
             preprocessing.
-        :param n_parallel_envs: (int) Number of parallel environments when using A3C or PPO. By default number of cpu
+        :param n_threads: (int) Number of parallel environments when using A3C or PPO. By default number of cpu
             kernels are selected.
         :param net_architecture: (dict) Define the net architecture. Is recommended use dicts from
             RL_Agent.base.utils.networks
@@ -188,7 +188,7 @@ class AgentSuper(AgentInterface):
         self.state_size = state_size
         self.env_state_size = state_size
 
-        self.n_parallel_envs = n_parallel_envs
+        self.n_threads = n_threads
 
         self.net_architecture = net_architecture
 

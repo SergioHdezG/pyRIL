@@ -18,7 +18,7 @@ environment = "LunarLander-v2"
 environment = gym.make(environment)
 
 
-exp_path = "expert_demonstrations/Expert_LunarLander.pkl"
+exp_path = "tf_tutorials/expert_demonstrations/Expert_LunarLander.pkl"
 
 
 net_architecture = networks.net_architecture(dense_layers=2,

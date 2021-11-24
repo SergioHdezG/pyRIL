@@ -18,14 +18,14 @@ class PPOSuper(AgentSuper):
     def __init__(self, actor_lr, critic_lr, batch_size, epsilon=0., epsilon_decay=0., epsilon_min=0.,
                  gamma=0.95, n_step_return=10, memory_size=512, loss_clipping=0.2, loss_critic_discount=0.5,
                  loss_entropy_beta=0.001, lmbda=0.95, train_steps=1, exploration_noise=1.0, n_stack=1, img_input=False,
-                 state_size=None, net_architecture=None, n_parallel_envs=None, tensorboard_dir=None,
+                 state_size=None, net_architecture=None, n_threads=None, tensorboard_dir=None,
                  train_action_selection_options=None, action_selection_options=None, loads_saved_params=True):
         super().__init__(actor_lr=actor_lr, critic_lr=critic_lr, batch_size=batch_size, epsilon=epsilon,
                          epsilon_decay=epsilon_decay, epsilon_min=epsilon_min, gamma=gamma, n_step_return=n_step_return,
                          memory_size=memory_size, loss_clipping=loss_clipping,
                          loss_critic_discount=loss_critic_discount, loss_entropy_beta=loss_entropy_beta, lmbda=lmbda,
                          train_steps=train_steps, exploration_noise=exploration_noise, n_stack=n_stack,
-                         img_input=img_input, state_size=state_size, n_parallel_envs=n_parallel_envs,
+                         img_input=img_input, state_size=state_size, n_threads=n_threads,
                          tensorboard_dir=tensorboard_dir, net_architecture=net_architecture,
                          train_action_selection_options=train_action_selection_options,
                          action_selection_options=action_selection_options, loads_saved_params=loads_saved_params)
@@ -113,7 +113,7 @@ class PPOSuper(AgentSuper):
         m = mask[0]
 
         # TODO: Optimizar, es muy lento
-        for i in range(1, self.n_parallel_envs):
+        for i in range(1, self.n_threads):
             o = np.concatenate((o, obs[i]), axis=0)
             a = np.concatenate((a, action[i]), axis=0)
             p_a = np.concatenate((p_a, pred_act[i]), axis=0)

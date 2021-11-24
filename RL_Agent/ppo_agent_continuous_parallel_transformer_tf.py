@@ -10,7 +10,7 @@ class Agent(PPOSuper):
     def __init__(self, actor_lr=1e-4, critic_lr=1e-3, batch_size=32, epsilon=1.0, epsilon_decay=0.9999, epsilon_min=0.1,
                  gamma=0.95, n_step_return=10, memory_size=512, loss_clipping=0.2, loss_critic_discount=0.5,
                  loss_entropy_beta=0.001, lmbda=0.95, train_steps=10, exploration_noise=1.0, n_stack=1,
-                 img_input=False, state_size=None, n_parallel_envs=None, net_architecture=None, use_tr_last_hidden_out=False):
+                 img_input=False, state_size=None, n_threads=None, net_architecture=None, use_tr_last_hidden_out=False):
         """
         Proximal Policy Optimization (PPO) agent for discrete action spaces with parallelized experience collection class.
         :param actor_lr: (float) learning rate for training the actor NN.
@@ -35,7 +35,7 @@ class Agent(PPOSuper):
         :param n_stack: (int) Number of time steps stacked on the state (observation stacked).
         :param img_input: (bool) Flag for using a images as states. True state are images (3D array).
         :param state_size: State size. Needed if the original state size is modified by any preprocessing.
-        :param n_parallel_envs: (int) or None. Number of parallel environments to use during training. If None will
+        :param n_threads: (int) or None. Number of parallel environments to use during training. If None will
             select by default the number of cpu kernels.
         :param net_architecture: (dict) Define the net architecture. Is recommended use dicts from
             RL_Agent.base.utils.networks
@@ -45,10 +45,10 @@ class Agent(PPOSuper):
                          n_step_return=n_step_return, memory_size=memory_size, loss_clipping=loss_clipping,
                          loss_critic_discount=loss_critic_discount, loss_entropy_beta=loss_entropy_beta, lmbda=lmbda,
                          train_steps=train_steps, exploration_noise=exploration_noise, n_stack=n_stack,
-                         img_input=img_input, state_size=state_size, n_parallel_envs=n_parallel_envs,
+                         img_input=img_input, state_size=state_size, n_threads=n_threads,
                          net_architecture=net_architecture)
-        if self.n_parallel_envs is None:
-            self.n_parallel_envs = multiprocessing.cpu_count()
+        if self.n_threads is None:
+            self.n_threads = multiprocessing.cpu_count()
         self.agent_name = agent_globals.names["ppo_continuous_parallel_transformer_tf"]
         self.use_tr_last_hidden_out = use_tr_last_hidden_out
 
@@ -64,7 +64,7 @@ class Agent(PPOSuper):
         self.action_bound = action_bound
         self.loss_selected = self.proximal_policy_optimization_loss_continuous
         self.actor, self.critic = self._build_model(self.net_architecture, last_activation='tanh')
-        self.dummy_action, self.dummy_value = self.dummies_parallel(self.n_parallel_envs)
+        self.dummy_action, self.dummy_value = self.dummies_parallel(self.n_threads)
         self.remember = self.remember_parallel
 
     def act_train(self, obs):
@@ -89,8 +89,8 @@ class Agent(PPOSuper):
 
         value = self.critic.predict(obs)
 
-        # action_matrix = [np.zeros(self.n_actions) for i in range(self.n_parallel_envs)]
-        # for i in range(self.n_parallel_envs):
+        # action_matrix = [np.zeros(self.n_actions) for i in range(self.n_threads)]
+        # for i in range(self.n_threads):
         #     action_matrix[i][action[i]] = 1
 
         if self.use_tr_last_hidden_out:
@@ -156,7 +156,7 @@ class Agent(PPOSuper):
         m = mask[0]
 
         # TODO: Optimizar, es muy lento
-        for i in range(1, self.n_parallel_envs):
+        for i in range(1, self.n_threads):
             o = np.concatenate((o, obs[i]), axis=0)
             a = np.concatenate((a, action[i]), axis=0)
             p_a = np.concatenate((p_a, pred_act[i]), axis=0)

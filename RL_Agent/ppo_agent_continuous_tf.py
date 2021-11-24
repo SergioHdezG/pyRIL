@@ -78,7 +78,7 @@ class Agent(PPOSuper):
         """
         obs = self._format_obs_act(obs)
         act_pred = self.model.predict(obs)
-        action = self.train_action_selection_options(act_pred, self.n_actions, epsilon=self.epsilon, n_env=self.n_parallel_envs, exploration_noise=self.exploration_noise)
+        action = self.train_action_selection_options(act_pred, self.n_actions, epsilon=self.epsilon, n_env=self.n_threads, exploration_noise=self.exploration_noise)
 
         # action = action_matrix = p[0] + np.random.normal(loc=0, scale=self.exploration_noise*self.epsilon, size=p[0].shape)
         action_matrix = action = action[0]

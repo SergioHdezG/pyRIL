@@ -758,7 +758,7 @@ def extract_agent_attributes(agent):
         'n_step_return': agent.n_step_return,
         'n_stack': agent.n_stack,
         'img_input': agent.img_input,
-        'n_parallel_envs': agent.n_parallel_envs,
+        'n_threads': agent.n_threads,
         'net_architecture': agent.net_architecture,
         'action_low_bound': action_low_bound,
         'action_high_bound': action_high_bound,
@@ -829,8 +829,8 @@ def set_agent_attributes(att, agent, set_all, set_nones=False):
         agent.n_step_return = att['n_step_return']
     if (set_nones and agent.img_input is None) or set_all:
         agent.img_input = att['img_input']
-    if (set_nones and agent.n_parallel_envs is None) or set_all:
-        agent.n_parallel_envs = att['n_parallel_envs']
+    if (set_nones and agent.n_threads is None) or set_all:
+        agent.n_threads = att['n_threads']
     if (set_nones and agent.net_architecture is None) or set_all:
         agent.net_architecture = att['net_architecture']
     if (set_nones and hasattr(agent, 'action_bound') and agent.action_bound is None) or set_all:

@@ -83,7 +83,7 @@ class PPOProblemBase(RLProblemSuper):
         #                           batch_size=self.batch_size, buffer_size=self.buffer_size, epsilon=self.epsilon,
         #                           epsilon_decay=self.epsilon_decay, epsilon_min=self.epsilon_min,
         #                           action_bound=self.action_bound, net_architecture=self.net_architecture,
-        #                           n_parallel_envs=self.n_parallel_envs)
+        #                           n_threads=self.n_threads)
 
     def solve(self, episodes, render=True, render_after=None, max_step_epi=None, skip_states=1, verbose=1,
               discriminator=None, expert_traj=None, save_live_histogram=False, smooth_rewards=2):

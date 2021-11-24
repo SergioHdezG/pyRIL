@@ -24,7 +24,7 @@ class PPOProblem(PPOProblemBase):
 
     # def _define_agent(self, agent, state_size, n_actions, stack, img_input, actor_lr, critic_lr, batch_size,
     #                   buffer_size, epsilon, epsilon_decay, epsilon_min, action_bound, net_architecture,
-    #                   n_parallel_envs):
+    #                   n_threads):
     #     self.agent.build_agent(state_size, n_actions, stack=stack, img_input=img_input, actor_lr=actor_lr,
     #                        critic_lr=critic_lr, batch_size=batch_size, buffer_size=buffer_size, epsilon=epsilon,
     #                        epsilon_decay=epsilon_decay, epsilon_min=epsilon_min, net_architecture=net_architecture)

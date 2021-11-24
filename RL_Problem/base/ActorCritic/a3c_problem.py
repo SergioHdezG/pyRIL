@@ -68,7 +68,7 @@ class A3CProblem:
             self.agent.action_bound = self.action_bound
 
         self.global_net_scope = "Global_Net"
-        self.n_workers = agent.n_parallel_envs  # multiprocessing.cpu_count()  # number of workers
+        self.n_workers = agent.n_threads  # multiprocessing.cpu_count()  # number of workers
         self.n_step_return = agent.n_step_return  # n_step_rew
         self.actor_lr = agent.actor_lr
         self.critic_lr = agent.critic_lr
