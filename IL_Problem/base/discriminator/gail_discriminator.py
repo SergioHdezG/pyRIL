@@ -39,6 +39,8 @@ class Discriminator(DiscriminatorBase):
         :param val_split: (float in [0., 1.]) Fraction of data to be used for validation in discriminator training.
         :param discrete: (bool) Set to True when discrete action spaces are used. Set to False when continuous action
             spaces are used.
+        :param net_architecture: (dict) Define the net architecture. Is recommended use dicts from
+            IL_Problem.base.utils.networks.networks_dictionaries.py.
         :param preprocess: (function) Function for preprocessing the states. Signature shape: preprocess(state). Must
             return a nd array of the selected state_size.
         :param tensorboard_dir: (str) path to store tensorboard summaries.

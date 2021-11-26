@@ -3,8 +3,7 @@ import numpy as np
 
 """
 These functions uses different strategies for choice the actions to perform given the outputs of the network. 
-Each function have the next structure and you must respect that structure in order to implement your own custom 
-function:
+Each function have the next structure and  must be respected in order to implement a custom function:
 
 def function(act_pred, n_actions, epsilon=0., n_env=1, exploration_noise=1.0):
     :param act_pred: (nd array of floats) network predictions.
@@ -12,9 +11,9 @@ def function(act_pred, n_actions, epsilon=0., n_env=1, exploration_noise=1.0):
                     actions. In a continuous action configuration represent the number of actions 
                     to take simultaneously.
     :param epsilon: (float in range [0., 1.]) Exploration rate. Probability of selecting an exploitative action.            
-    :param n_env: (int) Number of environment in multithread agents. Also may be seen as the number of input
-                    observations; if there is one observation only an action is selected, if there is three observation
-                    three actions must be selected.
+    :param n_env: (int) Number of simultaneous environment in multithread agents. Also may be seen as the number of 
+                    input states; if there is one state only an action is selected, if there is three (or multiple) 
+                    states three (or multiple) actions must be selected.
     :param exploration_noise: (float in range [0., 1.]) Multiplier of exploration rate of scale of exploration. E.g.: 
                                 Used for setting the stddev when sampling from a normal distribution.
 """
@@ -32,10 +31,7 @@ def random_choice(act_pred, n_actions, epsilon=0., n_env=1, exploration_noise=1.
 
 def greedy_action(act_pred, n_actions, epsilon=0., n_env=1, exploration_noise=1.0):
     if np.random.rand() <= epsilon:
-        # action = [random.randrange(n_actions) for i in range(n_env)]
-        # action = [np.random.choice(n_actions) for i in range(n_env)]
-        # action = [np.random.rand(n_actions) for i in range(n_env)]
-        # TODO: al utilizar algoritmos normales puede petar
+        # TODO: al utilizar algoritmos normales puede fallar
         action = np.random.rand(*act_pred.shape)
         action = np.argmax(action, axis=-1)
     else:
