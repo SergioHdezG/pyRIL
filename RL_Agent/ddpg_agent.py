@@ -23,25 +23,36 @@ class Agent(AgentSuper):
                  action_selection_options=action_selection_options.identity
                  ):
         """
-        Deep Deterministic Policy Gradient (DDPG) agent class.
+        Deep Deterministic Policy Gradient (DDPG) agent for continuous action spaces.
+
         :param actor_lr: (float) learning rate for training the actor NN.
         :param critic_lr: (float) learning rate for training the critic NN.
-        :param batch_size: (int) batch size for training procedure.
-        :param epsilon: (float) exploration-exploitation rate during training. epsilon=1.0 -> Exploration,
-            epsilon=0.0 -> Exploitation.
-        :param epsilon_decay: (float or func) exploration-exploitation rate reduction. If float it reduce epsilon by
-            multiplication (new epsilon = epsilon * epsilon_decay). If func it receives (epsilon, epsilon_min) as
-            arguments and it is applied to return the new epsilon value.
-        :param epsilon_min: (float) min exploration-exploitation rate allowed during training.
+        :param batch_size: (int) Size of training batches.
         :param gamma: (float) Discount or confidence factor for target value estimation.
         :param tau: (float) Transference factor between main and target networks.
-        :param n_stack: (int) Number of time steps stacked on the state (observation stacked).
-        :param img_input: (bool) Flag for using a images as states. True state are images (3D array).
-        :param state_size: State size. Needed if the original state size is modified by any preprocessing.
+        :param n_stack: (int) Number of time steps stacked on the state.
+        :param img_input: (bool) Flag for using a images as states. If True, the states are supposed to be images (3D
+            array).
+        :param state_size: (tuple of ints) State size. Only needed if the original state size is modified by any
+            preprocessing. Shape of the state that must match network's inputs. This shape must include the number of
+            stacked states.
         :param memory_size: (int) Size of experiences memory.
-        :param train_steps: (int) Train epoch for each training iteration.
+        :param train_steps: (int > 0) Number of epochs for training the agent network in each iteration of the algorithm.
+        :param exploration_noise: (float [0, 1]) Maximum value of noise for action selection in exploration mode. By
+            default is used as maximum stddev for selecting actions from a normal distribution during exploration and it
+            is multiplied by epsilon to reduce the stddev. This result on exploration factor reduction through the time
+            steps.
+        :param tensorboard_dir: (str) path to store tensorboard summaries.
         :param net_architecture: (dict) Define the net architecture. Is recommended use dicts from
-            RL_Agent.base.utils.networks
+            IL_Problem.base.utils.networks.networks_dictionaries.py.
+        :param train_action_selection_options: (func) How to select the actions in exploration mode. This allows to
+            change the exploration method used acting directly over the actions selected by the neural network or
+            adapting the action selection procedure to an especial neural network. Some usable functions and
+            documentation on how to implement your own function on RL_Agent.base.utils.networks.action_selection_options.
+        :param action_selection_options:(func) How to select the actions in exploitation mode. This allows to change or
+            modify the actions selection procedure acting directly over the actions selected by the neural network or
+            adapting the action selection procedure to an especial neural network. Some usable functions and
+            documentation on how to implement your own function on RL_Agent.base.utils.networks.action_selection_options.
         """
         super().__init__(actor_lr=actor_lr, critic_lr=critic_lr, batch_size=batch_size, epsilon=epsilon,
                          epsilon_decay=epsilon_decay, epsilon_min=epsilon_min, gamma=gamma, tau=tau,
@@ -55,12 +66,14 @@ class Agent(AgentSuper):
     def build_agent(self, n_actions, state_size, stack, action_bound=None):
         """
         Define the agent params, structure, architecture, neural nets ...
-        :param state_size: (tuple of ints) State size.
-        :param n_actions: (int) Number of actions.
-        :param stack: (bool) True means that a sequence of input in contiguous time steps are stacked in the state.
+        :param state_size: (tuple of ints) State size. Only needed if the original state size is modified by any
+            preprocessing. Shape of the state that must match network's inputs. This shape must include the number of
+            stacked states.
+        :param n_actions: (int) Number of action of the agent.
+        :param stack: (bool) If True, the input states are supposed to be stacked (various time steps).
         :param action_bound: ([float]) [min, max]. If action space is continuous set the max and min limit values for
-            actions.
-        """
+           actions.
+       """
         super().build_agent(state_size=state_size, n_actions=n_actions, stack=stack)
 
         self.action_bound = action_bound

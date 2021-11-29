@@ -11,9 +11,9 @@ class AgentInterface(object, metaclass=ABCMeta):
     def __init__(self):
         self.state_size = None  # (tuple) size and shape of states.
         self.n_actions = None  # (int) Number of actions.
-        self.stack = None  # (bool) True means that a sequence of input in contiguous time steps are stacked in the state.
-        self.img_input = None  # (bool) True if states are images (3D array), False if states are 1D array.
-        self.agent_name = None   # (str) id of the agent.
+        self.stack = None  # (bool) True means that a sequence of input in contiguous time steps are stacked to form the state.
+        self.img_input = None  # (bool) Set to True when states are images (3D array), False otherwise.
+        self.agent_name = None   # (str) id/name of the agent.
 
     @abstractmethod
     def build_agent(self):
@@ -121,20 +121,20 @@ class AgentSuper(AgentInterface):
                  loss_clipping=None, loss_critic_discount=None, loss_entropy_beta=None, lmbda=None, train_steps=None,
                  exploration_noise=None, n_stack=None, img_input=None, state_size=None, n_threads=None,
                  tensorboard_dir=None, net_architecture=None, train_action_selection_options=None,
-                 action_selection_options=None, loads_saved_params=None):
+                 action_selection_options=None):
         """
         Abstract agent class for defining the principal attributes of an rl agent.
         :param learning_rate: (float) learning rate for training the agent NN. Not used if actor_lr or critic_lr are 
             defined.
         :param actor_lr: (float) learning rate for training the actor NN of an Actor-Critic agent.
         :param critic_lr: (float) learning rate for training the critic NN of an Actor-Critic agent.
-        :param batch_size: (int) batch size for training procedure.
-        :param epsilon: (float) exploration-exploitation rate during training. epsilon=1.0 -> Exploration,
+        :param batch_size: (int) Size of training batches.
+        :param epsilon: (float in [0., 1.]) exploration-exploitation rate during training. epsilon=1.0 -> Exploration,
             epsilon=0.0 -> Exploitation.
-        :param epsilon_decay: (float or func) exploration-exploitation rate reduction. If float it reduce epsilon by
-            multiplication (new epsilon = epsilon * epsilon_decay). If func it receives (epsilon, epsilon_min) as
-            arguments and it is applied to return the new epsilon value.
-        :param epsilon_min: (float) min exploration-exploitation rate allowed during training.
+       :param epsilon_decay: (float or func) Exploration-exploitation rate reduction factor. If float, it reduce epsilon
+            by multiplication (new epsilon = epsilon * epsilon_decay). If func it receives (epsilon, epsilon_min) as
+            arguments and it is applied to return the new epsilon value (float).
+        :param epsilon_min: (float, [0., 1.])  Minimum exploration-exploitation rate allowed ing training.
         :param gamma: (float) Discount or confidence factor for target value estimation.
         :param tau: (float) Transference factor between main and target discriminator.
         :param n_step_return: (int) Number of steps used for calculating the return.
@@ -154,9 +154,9 @@ class AgentSuper(AgentInterface):
             kernels are selected.
         :param net_architecture: (dict) Define the net architecture. Is recommended use dicts from
             RL_Agent.base.utils.networks
-        :param loads_saved_params: (bool) If True when loading from a checkpoint all the agent parameters will be loaded
-                                    in the state they was saved. If False the new specified parameters are maintained
-                                    when a saved agent is loaded.
+        # :param loads_saved_params: (bool) If True when loading from a checkpoint all the agent parameters will be loaded
+        #                             in the state they was saved. If False the new specified parameters are maintained
+        #                             when a saved agent is loaded.
         """
         super().__init__()
 
@@ -198,7 +198,7 @@ class AgentSuper(AgentInterface):
 
         self.tensorboard_dir=tensorboard_dir
         self.agent_builded = False
-        self.loads_saved_params = loads_saved_params
+        # self.loads_saved_params = loads_saved_params
 
         self.train_action_selection_options = train_action_selection_options
         self.action_selection_options = action_selection_options

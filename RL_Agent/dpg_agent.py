@@ -19,25 +19,35 @@ from RL_Agent.base.utils.networks import action_selection_options
 
 
 class Agent(AgentSuper):
-    """
-    Double Deep Q Network Agent extend DQNAgentSuper
-    """
     def __init__(self, learning_rate=1e-3, batch_size=32, gamma=0.95, n_stack=1, img_input=False, state_size=None,
                  train_steps=1, tensorboard_dir=None, net_architecture=None,
                  train_action_selection_options=action_selection_options.random_choice,
                  action_selection_options=action_selection_options.random_choice
                  ):
         """
-        Deterministic Policy Gradient (DPG) agent class.
+        Deterministic Policy Gradient (DDPG) agent for discrete action spaces.
+
         :param learning_rate: (float) learning rate for training the agent NN.
-        :param batch_size: (int) batch size for training procedure.
+        :param batch_size: (int) Size of training batches.
         :param gamma: (float) Discount or confidence factor for target value estimation.
-        :param n_stack: (int) Number of time steps stacked on the state (observation stacked).
-        :param img_input: (bool) Flag for using a images as states. True state are images (3D array).
-        :param state_size: State size. Needed if the original state size is modified by any preprocessing.
-        :param train_steps: (int) Train epoch for each training iteration.
+        :param n_stack: (int) Number of time steps stacked on the state.
+        :param img_input: (bool) Flag for using a images as states. If True, the states are supposed to be images (3D
+            array).
+        :param state_size: (tuple of ints) State size. Only needed if the original state size is modified by any
+            preprocessing. Shape of the state that must match network's inputs. This shape must include the number of
+            stacked states.
+        :param train_steps: (int > 0) Number of epochs for training the agent network in each iteration of the algorithm.
+        :param tensorboard_dir: (str) path to store tensorboard summaries.
         :param net_architecture: (dict) Define the net architecture. Is recommended use dicts from
-            RL_Agent.base.utils.networks
+            IL_Problem.base.utils.networks.networks_dictionaries.py.
+        :param train_action_selection_options: (func) How to select the actions in exploration mode. This allows to
+            change the exploration method used acting directly over the actions selected by the neural network or
+            adapting the action selection procedure to an especial neural network. Some usable functions and
+            documentation on how to implement your own function on RL_Agent.base.utils.networks.action_selection_options.
+        :param action_selection_options:(func) How to select the actions in exploitation mode. This allows to change or
+            modify the actions selection procedure acting directly over the actions selected by the neural network or
+            adapting the action selection procedure to an especial neural network. Some usable functions and
+            documentation on how to implement your own function on RL_Agent.base.utils.networks.action_selection_options.
         """
         super().__init__(learning_rate=learning_rate, batch_size=batch_size, gamma=gamma, train_steps=train_steps,
                          n_stack=n_stack, img_input=img_input, state_size=state_size, tensorboard_dir=tensorboard_dir,
@@ -49,10 +59,13 @@ class Agent(AgentSuper):
 
     def build_agent(self, n_actions, state_size, stack=False):
         """
-        :param n_actions: (int) Number of different actions.
-        :param state_size: (int or Tuple). State dimensions.
-        :param stack: (bool) True if stacked inputs are used, False otherwise.
-        """
+        Define the agent params, structure, architecture, neural nets ...
+        :param state_size: (tuple of ints) State size. Only needed if the original state size is modified by any
+            preprocessing. Shape of the state that must match network's inputs. This shape must include the number of
+            stacked states.
+        :param n_actions: (int) Number of action of the agent.
+        :param stack: (bool) If True, the input states are supposed to be stacked (various time steps).
+       """
         super().build_agent(state_size=state_size, n_actions=n_actions, stack=stack)
 
         self.model = self._build_model(self.net_architecture)
