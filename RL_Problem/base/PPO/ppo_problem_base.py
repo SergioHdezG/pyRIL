@@ -120,6 +120,8 @@ class PPOProblemBase(RLProblemSuper):
 
             self.gradient_steps += 1
 
+        self.agent.save_tensorboar_rl_histogram(self.histogram_metrics)
+
     def collect_batch(self, render, render_after, max_step_epi, skip_states, verbose, discriminator=None,
                       expert_traj=None, save_live_histories=False):
         self.obs_batch = []
@@ -209,7 +211,6 @@ class PPOProblemBase(RLProblemSuper):
                 else:
                     raise Exception('Type of parameter save_live_histories must be string but ' +
                                     str(type(save_live_histories)) + ' has been received')
-
 
             # Print log on scream
             self._feedback_print(self.total_episodes, episodic_reward, epochs, verbose, self.rew_mean_list)
