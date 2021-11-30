@@ -6,34 +6,35 @@ mse = tf.keras.losses.MeanSquaredError()
 
 @tf.function
 def dqn_loss(y, y_):
-    return mse(y, y_)
+    return mse(y, y_), []
     # return tf.math.reduce_mean(tf.math.square(y-y_))
 
 @tf.function
 def dpg_loss(pred, actions, returns):
     log_prob = tf.keras.losses.CategoricalCrossentropy(reduction=tf.keras.losses.Reduction.NONE)(actions, pred)
     loss = tf.math.reduce_mean(log_prob * returns)
-    return loss
+    return loss, [log_prob, returns]
 
 @tf.function
 def dpg_loss_continuous(pred, actions, returns):
     prob = tfp.distributions.Normal(pred, tf.math.reduce_std(pred))
     log_prob = - prob.log_prob(actions)
     returns = tf.expand_dims(returns, axis=-1)
+
     loss = tf.math.reduce_mean(log_prob * returns)
-    return loss
+    return loss, [log_prob, returns]
 
 
 @tf.function(experimental_relax_shapes=True)
 def ddpg_actor_loss(values):
     loss = -tf.math.reduce_mean(values)
-    return loss
+    return loss, [values]
 
 
 @tf.function(experimental_relax_shapes=True)
 def ddpg_critic_loss(q_target, q):
     loss = mse(q_target, q)
-    return loss
+    return loss, []
 
 
 @tf.function(experimental_relax_shapes=True)
@@ -123,4 +124,4 @@ def a2c_actor_loss(log_prob, td, entropy_beta, entropy):
 
 @tf.function(experimental_relax_shapes=True)
 def a2c_critic_loss(y, y_):
-    return mse(y, y_)
+    return mse(y, y_), []

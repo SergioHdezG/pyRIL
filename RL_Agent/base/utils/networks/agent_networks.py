@@ -620,14 +620,14 @@ class DQNNet(RLNetModel):
         """
         with tf.GradientTape() as tape:
             y_ = self.net(obs, training=True)
-            loss = self.loss_func(target, y_)
+            loss, loss_components = self.loss_func(target, y_)
         self.metrics.update_state(target, y_)
 
         variables = self.net.trainable_variables
         gradients = tape.gradient(loss, variables)
         self.optimizer.apply_gradients(zip(gradients, variables))
 
-        return loss, gradients, variables
+        return loss, gradients, variables, loss_components
 
     def fit(self, obs, next_obs, actions, rewards, done, epochs, batch_size,
             validation_split=0.,
@@ -658,8 +658,7 @@ class DQNNet(RLNetModel):
             loss = 0.
             for batch, (bach_obs,
                         bach_target) in enumerate(dataset.take(-1)):
-                loss, gradients, variables = self.train_step(bach_obs,
-                                                             bach_target)
+                loss, gradients, variables, loss_components = self.train_step(bach_obs, bach_target)
 
                 if batch % int(batch_size / 5) == 0 and verbose == 1:
                     print('Epoch {}\t Batch {}\t Loss {:.4f} Acc {:.4f} Elapsed time {:.2f}s'.format(
@@ -889,8 +888,7 @@ class DDQNNet(DQNNet):
             loss = 0.
             for batch, (bach_obs,
                         bach_target) in enumerate(dataset.take(-1)):
-                loss, gradients, variables = self.train_step(bach_obs,
-                                                             bach_target)
+                loss, gradients, variables, loss_components = self.train_step(bach_obs, bach_target)
 
                 if batch % int(batch_size / 5) == 0 and verbose == 1:
                     print('Epoch {}\t Batch {}\t Loss {:.4f} Acc {:.4f} Elapsed time {:.2f}s'.format(
@@ -990,14 +988,14 @@ class DPGNet(RLNetModel):
         """
         with tf.GradientTape() as tape:
             y_ = self.net(obs, training=True)
-            loss = self.loss_func(y_, actions, returns)
+            loss, loss_components = self.loss_func(y_, actions, returns)
         self.metrics.update_state(actions, y_)
 
         variables = self.net.trainable_variables
         gradients = tape.gradient(loss, variables)
         self.optimizer.apply_gradients(zip(gradients, variables))
 
-        return loss, gradients, variables
+        return loss, gradients, variables, loss_components
 
     def fit(self, obs, next_obs, actions, rewards, done, epochs, batch_size, validation_split=0.,
             shuffle=True, verbose=1, callbacks=None, kargs=[]):
@@ -1021,9 +1019,7 @@ class DPGNet(RLNetModel):
             for batch, (bach_obs,
                         bach_actions,
                         bach_returns) in enumerate(dataset.take(-1)):
-                loss, gradients, variables = self.train_step(bach_obs,
-                                                             bach_actions,
-                                                             bach_returns)
+                loss, gradients, variables, loss_components = self.train_step(bach_obs, bach_actions, bach_returns)
 
                 if batch % int(batch_size / 5) == 0 and verbose == 1:
                     print('Epoch {}\t Batch {}\t Loss {:.4f} Acc {:.4f} Elapsed time {:.2f}s'.format(
@@ -1305,8 +1301,8 @@ class DDPGNet(RLNetModel):
             # TODO: actions or self.predict(obs)
             a_ = self.actor_net(obs)
             q_ = self.critic_net([obs, a_])
-            loss_critic = self.loss_critic(q_target, q_)
-            loss_actor = self.loss_actor(q_)
+            loss_critic, loss_components_actor = self.loss_critic(q_target, q_)
+            loss_actor, loss_components_critic = self.loss_actor(q_)
 
         variables_actor = self.actor_net.trainable_variables
         variables_critic = self.critic_net.trainable_variables
@@ -1316,7 +1312,8 @@ class DDPGNet(RLNetModel):
         self.optimizer_actor.apply_gradients(zip(gradients_actor, variables_actor))
         self.optimizer_critic.apply_gradients(zip(gradients_critic, variables_critic))
 
-        return [loss_actor, loss_critic], [gradients_actor, gradients_critic], [variables_actor, variables_critic]
+        return [loss_actor, loss_critic], [gradients_actor, gradients_critic], [variables_actor, variables_critic], \
+               [loss_components_actor, loss_components_critic]
 
     def fit(self, obs, next_obs, actions, rewards, done, epochs, batch_size, validation_split=0.,
             shuffle=True, verbose=1, callbacks=None, kargs=[]):
@@ -1344,7 +1341,7 @@ class DDPGNet(RLNetModel):
                         bach_actions,
                         bach_rewards) in enumerate(dataset.take(-1)):
 
-                loss, gradients, variables = self.train_step(bach_obs,
+                loss, gradients, variables, loss_components = self.train_step(bach_obs,
                                                              bach_actions,
                                                              bach_rewards,
                                                              gamma)
@@ -1659,7 +1656,7 @@ class A2CNetDiscrete(RLNetModel):
             normal_dist = (y_ * y) + 1e-10  # +1e-10 to prevent zero values
             log_prob = tf.math.log(normal_dist)
 
-            loss_critic = self.loss_func_critic(returns, values)
+            loss_critic, loss_components_critic = self.loss_func_critic(returns, values)
             td = returns - values
             entropy = -(y_ * tf.math.log(y_ + 1e-10))  # +1e-10 to prevent zero values
 
@@ -1679,7 +1676,7 @@ class A2CNetDiscrete(RLNetModel):
                [gradients_actor, gradients_critic], \
                [variables_actor, variables_critic], \
                returns, \
-               [act_comp_loss, entropy_comp_loss]
+               [[act_comp_loss, entropy_comp_loss], loss_components_critic]
 
     def fit(self, obs, next_obs, actions, rewards, done, epochs, batch_size, validation_split=0.,
             shuffle=True, verbose=1, callbacks=None, kargs=[]):
@@ -1980,7 +1977,7 @@ class A2CNetContinuous(A2CNetDiscrete):
             entropy = normal_dist.entropy()
 
             loss_actor, [act_comp_loss, entropy_comp_loss] = self.loss_func_actor(log_prob, td, entropy_beta, entropy)
-            loss_critic = self.loss_func_critic(returns, values)
+            loss_critic, loss_components_critic = self.loss_func_critic(returns, values)
 
         y_sampled = normal_dist.sample((1,))[0]
         self.metrics.update_state(y, y_sampled)
@@ -1996,7 +1993,7 @@ class A2CNetContinuous(A2CNetDiscrete):
                [gradients_actor, gradients_critic], \
                [variables_actor, variables_critic], \
                returns,\
-               [act_comp_loss, entropy_comp_loss, y_[0], y_[1]]
+               [[act_comp_loss, entropy_comp_loss, y_[0], y_[1]], loss_components_critic]
 
     def fit(self, obs, next_obs, actions, rewards, done, epochs, batch_size, validation_split=0.,
             shuffle=True, verbose=1, callbacks=None, kargs=[]):
