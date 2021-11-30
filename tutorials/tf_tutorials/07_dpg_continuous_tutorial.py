@@ -138,7 +138,7 @@ class ActorNet(RLNetModel):
                     tf.summary.scalar('loss', loss, step=self.total_epochs)
                     tf.summary.scalar('accuracy', self.metrics.result(), step=self.total_epochs)
                     self.extract_variable_summaries(self.net, self.total_epochs)
-                    # self.rl_sumaries(returns, advantages, actions, act_probs, stddev, self.total_epochs)
+                    # self.rl_loss_sumaries(returns, advantages, actions, act_probs, stddev, self.total_epochs)
             self.total_epochs += 1
 
             history.history['loss'].append(loss.numpy())
@@ -158,7 +158,7 @@ class ActorNet(RLNetModel):
         for layer, w in zip(self.net.layers, weights):
             layer.set_weights(w)
 
-    def rl_sumaries(self, returns, advantages, actions, pred_actions, stddev, e):
+    def rl_loss_sumaries(self, returns, advantages, actions, pred_actions, stddev, e):
         with tf.name_scope('Rl'):
             with tf.name_scope('returns'):
                 tf.summary.histogram('histogram', returns, step=e)
@@ -231,8 +231,8 @@ net_architecture = networks.dpg_net(dense_layers=2,
 agent = dpg_agent_continuous.Agent(learning_rate=1e-3,
                             batch_size=64,
                             n_stack=1,
-                            net_architecture=net_architecture)
-                                      # tensorboard_dir='/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/tf_tutorials/tensorboard_logs/')
+                            net_architecture=net_architecture,
+                            tensorboard_dir='/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/tf_tutorials/tensorboard_logs/')
 
 # agent = agent_saver.load('agent_dpg_cont', agent=dpg_agent_continuous.Agent())
 # agent = agent_saver.load('agent_dpg_cont', agent=agent, overwrite_attrib=True)
@@ -241,7 +241,7 @@ problem = rl_problem.Problem(environment, agent)
 
 # agent = agent_saver.load('agent_dpg_cont', agent=problem.agent, overwrite_attrib=True)
 
-problem.solve(500, render=False, render_after=490, skip_states=1)
+problem.solve(10, render=False, render_after=490, skip_states=1)
 problem.test(render=True, n_iter=5)
 
 agent_saver.save(agent, 'agent_dpg_cont')

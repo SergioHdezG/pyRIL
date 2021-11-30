@@ -40,7 +40,9 @@ class PPONet(RLNetModel):
         self.metrics = None
         self.calculate_advantages = None
         # self.loss_sumaries = tensor_board_loss_functions.loss_sumaries
+        # self.rl_loss_sumaries = tensor_board_loss_functions.rl_loss_sumaries
         # self.rl_sumaries = tensor_board_loss_functions.rl_sumaries
+
 
         if chckpoint_path is not None:
             self.actor_chkpoint = tf.train.Checkpoint(model=self.actor_net)
@@ -248,7 +250,7 @@ class PPONet(RLNetModel):
                                         '(c*c_l)',
                                         '(b*e_l)'],
                                         self.total_epochs)
-                    self.rl_sumaries([returns.numpy(),
+                    self.rl_loss_sumaries([returns.numpy(),
                                       advantages.numpy(),
                                       actions,
                                       act_probs,
@@ -318,7 +320,13 @@ class PPONet(RLNetModel):
         loss_sumaries_code = marshal.dumps(self.loss_sumaries.__code__)
         loss_sumaries_code = base64.b64encode(loss_sumaries_code).decode('ascii')
 
-        # Serializar función loss_sumaries
+        # Serializar función rl_loss_sumaries
+        rl_loss_sumaries_globals = dill.dumps(self.rl_loss_sumaries.__globals__)
+        rl_loss_sumaries_globals = base64.b64encode(rl_loss_sumaries_globals).decode('ascii')
+        rl_loss_sumaries_code = marshal.dumps(self.rl_loss_sumaries.__code__)
+        rl_loss_sumaries_code = base64.b64encode(rl_loss_sumaries_code).decode('ascii')
+
+        # Serializar función rl_sumaries
         rl_sumaries_globals = dill.dumps(self.rl_sumaries.__globals__)
         rl_sumaries_globals = base64.b64encode(rl_sumaries_globals).decode('ascii')
         rl_sumaries_code = marshal.dumps(self.rl_sumaries.__code__)
@@ -335,6 +343,8 @@ class PPONet(RLNetModel):
             "calculate_advantages_code": calculate_advantages_code,
             "loss_sumaries_globals": loss_sumaries_globals,
             "loss_sumaries_code": loss_sumaries_code,
+            "rl_loss_sumaries_globals": rl_loss_sumaries_globals,
+            "rl_loss_sumaries_code": rl_loss_sumaries_code,
             "rl_sumaries_globals": rl_sumaries_globals,
             "rl_sumaries_code": rl_sumaries_code,
             }
@@ -355,7 +365,13 @@ class PPONet(RLNetModel):
         loss_sumaries_code = marshal.dumps(self.loss_sumaries.__code__)
         loss_sumaries_code = base64.b64encode(loss_sumaries_code).decode('ascii')
 
-        # Serializar función loss_sumaries
+        # Serializar función rl_loss_sumaries
+        rl_loss_sumaries_globals = dill.dumps(self.rl_loss_sumaries.__globals__)
+        rl_loss_sumaries_globals = base64.b64encode(rl_loss_sumaries_globals).decode('ascii')
+        rl_loss_sumaries_code = marshal.dumps(self.rl_loss_sumaries.__code__)
+        rl_loss_sumaries_code = base64.b64encode(rl_loss_sumaries_code).decode('ascii')
+
+        # Serializar función rl_sumaries
         rl_sumaries_globals = dill.dumps(self.rl_sumaries.__globals__)
         rl_sumaries_globals = base64.b64encode(rl_sumaries_globals).decode('ascii')
         rl_sumaries_code = marshal.dumps(self.rl_sumaries.__code__)
@@ -378,6 +394,8 @@ class PPONet(RLNetModel):
             "calculate_advantages_code": calculate_advantages_code,
             "loss_sumaries_globals": loss_sumaries_globals,
             "loss_sumaries_code": loss_sumaries_code,
+            "rl_loss_sumaries_globals": rl_loss_sumaries_globals,
+            "rl_loss_sumaries_code": rl_loss_sumaries_code,
             "rl_sumaries_globals": rl_sumaries_globals,
             "rl_sumaries_code": rl_sumaries_code,
             }
@@ -395,6 +413,9 @@ class PPONet(RLNetModel):
         loss_sumaries_code = base64.b64decode(data['loss_sumaries_code'])
         loss_sumaries_globals = base64.b64decode(data['loss_sumaries_globals'])
 
+        rl_loss_sumaries_code = base64.b64decode(data['rl_loss_sumaries_code'])
+        rl_loss_sumaries_globals = base64.b64decode(data['rl_loss_sumaries_globals'])
+
         rl_sumaries_code = base64.b64decode(data['rl_sumaries_code'])
         rl_sumaries_globals = base64.b64decode(data['rl_sumaries_globals'])
 
@@ -409,10 +430,16 @@ class PPONet(RLNetModel):
         loss_sumaries_code = marshal.loads(loss_sumaries_code)
         self.loss_sumaries = types.FunctionType(loss_sumaries_code, loss_sumaries_globals, "loss_sumaries_func")
 
+        rl_loss_sumaries_globals = dill.loads(rl_loss_sumaries_globals)
+        rl_loss_sumaries_globals = self.process_globals(rl_loss_sumaries_globals)
+        rl_loss_sumaries_code = marshal.loads(rl_loss_sumaries_code)
+        self.rl_loss_sumaries = types.FunctionType(rl_loss_sumaries_code, rl_loss_sumaries_globals, "rl_loss_sumaries_func")
+
         rl_sumaries_globals = dill.loads(rl_sumaries_globals)
         rl_sumaries_globals = self.process_globals(rl_sumaries_globals)
         rl_sumaries_code = marshal.loads(rl_sumaries_code)
-        self.loss_sumaries = types.FunctionType(rl_sumaries_code, rl_sumaries_globals, "rl_sumaries_func")
+        self.rl_sumaries = types.FunctionType(rl_sumaries_code, rl_sumaries_globals, "rl_sumaries_func")
+
 
         self.total_epochs = data['total_epochs']
         self.train_log_dir = data['train_log_dir']
@@ -542,6 +569,7 @@ class DQNNet(RLNetModel):
         self.optimizer = None
         self.metrics = None
         # self.loss_sumaries = tensor_board_loss_functions.loss_sumaries
+        # self.rl_loss_sumaries = tensor_board_loss_functions.rl_loss_sumaries
         # self.rl_sumaries = tensor_board_loss_functions.rl_sumaries
 
         if chckpoint_path is not None:
@@ -641,7 +669,7 @@ class DQNNet(RLNetModel):
             if self.train_summary_writer is not None:
                 with self.train_summary_writer.as_default():
                     self.loss_sumaries([loss], ['loss'], self.total_epochs)
-                    self.rl_sumaries([np.float32(np.expand_dims(actions, axis=-1))], ['actions'],
+                    self.rl_loss_sumaries([np.float32(np.expand_dims(actions, axis=-1))], ['actions'],
                                      self.total_epochs)
 
             self.total_epochs += 1
@@ -701,7 +729,13 @@ class DQNNet(RLNetModel):
         loss_sumaries_code = marshal.dumps(self.loss_sumaries.__code__)
         loss_sumaries_code = base64.b64encode(loss_sumaries_code).decode('ascii')
 
-        # Serializar función loss_sumaries
+        # Serializar función rl_loss_sumaries
+        rl_loss_sumaries_globals = dill.dumps(self.rl_loss_sumaries.__globals__)
+        rl_loss_sumaries_globals = base64.b64encode(rl_loss_sumaries_globals).decode('ascii')
+        rl_loss_sumaries_code = marshal.dumps(self.rl_loss_sumaries.__code__)
+        rl_loss_sumaries_code = base64.b64encode(rl_loss_sumaries_code).decode('ascii')
+
+        # Serializar función rl_sumaries
         rl_sumaries_globals = dill.dumps(self.rl_sumaries.__globals__)
         rl_sumaries_globals = base64.b64encode(rl_sumaries_globals).decode('ascii')
         rl_sumaries_code = marshal.dumps(self.rl_sumaries.__code__)
@@ -718,6 +752,8 @@ class DQNNet(RLNetModel):
             # "calculate_advantages_code": calculate_advantages_code,
             "loss_sumaries_globals": loss_sumaries_globals,
             "loss_sumaries_code": loss_sumaries_code,
+            "rl_loss_sumaries_globals": rl_loss_sumaries_globals,
+            "rl_loss_sumaries_code": rl_loss_sumaries_code,
             "rl_sumaries_globals": rl_sumaries_globals,
             "rl_sumaries_code": rl_sumaries_code,
             }
@@ -749,19 +785,26 @@ class DQNNet(RLNetModel):
         loss_sumaries_code = base64.b64decode(data['loss_sumaries_code'])
         loss_sumaries_globals = base64.b64decode(data['loss_sumaries_globals'])
 
+        rl_loss_sumaries_code = base64.b64decode(data['rl_loss_sumaries_code'])
+        rl_loss_sumaries_globals = base64.b64decode(data['rl_loss_sumaries_globals'])
+
         rl_sumaries_code = base64.b64decode(data['rl_sumaries_code'])
         rl_sumaries_globals = base64.b64decode(data['rl_sumaries_globals'])
-
 
         loss_sumaries_globals = dill.loads(loss_sumaries_globals)
         loss_sumaries_globals = self.process_globals(loss_sumaries_globals)
         loss_sumaries_code = marshal.loads(loss_sumaries_code)
         self.loss_sumaries = types.FunctionType(loss_sumaries_code, loss_sumaries_globals, "loss_sumaries_func")
 
+        rl_loss_sumaries_globals = dill.loads(rl_loss_sumaries_globals)
+        rl_loss_sumaries_globals = self.process_globals(rl_loss_sumaries_globals)
+        rl_loss_sumaries_code = marshal.loads(rl_loss_sumaries_code)
+        self.rl_loss_sumaries = types.FunctionType(rl_loss_sumaries_code, rl_loss_sumaries_globals, "rl_loss_sumaries_func")
+
         rl_sumaries_globals = dill.loads(rl_sumaries_globals)
         rl_sumaries_globals = self.process_globals(rl_sumaries_globals)
         rl_sumaries_code = marshal.loads(rl_sumaries_code)
-        self.loss_sumaries = types.FunctionType(rl_sumaries_code, rl_sumaries_globals, "rl_sumaries_func")
+        self.rl_sumaries = types.FunctionType(rl_sumaries_code, rl_sumaries_globals, "rl_sumaries_func")
 
         self.total_epochs = data['total_epochs']
         self.train_log_dir = data['train_log_dir']
@@ -857,7 +900,7 @@ class DDQNNet(DQNNet):
             if self.train_summary_writer is not None:
                 with self.train_summary_writer.as_default():
                     self.loss_sumaries([loss], ['loss'], self.total_epochs)
-                    self.rl_sumaries([np.float32(np.expand_dims(actions, axis=-1))], ['actions'],
+                    self.rl_loss_sumaries([np.float32(np.expand_dims(actions, axis=-1))], ['actions'],
                                      self.total_epochs)
             self.total_epochs += 1
 
@@ -895,9 +938,10 @@ class DPGNet(RLNetModel):
         self.optimizer = None
         self.metrics = None
         # self.loss_sumaries = tensor_board_loss_functions.loss_sumaries
+        # self.rl_loss_sumaries = tensor_board_loss_functions.rl_loss_sumaries
         # self.rl_sumaries = tensor_board_loss_functions.rl_sumaries
-
         if chckpoint_path is not None:
+
             self.net_chkpoint = tf.train.Checkpoint(model=self.net)
             self.net_manager = tf.train.CheckpointManager(self.net_chkpoint,
                                                        os.path.join(chckpoint_path, 'checkpoint'),
@@ -989,7 +1033,7 @@ class DPGNet(RLNetModel):
             if self.train_summary_writer is not None:
                 with self.train_summary_writer.as_default():
                     self.loss_sumaries([loss], ['loss'], self.total_epochs)
-                    self.rl_sumaries([np.float32(np.expand_dims(actions, axis=-1)),
+                    self.rl_loss_sumaries([np.float32(np.expand_dims(actions, axis=-1)),
                                       np.float32(np.expand_dims(returns, axis=-1))],
                                      ['actions',
                                       'returns'],
@@ -1050,7 +1094,13 @@ class DPGNet(RLNetModel):
         loss_sumaries_code = marshal.dumps(self.loss_sumaries.__code__)
         loss_sumaries_code = base64.b64encode(loss_sumaries_code).decode('ascii')
 
-        # Serializar función loss_sumaries
+        # Serializar función rl_loss_sumaries
+        rl_loss_sumaries_globals = dill.dumps(self.rl_loss_sumaries.__globals__)
+        rl_loss_sumaries_globals = base64.b64encode(rl_loss_sumaries_globals).decode('ascii')
+        rl_loss_sumaries_code = marshal.dumps(self.rl_loss_sumaries.__code__)
+        rl_loss_sumaries_code = base64.b64encode(rl_loss_sumaries_code).decode('ascii')
+
+        # Serializar función rl_sumaries
         rl_sumaries_globals = dill.dumps(self.rl_sumaries.__globals__)
         rl_sumaries_globals = base64.b64encode(rl_sumaries_globals).decode('ascii')
         rl_sumaries_code = marshal.dumps(self.rl_sumaries.__code__)
@@ -1067,6 +1117,8 @@ class DPGNet(RLNetModel):
             # "calculate_advantages_code": calculate_advantages_code,
             "loss_sumaries_globals": loss_sumaries_globals,
             "loss_sumaries_code": loss_sumaries_code,
+            "rl_loss_sumaries_globals": rl_loss_sumaries_globals,
+            "rl_loss_sumaries_code": rl_loss_sumaries_code,
             "rl_sumaries_globals": rl_sumaries_globals,
             "rl_sumaries_code": rl_sumaries_code,
             }
@@ -1097,19 +1149,27 @@ class DPGNet(RLNetModel):
         loss_sumaries_code = base64.b64decode(data['loss_sumaries_code'])
         loss_sumaries_globals = base64.b64decode(data['loss_sumaries_globals'])
 
+        rl_loss_sumaries_code = base64.b64decode(data['rl_loss_sumaries_code'])
+        rl_loss_sumaries_globals = base64.b64decode(data['rl_loss_sumaries_globals'])
+
         rl_sumaries_code = base64.b64decode(data['rl_sumaries_code'])
         rl_sumaries_globals = base64.b64decode(data['rl_sumaries_globals'])
-
 
         loss_sumaries_globals = dill.loads(loss_sumaries_globals)
         loss_sumaries_globals = self.process_globals(loss_sumaries_globals)
         loss_sumaries_code = marshal.loads(loss_sumaries_code)
         self.loss_sumaries = types.FunctionType(loss_sumaries_code, loss_sumaries_globals, "loss_sumaries_func")
 
+        rl_loss_sumaries_globals = dill.loads(rl_loss_sumaries_globals)
+        rl_loss_sumaries_globals = self.process_globals(rl_loss_sumaries_globals)
+        rl_loss_sumaries_code = marshal.loads(rl_loss_sumaries_code)
+        self.rl_loss_sumaries = types.FunctionType(rl_loss_sumaries_code, rl_loss_sumaries_globals, "rl_loss_sumaries_func")
+
         rl_sumaries_globals = dill.loads(rl_sumaries_globals)
         rl_sumaries_globals = self.process_globals(rl_sumaries_globals)
         rl_sumaries_code = marshal.loads(rl_sumaries_code)
-        self.loss_sumaries = types.FunctionType(rl_sumaries_code, rl_sumaries_globals, "rl_sumaries_func")
+        self.rl_sumaries = types.FunctionType(rl_sumaries_code, rl_sumaries_globals, "rl_sumaries_func")
+
 
         self.total_epochs = data['total_epochs']
         self.train_log_dir = data['train_log_dir']
@@ -1181,6 +1241,7 @@ class DDPGNet(RLNetModel):
         self.optimizer = None
         self.metrics = None
         # self.loss_sumaries = tensor_board_loss_functions.loss_sumaries
+        # self.rl_loss_sumaries = tensor_board_loss_functions.rl_loss_sumaries
         # self.rl_sumaries = tensor_board_loss_functions.rl_sumaries
 
         if chckpoint_path is not None:
@@ -1298,7 +1359,7 @@ class DDPGNet(RLNetModel):
             if self.train_summary_writer is not None:
                 with self.train_summary_writer.as_default():
                     self.loss_sumaries([loss[0], loss[1]], ['loss actor', 'loss critic'], self.total_epochs)
-                    self.rl_sumaries([np.float32(np.expand_dims(actions, axis=-1))],
+                    self.rl_loss_sumaries([np.float32(np.expand_dims(actions, axis=-1))],
                                      ['actions'],
                                      self.total_epochs)
             self.total_epochs += 1
@@ -1325,7 +1386,13 @@ class DDPGNet(RLNetModel):
         loss_sumaries_code = marshal.dumps(self.loss_sumaries.__code__)
         loss_sumaries_code = base64.b64encode(loss_sumaries_code).decode('ascii')
 
-        # Serializar función loss_sumaries
+        # Serializar función rl_loss_sumaries
+        rl_loss_sumaries_globals = dill.dumps(self.rl_loss_sumaries.__globals__)
+        rl_loss_sumaries_globals = base64.b64encode(rl_loss_sumaries_globals).decode('ascii')
+        rl_loss_sumaries_code = marshal.dumps(self.rl_loss_sumaries.__code__)
+        rl_loss_sumaries_code = base64.b64encode(rl_loss_sumaries_code).decode('ascii')
+
+        # Serializar función rl_sumaries
         rl_sumaries_globals = dill.dumps(self.rl_sumaries.__globals__)
         rl_sumaries_globals = base64.b64encode(rl_sumaries_globals).decode('ascii')
         rl_sumaries_code = marshal.dumps(self.rl_sumaries.__code__)
@@ -1342,6 +1409,8 @@ class DDPGNet(RLNetModel):
             # "calculate_advantages_code": calculate_advantages_code,
             "loss_sumaries_globals": loss_sumaries_globals,
             "loss_sumaries_code": loss_sumaries_code,
+            "rl_loss_sumaries_globals": rl_loss_sumaries_globals,
+            "rl_loss_sumaries_code": rl_loss_sumaries_code,
             "rl_sumaries_globals": rl_sumaries_globals,
             "rl_sumaries_code": rl_sumaries_code,
             }
@@ -1417,19 +1486,27 @@ class DDPGNet(RLNetModel):
         loss_sumaries_code = base64.b64decode(data['loss_sumaries_code'])
         loss_sumaries_globals = base64.b64decode(data['loss_sumaries_globals'])
 
+        rl_loss_sumaries_code = base64.b64decode(data['rl_loss_sumaries_code'])
+        rl_loss_sumaries_globals = base64.b64decode(data['rl_loss_sumaries_globals'])
+
         rl_sumaries_code = base64.b64decode(data['rl_sumaries_code'])
         rl_sumaries_globals = base64.b64decode(data['rl_sumaries_globals'])
-
 
         loss_sumaries_globals = dill.loads(loss_sumaries_globals)
         loss_sumaries_globals = self.process_globals(loss_sumaries_globals)
         loss_sumaries_code = marshal.loads(loss_sumaries_code)
         self.loss_sumaries = types.FunctionType(loss_sumaries_code, loss_sumaries_globals, "loss_sumaries_func")
 
+        rl_loss_sumaries_globals = dill.loads(rl_loss_sumaries_globals)
+        rl_loss_sumaries_globals = self.process_globals(rl_loss_sumaries_globals)
+        rl_loss_sumaries_code = marshal.loads(rl_loss_sumaries_code)
+        self.rl_loss_sumaries = types.FunctionType(rl_loss_sumaries_code, rl_loss_sumaries_globals, "rl_loss_sumaries_func")
+
         rl_sumaries_globals = dill.loads(rl_sumaries_globals)
         rl_sumaries_globals = self.process_globals(rl_sumaries_globals)
         rl_sumaries_code = marshal.loads(rl_sumaries_code)
-        self.loss_sumaries = types.FunctionType(rl_sumaries_code, rl_sumaries_globals, "rl_sumaries_func")
+        self.rl_sumaries = types.FunctionType(rl_sumaries_code, rl_sumaries_globals, "rl_sumaries_func")
+
 
         self.total_epochs = data['total_epochs']
         self.train_log_dir = data['train_log_dir']
@@ -1529,6 +1606,7 @@ class A2CNetDiscrete(RLNetModel):
         self.metrics = None
         self.calculate_returns = None
         # self.loss_sumaries = tensor_board_loss_functions.loss_sumaries
+        # self.rl_loss_sumaries = tensor_board_loss_functions.rl_loss_sumaries
         # self.rl_sumaries = tensor_board_loss_functions.rl_sumaries
 
     def compile(self, loss, optimizer, metrics=tf.keras.metrics.Accuracy()):
@@ -1667,7 +1745,7 @@ class A2CNetDiscrete(RLNetModel):
                                         'actor_loss_component (a_l)',
                                         'entropy_loss_component (e_l)',
                                         '(b*el)'], self.total_epochs)
-                    self.rl_sumaries([np.float32(np.expand_dims(actions, axis=-1)),
+                    self.rl_loss_sumaries([np.float32(np.expand_dims(actions, axis=-1)),
                                       np.float32(np.expand_dims(returns, axis=-1))],
                                      ['actions',
                                       'returns'],
@@ -1729,7 +1807,13 @@ class A2CNetDiscrete(RLNetModel):
         loss_sumaries_code = marshal.dumps(self.loss_sumaries.__code__)
         loss_sumaries_code = base64.b64encode(loss_sumaries_code).decode('ascii')
 
-        # Serializar función loss_sumaries
+        # Serializar función rl_loss_sumaries
+        rl_loss_sumaries_globals = dill.dumps(self.rl_loss_sumaries.__globals__)
+        rl_loss_sumaries_globals = base64.b64encode(rl_loss_sumaries_globals).decode('ascii')
+        rl_loss_sumaries_code = marshal.dumps(self.rl_loss_sumaries.__code__)
+        rl_loss_sumaries_code = base64.b64encode(rl_loss_sumaries_code).decode('ascii')
+
+        # Serializar función rl_sumaries
         rl_sumaries_globals = dill.dumps(self.rl_sumaries.__globals__)
         rl_sumaries_globals = base64.b64encode(rl_sumaries_globals).decode('ascii')
         rl_sumaries_code = marshal.dumps(self.rl_sumaries.__code__)
@@ -1746,6 +1830,8 @@ class A2CNetDiscrete(RLNetModel):
             # "calculate_advantages_code": calculate_advantages_code,
             "loss_sumaries_globals": loss_sumaries_globals,
             "loss_sumaries_code": loss_sumaries_code,
+            "rl_loss_sumaries_globals": rl_loss_sumaries_globals,
+            "rl_loss_sumaries_code": rl_loss_sumaries_code,
             "rl_sumaries_globals": rl_sumaries_globals,
             "rl_sumaries_code": rl_sumaries_code,
             }
@@ -1763,6 +1849,9 @@ class A2CNetDiscrete(RLNetModel):
         loss_sumaries_code = base64.b64decode(data['loss_sumaries_code'])
         loss_sumaries_globals = base64.b64decode(data['loss_sumaries_globals'])
 
+        rl_loss_sumaries_code = base64.b64decode(data['rl_loss_sumaries_code'])
+        rl_loss_sumaries_globals = base64.b64decode(data['rl_loss_sumaries_globals'])
+
         rl_sumaries_code = base64.b64decode(data['rl_sumaries_code'])
         rl_sumaries_globals = base64.b64decode(data['rl_sumaries_globals'])
 
@@ -1777,10 +1866,15 @@ class A2CNetDiscrete(RLNetModel):
         loss_sumaries_code = marshal.loads(loss_sumaries_code)
         self.loss_sumaries = types.FunctionType(loss_sumaries_code, loss_sumaries_globals, "loss_sumaries_func")
 
+        rl_loss_sumaries_globals = dill.loads(rl_loss_sumaries_globals)
+        rl_loss_sumaries_globals = self.process_globals(rl_loss_sumaries_globals)
+        rl_loss_sumaries_code = marshal.loads(rl_loss_sumaries_code)
+        self.rl_loss_sumaries = types.FunctionType(rl_loss_sumaries_code, rl_loss_sumaries_globals, "rl_loss_sumaries_func")
+
         rl_sumaries_globals = dill.loads(rl_sumaries_globals)
         rl_sumaries_globals = self.process_globals(rl_sumaries_globals)
         rl_sumaries_code = marshal.loads(rl_sumaries_code)
-        self.loss_sumaries = types.FunctionType(rl_sumaries_code, rl_sumaries_globals, "rl_sumaries_func")
+        self.rl_sumaries = types.FunctionType(rl_sumaries_code, rl_sumaries_globals, "rl_sumaries_func")
 
         self.total_epochs = data['total_epochs']
         self.train_log_dir = data['train_log_dir']
@@ -1968,7 +2062,7 @@ class A2CNetContinuous(A2CNetDiscrete):
                                         'actor_loss_component (a_l)',
                                         'entropy_loss_component (e_l)',
                                         '(b*el)'], self.total_epochs)
-                    self.rl_sumaries([np.float32(np.expand_dims(actions, axis=-1)),
+                    self.rl_loss_sumaries([np.float32(np.expand_dims(actions, axis=-1)),
                                       np.float32(np.expand_dims(returns, axis=-1)),
                                       np.float32(np.expand_dims(pred_act, axis=-1)),
                                       np.float32(np.expand_dims(pred_std, axis=-1))],
@@ -2106,7 +2200,7 @@ class A2CNetQueueDiscrete(A2CNetDiscrete):
                                         'actor_loss_component (a_l)',
                                         'entropy_loss_component (e_l)',
                                         '(b*el)'], self.total_epochs)
-                    self.rl_sumaries([np.float32(np.expand_dims(actions, axis=-1)),
+                    self.rl_loss_sumaries([np.float32(np.expand_dims(actions, axis=-1)),
                                       np.float32(np.expand_dims(returns, axis=-1))],
                                      ['actions',
                                       'returns'],
@@ -2182,7 +2276,7 @@ class A2CNetQueueContinuous(A2CNetContinuous):
                                         'actor_loss_component (a_l)',
                                         'entropy_loss_component (e_l)',
                                         '(b*el)'], self.total_epochs)
-                    self.rl_sumaries([np.float32(np.expand_dims(actions, axis=-1)),
+                    self.rl_loss_sumaries([np.float32(np.expand_dims(actions, axis=-1)),
                                       np.float32(np.expand_dims(returns, axis=-1)),
                                       np.float32(np.expand_dims(pred_act, axis=-1)),
                                       np.float32(np.expand_dims(pred_std, axis=-1))],

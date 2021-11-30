@@ -159,7 +159,9 @@ class RLNetModel(RLNetInterfaz):
         self.metrics = None
         self._tensorboard_util(tensorboard_dir)
         self.loss_sumaries = tensor_board_loss_functions.loss_sumaries
+        self.rl_loss_sumaries = tensor_board_loss_functions.rl_loss_sumaries
         self.rl_sumaries = tensor_board_loss_functions.rl_sumaries
+
         self.total_epochs = 0
 
     def _tensorboard_util(self, tensorboard_dir):

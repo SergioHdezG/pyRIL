@@ -6,8 +6,8 @@ def loss_sumaries(loss, names, step):
             for l, n in zip(loss, names):
                 tf.summary.scalar(n, l, step=step)
 
-def rl_sumaries(data, names, step):
-    with tf.name_scope('Rl'):
+def rl_loss_sumaries(data, names, step):
+    with tf.name_scope('RL_Values'):
         for d, n in zip(data, names):
             with tf.name_scope(n):
                 tf.summary.histogram('histogram', d, step=step)
@@ -16,6 +16,11 @@ def rl_sumaries(data, names, step):
                 tf.summary.scalar('max', tf.reduce_max(d), step=step)
                 tf.summary.scalar('min', tf.reduce_min(d), step=step)
 
+def rl_sumaries(data, names, step):
+    with tf.name_scope('RL'):
+        for d, n in zip(data, names):
+            with tf.name_scope(n):
+                tf.summary.scalar(n, d, step=step)
 
 def variable_summaries(name, var, e):
     """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""

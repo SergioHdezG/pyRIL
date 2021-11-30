@@ -271,7 +271,13 @@ class IRLNet(ILNetModel):
         loss_sumaries_code = marshal.dumps(self.loss_sumaries.__code__)
         loss_sumaries_code = base64.b64encode(loss_sumaries_code).decode('ascii')
 
-        # Serializar función loss_sumaries
+        # Serializar función rl_loss_sumaries
+        rl_loss_sumaries_globals = dill.dumps(self.rl_loss_sumaries.__globals__)
+        rl_loss_sumaries_globals = base64.b64encode(rl_loss_sumaries_globals).decode('ascii')
+        rl_loss_sumaries_code = marshal.dumps(self.rl_loss_sumaries.__code__)
+        rl_loss_sumaries_code = base64.b64encode(rl_loss_sumaries_code).decode('ascii')
+
+        # Serializar función rl_sumaries
         rl_sumaries_globals = dill.dumps(self.rl_sumaries.__globals__)
         rl_sumaries_globals = base64.b64encode(rl_sumaries_globals).decode('ascii')
         rl_sumaries_code = marshal.dumps(self.rl_sumaries.__code__)
@@ -288,6 +294,8 @@ class IRLNet(ILNetModel):
             "calculate_advantages_code": calculate_advantages_code,
             "loss_sumaries_globals": loss_sumaries_globals,
             "loss_sumaries_code": loss_sumaries_code,
+            "rl_loss_sumaries_globals": rl_loss_sumaries_globals,
+            "rl_loss_sumaries_code": rl_loss_sumaries_code,
             "rl_sumaries_globals": rl_sumaries_globals,
             "rl_sumaries_code": rl_sumaries_code,
             }
@@ -308,7 +316,13 @@ class IRLNet(ILNetModel):
         loss_sumaries_code = marshal.dumps(self.loss_sumaries.__code__)
         loss_sumaries_code = base64.b64encode(loss_sumaries_code).decode('ascii')
 
-        # Serializar función loss_sumaries
+        # Serializar función rl_loss_sumaries
+        rl_loss_sumaries_globals = dill.dumps(self.rl_loss_sumaries.__globals__)
+        rl_loss_sumaries_globals = base64.b64encode(rl_loss_sumaries_globals).decode('ascii')
+        rl_loss_sumaries_code = marshal.dumps(self.rl_loss_sumaries.__code__)
+        rl_loss_sumaries_code = base64.b64encode(rl_loss_sumaries_code).decode('ascii')
+
+        # Serializar función rl_sumaries
         rl_sumaries_globals = dill.dumps(self.rl_sumaries.__globals__)
         rl_sumaries_globals = base64.b64encode(rl_sumaries_globals).decode('ascii')
         rl_sumaries_code = marshal.dumps(self.rl_sumaries.__code__)
@@ -331,6 +345,8 @@ class IRLNet(ILNetModel):
             "calculate_advantages_code": calculate_advantages_code,
             "loss_sumaries_globals": loss_sumaries_globals,
             "loss_sumaries_code": loss_sumaries_code,
+            "rl_loss_sumaries_globals": rl_loss_sumaries_globals,
+            "rl_loss_sumaries_code": rl_loss_sumaries_code,
             "rl_sumaries_globals": rl_sumaries_globals,
             "rl_sumaries_code": rl_sumaries_code,
             }
@@ -348,6 +364,9 @@ class IRLNet(ILNetModel):
         loss_sumaries_code = base64.b64decode(data['loss_sumaries_code'])
         loss_sumaries_globals = base64.b64decode(data['loss_sumaries_globals'])
 
+        rl_loss_sumaries_code = base64.b64decode(data['rl_loss_sumaries_code'])
+        rl_loss_sumaries_globals = base64.b64decode(data['rl_loss_sumaries_globals'])
+
         rl_sumaries_code = base64.b64decode(data['rl_sumaries_code'])
         rl_sumaries_globals = base64.b64decode(data['rl_sumaries_globals'])
 
@@ -362,10 +381,15 @@ class IRLNet(ILNetModel):
         loss_sumaries_code = marshal.loads(loss_sumaries_code)
         self.loss_sumaries = types.FunctionType(loss_sumaries_code, loss_sumaries_globals, "loss_sumaries_func")
 
+        rl_loss_sumaries_globals = dill.loads(rl_loss_sumaries_globals)
+        rl_loss_sumaries_globals = self.process_globals(rl_loss_sumaries_globals)
+        rl_loss_sumaries_code = marshal.loads(rl_loss_sumaries_code)
+        self.rl_loss_sumaries = types.FunctionType(rl_loss_sumaries_code, rl_loss_sumaries_globals, "rl_loss_sumaries_func")
+
         rl_sumaries_globals = dill.loads(rl_sumaries_globals)
         rl_sumaries_globals = self.process_globals(rl_sumaries_globals)
         rl_sumaries_code = marshal.loads(rl_sumaries_code)
-        self.loss_sumaries = types.FunctionType(rl_sumaries_code, rl_sumaries_globals, "rl_sumaries_func")
+        self.rl_sumaries = types.FunctionType(rl_sumaries_code, rl_sumaries_globals, "rl_sumaries_func")
 
         self.total_epochs = data['total_epochs']
         self.train_log_dir = data['train_log_dir']
@@ -707,7 +731,13 @@ class GAILNet(IRLNet):
         loss_sumaries_code = marshal.dumps(self.loss_sumaries.__code__)
         loss_sumaries_code = base64.b64encode(loss_sumaries_code).decode('ascii')
 
-        # Serializar función loss_sumaries
+        # Serializar función rl_loss_sumaries
+        rl_loss_sumaries_globals = dill.dumps(self.rl_loss_sumaries.__globals__)
+        rl_loss_sumaries_globals = base64.b64encode(rl_loss_sumaries_globals).decode('ascii')
+        rl_loss_sumaries_code = marshal.dumps(self.rl_loss_sumaries.__code__)
+        rl_loss_sumaries_code = base64.b64encode(rl_loss_sumaries_code).decode('ascii')
+
+        # Serializar función rl_sumaries
         rl_sumaries_globals = dill.dumps(self.rl_sumaries.__globals__)
         rl_sumaries_globals = base64.b64encode(rl_sumaries_globals).decode('ascii')
         rl_sumaries_code = marshal.dumps(self.rl_sumaries.__code__)
@@ -724,6 +754,8 @@ class GAILNet(IRLNet):
             "calculate_advantages_code": calculate_advantages_code,
             "loss_sumaries_globals": loss_sumaries_globals,
             "loss_sumaries_code": loss_sumaries_code,
+            "rl_loss_sumaries_globals": rl_loss_sumaries_globals,
+            "rl_loss_sumaries_code": rl_loss_sumaries_code,
             "rl_sumaries_globals": rl_sumaries_globals,
             "rl_sumaries_code": rl_sumaries_code,
             }
@@ -744,7 +776,13 @@ class GAILNet(IRLNet):
         loss_sumaries_code = marshal.dumps(self.loss_sumaries.__code__)
         loss_sumaries_code = base64.b64encode(loss_sumaries_code).decode('ascii')
 
-        # Serializar función loss_sumaries
+        # Serializar función rl_loss_sumaries
+        rl_loss_sumaries_globals = dill.dumps(self.rl_loss_sumaries.__globals__)
+        rl_loss_sumaries_globals = base64.b64encode(rl_loss_sumaries_globals).decode('ascii')
+        rl_loss_sumaries_code = marshal.dumps(self.rl_loss_sumaries.__code__)
+        rl_loss_sumaries_code = base64.b64encode(rl_loss_sumaries_code).decode('ascii')
+
+        # Serializar función rl_sumaries
         rl_sumaries_globals = dill.dumps(self.rl_sumaries.__globals__)
         rl_sumaries_globals = base64.b64encode(rl_sumaries_globals).decode('ascii')
         rl_sumaries_code = marshal.dumps(self.rl_sumaries.__code__)
@@ -767,6 +805,8 @@ class GAILNet(IRLNet):
             "calculate_advantages_code": calculate_advantages_code,
             "loss_sumaries_globals": loss_sumaries_globals,
             "loss_sumaries_code": loss_sumaries_code,
+            "rl_loss_sumaries_globals": rl_loss_sumaries_globals,
+            "rl_loss_sumaries_code": rl_loss_sumaries_code,
             "rl_sumaries_globals": rl_sumaries_globals,
             "rl_sumaries_code": rl_sumaries_code,
             }
@@ -784,6 +824,9 @@ class GAILNet(IRLNet):
         loss_sumaries_code = base64.b64decode(data['loss_sumaries_code'])
         loss_sumaries_globals = base64.b64decode(data['loss_sumaries_globals'])
 
+        rl_loss_sumaries_code = base64.b64decode(data['rl_loss_sumaries_code'])
+        rl_loss_sumaries_globals = base64.b64decode(data['rl_loss_sumaries_globals'])
+
         rl_sumaries_code = base64.b64decode(data['rl_sumaries_code'])
         rl_sumaries_globals = base64.b64decode(data['rl_sumaries_globals'])
 
@@ -798,10 +841,15 @@ class GAILNet(IRLNet):
         loss_sumaries_code = marshal.loads(loss_sumaries_code)
         self.loss_sumaries = types.FunctionType(loss_sumaries_code, loss_sumaries_globals, "loss_sumaries_func")
 
+        rl_loss_sumaries_globals = dill.loads(rl_loss_sumaries_globals)
+        rl_loss_sumaries_globals = self.process_globals(rl_loss_sumaries_globals)
+        rl_loss_sumaries_code = marshal.loads(rl_loss_sumaries_code)
+        self.rl_loss_sumaries = types.FunctionType(rl_loss_sumaries_code, rl_loss_sumaries_globals, "rl_loss_sumaries_func")
+
         rl_sumaries_globals = dill.loads(rl_sumaries_globals)
         rl_sumaries_globals = self.process_globals(rl_sumaries_globals)
         rl_sumaries_code = marshal.loads(rl_sumaries_code)
-        self.loss_sumaries = types.FunctionType(rl_sumaries_code, rl_sumaries_globals, "rl_sumaries_func")
+        self.rl_sumaries = types.FunctionType(rl_sumaries_code, rl_sumaries_globals, "rl_sumaries_func")
 
         self.total_epochs = data['total_epochs']
         self.train_log_dir = data['train_log_dir']

@@ -50,6 +50,7 @@ class ActorNet(RLNetModel):
         self.metrics = None
         self.calculate_advantages = None
         self.loss_sumaries = tensor_board_loss_functions.loss_sumaries
+        self.rl_loss_sumaries = tensor_board_loss_functions.rl_loss_sumaries
         self.rl_sumaries = tensor_board_loss_functions.rl_sumaries
 
     def _build_actor_net(self, input_shape):
@@ -204,7 +205,7 @@ class ActorNet(RLNetModel):
             if self.train_summary_writer is not None:
                 with self.train_summary_writer.as_default():
                     self.loss_sumaries(loss, self.total_epochs)
-                    self.rl_sumaries(returns.numpy(), advantages.numpy(), actions, act_probs, stddev, self.total_epochs)
+                    self.rl_loss_sumaries(returns.numpy(), advantages.numpy(), actions, act_probs, stddev, self.total_epochs)
 
             self.total_epochs += 1
 

@@ -183,7 +183,7 @@ class ActorNet(RLNetModel):
                     tf.summary.scalar('loss_actor', loss[0], step=self.total_epochs)
                     tf.summary.scalar('loss_critic', loss[1], step=self.total_epochs)
                     # self.extract_variable_summaries(self.actor_net, self.total_epochs)
-                    # self.rl_sumaries(returns, advantages, actions, act_probs, stddev, self.total_epochs)
+                    # self.rl_loss_sumaries(returns, advantages, actions, act_probs, stddev, self.total_epochs)
             self.total_epochs += 1
 
             history.history['loss'].append(loss[0].numpy())

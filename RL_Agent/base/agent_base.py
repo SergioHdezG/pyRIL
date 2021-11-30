@@ -304,3 +304,8 @@ class AgentSuper(AgentInterface):
             action_aux[action] = 1
             action_matrix.append(action_aux)
         return np.array(action_matrix)
+
+    def save_tensorboar_rl_histogram(self, histograms):
+        if self.tensorboard_dir is not None:
+            for [total_episodes, episodic_reward, epochs, epsilon, global_steps] in histograms:
+                self.model.rl_sumaries([episodic_reward, epsilon], ['Reward', 'Epsilon'], global_steps)

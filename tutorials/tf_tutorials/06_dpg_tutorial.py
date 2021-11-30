@@ -139,7 +139,7 @@ class ActorNet(RLNetModel):
                     tf.summary.scalar('loss', loss, step=self.total_epochs)
                     tf.summary.scalar('accuracy', self.metrics.result(), step=self.total_epochs)
                     self.extract_variable_summaries(self.net, self.total_epochs)
-                    # self.rl_sumaries(returns, advantages, actions, act_probs, stddev, self.total_epochs)
+                    # self.rl_loss_sumaries(returns, advantages, actions, act_probs, stddev, self.total_epochs)
             self.total_epochs += 1
 
             history.history['loss'].append(loss.numpy())
@@ -159,7 +159,7 @@ class ActorNet(RLNetModel):
         for layer, w in zip(self.net.layers, weights):
             layer.set_weights(w)
 
-    def rl_sumaries(self, returns, advantages, actions, pred_actions, stddev, e):
+    def rl_loss_sumaries(self, returns, advantages, actions, pred_actions, stddev, e):
         with tf.name_scope('Rl'):
             with tf.name_scope('returns'):
                 tf.summary.histogram('histogram', returns, step=e)
