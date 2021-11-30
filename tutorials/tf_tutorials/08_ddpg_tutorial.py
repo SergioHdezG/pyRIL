@@ -240,6 +240,7 @@ def actor_custom_model(input_shape):
     return model()
 
 def critic_custom_model(input_shape, actor_net):
+    # TODO: cambiar el actor_net por action_shape
     lstm = LSTM(64, activation='tanh', input_shape=input_shape, name='lstm_c')
     flat = Flatten(input_shape=input_shape, name='flat_c')
     dense_1 = Dense(256, activation='relu', name='dense_1_c')
