@@ -241,7 +241,7 @@ problem = rl_problem.Problem(environment, agent)
 
 # agent = agent_saver.load('agent_dpg_cont', agent=problem.agent, overwrite_attrib=True)
 
-problem.solve(10, render=False, render_after=490, skip_states=1)
+problem.solve(300, render=False, render_after=490, skip_states=1)
 problem.test(render=True, n_iter=5)
 
 agent_saver.save(agent, 'agent_dpg_cont')

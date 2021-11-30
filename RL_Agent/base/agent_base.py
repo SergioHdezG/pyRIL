@@ -307,5 +307,8 @@ class AgentSuper(AgentInterface):
 
     def save_tensorboar_rl_histogram(self, histograms):
         if self.tensorboard_dir is not None:
-            for [total_episodes, episodic_reward, epochs, epsilon, global_steps] in histograms:
-                self.model.rl_sumaries([episodic_reward, epsilon], ['Reward', 'Epsilon'], global_steps)
+            if self.model.train_summary_writer is not None:
+                with self.model.train_summary_writer.as_default():
+                    for [total_episodes, episodic_reward, epochs, epsilon, global_steps] in histograms:
+                        self.model.rl_sumaries([episodic_reward, epsilon], ['Reward', 'Epsilon'], total_episodes)
+
