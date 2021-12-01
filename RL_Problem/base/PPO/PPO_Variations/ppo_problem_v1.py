@@ -114,8 +114,9 @@ class PPOProblem(RLProblemSuper):
         while len(batch[0]) < self.buffer_size:
             tmp_batch = [[], [], []]
 
-            if self.episode % 100 == 0:
-                self.test(n_iter=1, render=True)
+            # TODO: normalizar como se ejecutan estos test, si se harán en todos los algoritmos y como puede controlar el usuario si se hacen o no.
+            # if self.episode % 100 == 0:
+            #     self.test(n_iter=1, render=True)
 
             obs = self.env.reset()
             episodic_reward = 0

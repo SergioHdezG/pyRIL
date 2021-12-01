@@ -61,9 +61,10 @@ class PPOProblemMultithreadBase(PPOProblemBase):
             obs_queue = None
             obs_next_queue = None
 
-        if self.run_test:
-            self.test(n_iter=5, render=True)
-            self.run_test = False
+        # TODO: normalizar como se ejecutan estos test, si se harán en todos los algoritmos y como puede controlar el usuario si se hacen o no.
+        # if self.run_test:
+        #     self.test(n_iter=5, render=True)
+        #     self.run_test = False
 
         obs = self.env.reset()
         episodic_reward = 0

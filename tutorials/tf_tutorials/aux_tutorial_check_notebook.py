@@ -86,7 +86,7 @@ class CustomNet(PPONet):
         y_ = self.actor_net(tf.cast(x, tf.float32), training=False)
         return y_[1]
 
-    # @tf.function(experimental_relax_shapes=True)
+    @tf.function(experimental_relax_shapes=True)
     def _train_step(self, x, old_prediction, y, returns, advantages, stddev=None, loss_clipping=0.3,
                     critic_discount=0.5, entropy_beta=0.001):
         with tf.GradientTape() as tape:

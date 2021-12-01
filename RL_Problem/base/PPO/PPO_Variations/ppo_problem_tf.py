@@ -100,6 +100,8 @@ class PPOProblem(RLProblemSuper):
 
             self.gradient_steps += 1
 
+        self.agent.save_tensorboar_rl_histogram(self.histogram_metrics)
+
     def collect_batch(self, render, render_after, max_step_epi, skip_states, verbose=1):
         batch = [[], [], [], [], [], [], []]
         self.obs_batch = []
@@ -119,8 +121,9 @@ class PPOProblem(RLProblemSuper):
         while len(self.obs_batch) < self.buffer_size:
             tmp_batch = [[], [], [], [], [], [], []]
 
-            if self.episode % 99 == 0:
-                self.test(n_iter=1, render=True)
+            # TODO: normalizar como se ejecutan estos test, si se harán en todos los algoritmos y como puede controlar el usuario si se hacen o no.
+            # if self.episode % 99 == 0:
+            #     self.test(n_iter=1, render=True)
 
             obs = self.env.reset()
             episodic_reward = 0
