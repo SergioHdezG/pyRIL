@@ -27,10 +27,10 @@ def double_dqn_net(conv_layers=None, kernel_num=None, kernel_size=None, kernel_s
 
 def dueling_dqn_net(common_conv_layers=None, common_kernel_num=None, common_kernel_size=None,
                     common_kernel_strides=None, common_conv_activation=None, common_dense_layers=None,
-                    common_n_neurons=None, common_dense_activation=None, action_dense_layers=None,
-                    action_n_neurons=None, action_dense_activation=None, value_dense_layers=None,
+                    common_n_neurons=None, common_dense_activation=None, advantage_dense_layers=None,
+                    advantage_n_neurons=None, advantage_dense_activation=None, value_dense_layers=None,
                     value_n_neurons=None, value_dense_activation=None, use_custom_network=False,
-                    common_custom_network=None, action_custom_network=None, value_custom_network=None,
+                    common_custom_network=None, advantage_custom_network=None, value_custom_network=None,
                     define_custom_output_layer=False, tf_custom_model=None, use_tf_custom_model=False
                     ):
     """
@@ -49,10 +49,10 @@ def dueling_dqn_net(common_conv_layers=None, common_kernel_num=None, common_kern
     :param common_dense_activation:  array of string, for example ['relu', 'relu']. Activation function for each dense
                                     layer on agent net.
                                     conv layer on agent net.
-    :param action_dense_layers:      int, for example 2. Number of dense layers on agent net.
-    :param action_n_neurons:         array of ints, for example [1024, 1024]. Number of neurons for each dense layer on
+    :param advantage_dense_layers:      int, for example 2. Number of dense layers on agent net.
+    :param advantage_n_neurons:         array of ints, for example [1024, 1024]. Number of neurons for each dense layer on
                                     agent net.
-    :param action_dense_activation:  array of string, for example ['relu', 'relu']. Activation function for each dense
+    :param advantage_dense_activation:  array of string, for example ['relu', 'relu']. Activation function for each dense
                                     layer on agent net.
     :param value_dense_layers:     int, for example 2. Number of dense layers on critic net.
     :param value_n_neurons:        array of ints, for example [1024, 1024]. Number of neurons for each dense layer on
@@ -65,7 +65,7 @@ def dueling_dqn_net(common_conv_layers=None, common_kernel_num=None, common_kern
     :param common_custom_network:   Model to be used for actor. Value based agent use keras models, for the other agents
                                     you have to return the network as a tensor flow graph. These models have to be an
                                     object returned by a function.
-    :param action_custom_network:   Model to be used for actor. Value based agent use keras models, for the other agents
+    :param advantage_custom_network:   Model to be used for actor. Value based agent use keras models, for the other agents
                                     you have to return the network as a tensor flow graph. These models have to be an
                                     object returned by a function.
     :param value_custom_network:    Model to be used for critic. Value based agent use keras models, for the other
@@ -97,9 +97,9 @@ def dueling_dqn_net(common_conv_layers=None, common_kernel_num=None, common_kern
         "common_n_neurons": common_n_neurons,
         "common_dense_activation": common_dense_activation,
 
-        "action_dense_lay": action_dense_layers,
-        "action_n_neurons": action_n_neurons,
-        "action_dense_activation": action_dense_activation,
+        "action_dense_lay": advantage_dense_layers,
+        "action_n_neurons": advantage_n_neurons,
+        "action_dense_activation": advantage_dense_activation,
 
         "value_dense_lay": value_dense_layers,
         "value_n_neurons": value_n_neurons,
@@ -108,7 +108,7 @@ def dueling_dqn_net(common_conv_layers=None, common_kernel_num=None, common_kern
         "use_custom_network": use_custom_network,
         "common_custom_network": common_custom_network,
         "value_custom_network": value_custom_network,
-        "action_custom_network": action_custom_network,
+        "action_custom_network": advantage_custom_network,
         "define_custom_output_layer": define_custom_output_layer if use_custom_network else False,
 
         "tf_custom_model": tf_custom_model,

@@ -6,9 +6,9 @@ sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
 import tensorflow as tf
 # Estas tres lineas resuelven algunos problemas con cuDNN en TF2 por los que no me permitía ejecutar en GPU
-physical_devices = tf.config.experimental.list_physical_devices('GPU')
-assert len(physical_devices) > 0, "Not enough GPU hardware devices available"
-config = tf.config.experimental.set_memory_growth(physical_devices[0], True)
+# physical_devices = tf.config.experimental.list_physical_devices('GPU')
+# assert len(physical_devices) > 0, "Not enough GPU hardware devices available"
+# config = tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 import os
 from RL_Problem import rl_problem
@@ -237,7 +237,7 @@ agent = ddqn_agent.Agent(learning_rate=1e-4,
                             tensorboard_dir='/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/tf_tutorials/tensorboard_logs/')
 
 # agent = agent_saver.load('agent_ddqn', agent=ddqn_agent.Agent())
-agent = agent_saver.load('agent_ddqn', agent=agent, overwrite_attrib=True)
+# agent = agent_saver.load('agent_ddqn', agent=agent, overwrite_attrib=True)
 
 problem = rl_problem.Problem(environment, agent)
 
@@ -246,4 +246,4 @@ problem = rl_problem.Problem(environment, agent)
 problem.solve(100, render=True, skip_states=2)
 problem.test(render=True, n_iter=5)
 
-agent_saver.save(agent, 'agent_ddqn')
+# agent_saver.save(agent, 'agent_ddqn')

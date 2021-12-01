@@ -84,8 +84,8 @@ class DeepIRL(ILProblemSuper):
             episodes.
         :param max_step_epi: (int >=1 or None) Maximum number of iterations allowed per episode. Mainly for problems
             where the environment doesn't have a maximum number of epochs specified.
-        :param skip_states: (int >= 1) Number of frames to skip. Frame skipping technique from Mnih, V., , K., Silver,
-            D. et al. Human-level control through deep reinforcement learning. Nature 518, 529–533 (2015).
+        :param skip_states: (int >= 1) Number of frames to skip. Frame skipping technique from Mnih, V., Kavukcuoglu, K.,
+            Silver, D. et al. Human-level control through deep reinforcement learning. Nature 518, 529–533 (2015).
             https://doi.org/10.1038/nature14236If. If skip_states = 1, this technique won't be applied. Where the inputs
             are just vectors, not images, this procedure will take the skipped states as they are. If inputs are images,
             the paper procedure will be specifically applied.
