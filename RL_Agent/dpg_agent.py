@@ -19,6 +19,7 @@ from RL_Agent.base.utils.networks import action_selection_options
 
 
 class Agent(AgentSuper):
+    # TODO: Quizás debería incluir epsilon por si el usuario lo quiere utilizar.
     def __init__(self, learning_rate=1e-3, batch_size=32, gamma=0.95, n_stack=1, img_input=False, state_size=None,
                  train_steps=1, tensorboard_dir=None, net_architecture=None,
                  train_action_selection_options=action_selection_options.random_choice,

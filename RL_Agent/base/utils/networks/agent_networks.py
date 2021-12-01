@@ -109,7 +109,6 @@ class PPONet(RLNetModel):
         Returns:
             The loss value of the current pass
         """
-
         return self._train_step(x, old_prediction, y, returns, advantages, stddev, loss_clipping,
                    critic_discount, entropy_beta)
 

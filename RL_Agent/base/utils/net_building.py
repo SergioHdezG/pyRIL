@@ -61,7 +61,7 @@ def read_net_params(net_architecture, actor=False, critic=False, action=False, v
         # id_12 is unique
         # id_13 is unique
 
-    # TODO: pintar correctamente estos warnings
+    # TODO: configurar correctamente los warnings
     if (id_1 and id_2 and id_3 and id_4 and id_5 in net_architecture) \
             and (net_architecture[id_1] and net_architecture[id_2] and net_architecture[id_3] and net_architecture[id_4]
                  and net_architecture[id_5] is not None):
