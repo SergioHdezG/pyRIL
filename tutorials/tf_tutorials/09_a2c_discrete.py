@@ -82,7 +82,7 @@ def custom_epsilon_decay(decay_rate=0.0001, init_epsilon=1.):
 # (a2c_agent_discrete_queue, a2c_agent_continuous_queue)
 agent_disc = a2c_agent_discrete.Agent(actor_lr=1e-2,
                                       critic_lr=1e-2,
-                                      batch_size=128,
+                                      batch_size=500,
                                       epsilon=1.0,
                                       epsilon_decay=custom_epsilon_decay(decay_rate=0.0001, init_epsilon=1.),
                                       epsilon_min=0.15,

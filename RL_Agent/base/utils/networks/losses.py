@@ -115,13 +115,13 @@ def ppo_loss_discrete(y_true, y_pred, advantage, old_prediction, returns, values
     return - actor_loss + critic_discount * critic_loss - entropy_beta * entropy, [actor_loss, critic_loss, entropy]
 
 
-@tf.function(experimental_relax_shapes=True)
+# @tf.function(experimental_relax_shapes=True)
 def a2c_actor_loss(log_prob, td, entropy_beta, entropy):
-    loss = -tf.math.reduce_mean(log_prob * td)
+    loss = tf.math.reduce_mean(- log_prob * td)
     entropy = - tf.math.reduce_mean(entropy)
     return tf.math.reduce_mean(loss + (entropy*entropy_beta)), [loss, entropy]
 
 
-@tf.function(experimental_relax_shapes=True)
+# @tf.function(experimental_relax_shapes=True)
 def a2c_critic_loss(y, y_):
     return mse(y, y_), []
