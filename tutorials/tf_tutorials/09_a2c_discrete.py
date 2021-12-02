@@ -3,13 +3,18 @@ import tensorflow as tf
 from os import path
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
+import tensorflow as tf
+physical_devices = tf.config.experimental.list_physical_devices('GPU')
+assert len(physical_devices) > 0, "Not enough GPU hardware devices available"
+config = tf.config.experimental.set_memory_growth(physical_devices[0], True)
+
 from RL_Problem import rl_problem
 from RL_Agent import a2c_agent_discrete, a2c_agent_discrete_queue
 import gym
 from RL_Agent.base.utils import agent_saver, history_utils
 from RL_Agent.base.utils.networks import networks
 
-environment_disc = "CartPole-v1"
+environment_disc = "LunarLander-v2"
 environment_disc = gym.make(environment_disc)
 
 
@@ -46,15 +51,40 @@ net_architecture = networks.actor_critic_net_architecture(
                     )
 
 
+def custom_epsilon_decay(decay_rate=0.0001, init_epsilon=1.):
+    # decay_rate = dr
+    # init_epsilon = ie
+    # aux_epsilon = init_epsilon
+    class epsilon_control:
+        def __init__(self, decay_rate, init_epsilon):
+            self.decay_rate = decay_rate
+            self.init_epsilon = init_epsilon
+            self.aux_epsilon = init_epsilon
+
+    eps_control = epsilon_control(decay_rate, init_epsilon)
+
+    def epsilon_decay(epsilon, epsilon_min):
+        epsilon = epsilon - eps_control.decay_rate
+        if epsilon < epsilon_min:
+            eps_control.aux_epsilon = eps_control.aux_epsilon - 0.1
+            epsilon = eps_control.aux_epsilon
+            if epsilon < 0.1:
+                eps_control.aux_epsilon = eps_control.init_epsilon
+                epsilon = eps_control.init_epsilon
+
+        return epsilon
+
+    return epsilon_decay
+
 # Encontramos cuatro tipos de agentes A2C, dos para problemas con acciones discretas (a2c_agent_discrete,
 # a2c_agent_discrete_queue)  y dos para acciones continuas (a2c_agent_continuous, a2c_agent_continuous_queue). Por
 # otro lado encontramos una versión de cada uno que utiliza una memoria de repetición de experiencias
 # (a2c_agent_discrete_queue, a2c_agent_continuous_queue)
-agent_disc = a2c_agent_discrete_queue.Agent(actor_lr=1e-2,
+agent_disc = a2c_agent_discrete.Agent(actor_lr=1e-2,
                                       critic_lr=1e-2,
                                       batch_size=128,
-                                      epsilon=0.7,
-                                      epsilon_decay=0.9999,
+                                      epsilon=1.0,
+                                      epsilon_decay=custom_epsilon_decay(decay_rate=0.0001, init_epsilon=1.),
                                       epsilon_min=0.15,
                                       n_stack=3,
                                       n_step_return=15,
@@ -70,7 +100,7 @@ problem_disc = rl_problem.Problem(environment_disc, agent_disc)
 # agent = agent_saver.load('agent_a2c', agent=problem.agent, overwrite_attrib=True)
 
 # Seleccionamos el tamaño de la memoria
-memory_max_len = 10000  # Indicamos la capacidad máxima de la memoria
+# memory_max_len = 10000  # Indicamos la capacidad máxima de la memoria
 # problem_disc.agent.set_memory(deq_m, memory_max_len)
 
 # En este caso se utiliza el parámetro max_step_epi=500 para indicar que cada episodio termine a las 500 épocas o

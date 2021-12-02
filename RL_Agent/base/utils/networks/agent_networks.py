@@ -1636,7 +1636,7 @@ class A2CNetDiscrete(RLNetModel):
         y_ = self.actor_net(tf.cast(x, tf.float32), training=False)
         return y_
 
-    @tf.function(experimental_relax_shapes=True)
+    # @tf.function(experimental_relax_shapes=True)
     def train_step(self, x, y, returns, entropy_beta=0.001):
         """
         Execute one training step (forward pass + backward pass)
@@ -1717,10 +1717,11 @@ class A2CNetDiscrete(RLNetModel):
                 gradients, \
                 variables, \
                 returns, \
-                [act_comp_loss, entropy_comp_loss] = self.train_step(batch_obs,
-                                                                      batch_actions,
-                                                                      batch_returns,
-                                                                      entropy_beta=entropy_beta)
+                [[act_comp_loss, entropy_comp_loss],
+                 loss_components_critic] = self.train_step(batch_obs,
+                                                              batch_actions,
+                                                              batch_returns,
+                                                              entropy_beta=entropy_beta)
 
                 if batch % int(batch_size / 5) == 0 and verbose == 1:
                     print(
@@ -2034,10 +2035,11 @@ class A2CNetContinuous(A2CNetDiscrete):
                 gradients, \
                 variables, \
                 returns, \
-                [act_comp_loss, entropy_comp_loss, pred_act, pred_std] = self.train_step(batch_obs,
-                                                                      batch_actions,
-                                                                      batch_returns,
-                                                                      entropy_beta=entropy_beta)
+                [[act_comp_loss, entropy_comp_loss, pred_act, pred_std],
+                 loss_components_critic] = self.train_step(batch_obs,
+                                                          batch_actions,
+                                                          batch_returns,
+                                                          entropy_beta=entropy_beta)
 
                 if batch % int(batch_size / 5) == 0 and verbose == 1:
                     print(
@@ -2172,10 +2174,11 @@ class A2CNetQueueDiscrete(A2CNetDiscrete):
                 gradients, \
                 variables, \
                 returns, \
-                [act_comp_loss, entropy_comp_loss] = self.train_step(batch_obs,
-                                                                      batch_actions,
-                                                                      batch_returns,
-                                                                      entropy_beta=entropy_beta)
+                [[act_comp_loss, entropy_comp_loss],
+                 loss_components_critic] = self.train_step(batch_obs,
+                                                          batch_actions,
+                                                          batch_returns,
+                                                          entropy_beta=entropy_beta)
 
                 if batch % int(batch_size / 5) == 0 and verbose == 1:
                     print(
@@ -2248,10 +2251,11 @@ class A2CNetQueueContinuous(A2CNetContinuous):
                 gradients, \
                 variables, \
                 returns, \
-                [act_comp_loss, entropy_comp_loss, pred_act, pred_std] = self.train_step(batch_obs,
-                                                                      batch_actions,
-                                                                      batch_returns,
-                                                                      entropy_beta=entropy_beta)
+                [[act_comp_loss, entropy_comp_loss, pred_act, pred_std],
+                 loss_components_critic] = self.train_step(batch_obs,
+                                                          batch_actions,
+                                                          batch_returns,
+                                                          entropy_beta=entropy_beta)
 
                 if batch % int(batch_size / 5) == 0 and verbose == 1:
                     print(

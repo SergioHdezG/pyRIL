@@ -163,7 +163,7 @@ class Agent(A2CQueueSuper):
 
         obs = self._format_obs_act(obs)
         act_pred = self.model.predict(obs)
-        action = self.action_selection_options(act_pred, self.n_actions, epsilon=self.epsilon, n_env=1)
+        action = self.train_action_selection_options(act_pred, self.n_actions, epsilon=self.epsilon, n_env=1)
         # action = np.random.choice(self.n_actions, p=p[0])
         action = action[0]
         return action

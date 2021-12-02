@@ -270,7 +270,8 @@ class AgentSuper(AgentInterface):
         self.optimizer = opt
 
     def bc_fit(self, expert_traj_s, expert_traj_a, epochs, batch_size, shuffle=False,
-               optimizer='adam', loss='mse', metrics=tf.metrics.MeanSquaredError(), validation_split=0., verbose=1,
+               optimizer=tf.keras.optimizers.Adam(name="bc_adam"), loss=tf.keras.losses.MeanSquaredError(name="bc_mse"),
+               metrics=tf.metrics.Accuracy(name="bc_acc"), validation_split=0., verbose=1,
                one_hot_encode_actions=False):
         """
         Behavioral cloning training procedure for the neural network.

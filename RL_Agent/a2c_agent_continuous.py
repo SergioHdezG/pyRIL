@@ -137,7 +137,7 @@ class Agent(A2CSuper):
         """
         obs = self._format_obs_act(obs)
         act_pred = self.model.predict(obs)
-        action = self.action_selection_options(act_pred, self.n_actions, epsilon=self.epsilon, n_env=1)
+        action = self.train_action_selection_options(act_pred, self.n_actions, epsilon=self.epsilon, n_env=1)
         action = action[0]
         action = np.clip(action, a_min=self.action_bound[0], a_max=self.action_bound[1])
         return action
