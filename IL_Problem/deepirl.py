@@ -64,7 +64,7 @@ class DeepIRL(ILProblemSuper):
 
         n_stack = self.n_stack if self.n_stack_disc > 1 else 1
 
-        return vdirl_discriminator.Discriminator("Discriminator", self.state_size, self.n_actions, n_stack=n_stack,
+        return vdirl_discriminator.Discriminator(self.state_size, self.n_actions, n_stack=n_stack,
                                                  img_input=self.img_input, use_expert_actions=self.use_expert_actions,
                                                  learning_rate=self.lr_disc, batch_size=self.batch_size_disc,
                                                  epochs=self.epochs_disc, val_split=self.val_split_disc,

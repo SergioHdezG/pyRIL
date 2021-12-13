@@ -21,6 +21,15 @@ from IL_Problem.base.utils.networks import networks_dictionaries as il_networks
 import gym
 a = tf.executing_eagerly()
 
+agent = ppo_agent_continuous_parallel.Agent(actor_lr=1e-4,
+                                          critic_lr=1e-4,
+                                          batch_size=128,
+                                          epsilon=0.9,
+                                          epsilon_decay=0.97,
+                                          epsilon_min=0.15,
+                                          memory_size=1024,
+                                          net_architecture=net_architecture,
+                                          n_stack=discriminator_stack)
 
 environment = "LunarLander-v2"
 environment = gym.make(environment)
@@ -104,13 +113,13 @@ irl_net_architecture = il_networks.irl_discriminator_net(use_custom_network=True
                                                          define_custom_output_layer=True,
                                                          use_tf_custom_model=False)
 
-# irl_problem = DeepIRL(rl_problem, exp_memory, lr_disc=1e-5, batch_size_disc=128, epochs_disc=2, val_split_disc=0.1,
-#                       agent_collect_iter=10, agent_train_iter=25, n_stack_disc=discriminator_stack,
-#                       net_architecture=irl_net_architecture, use_expert_actions=use_expert_actions, tensorboard_dir="logs")
+irl_problem = DeepIRL(rl_problem, exp_memory, lr_disc=1e-5, batch_size_disc=128, epochs_disc=2, val_split_disc=0.1,
+                      agent_collect_iter=10, agent_train_iter=25, n_stack_disc=discriminator_stack,
+                      net_architecture=irl_net_architecture, use_expert_actions=use_expert_actions, tensorboard_dir="logs")
 
-irl_problem = GAIL(rl_problem, exp_memory, lr_disc=1e-4, batch_size_disc=128, epochs_disc=5, val_split_disc=0.1,
-                   n_stack_disc=discriminator_stack, net_architecture=irl_net_architecture,
-                   use_expert_actions=use_expert_actions, tensorboard_dir="logs")
+# irl_problem = GAIL(rl_problem, exp_memory, lr_disc=1e-4, batch_size_disc=128, epochs_disc=5, val_split_disc=0.1,
+#                    n_stack_disc=discriminator_stack, net_architecture=irl_net_architecture,
+#                    use_expert_actions=use_expert_actions, tensorboard_dir="logs")
 
 print("Entrenamiento de agente con aprendizaje por imitación")
 # save_live_histories allows to record data for analysis in real time.

@@ -6,7 +6,7 @@ from RL_Agent.base.utils import agent_globals
 class GAIL(ILProblemSuper):
     """Generative Adversarial Imitation Learning class.
 
-    Implementation using Proximal Policy Optimization agent of HO, Jonathan; ERMON, Stefano. Generative adversarial
+    Implementation using a Proximal Policy Optimization agent of HO, Jonathan; ERMON, Stefano. Generative adversarial
     imitation learning. Advances in neural formation processing systems, 2016, vol. 29, p. 4565-4573.
 
     This class implements the GAIL algorithm. This algorithm relate two main entities: a discriminator
@@ -54,7 +54,7 @@ class GAIL(ILProblemSuper):
             discrete_env = True
 
         n_stack = self.n_stack if self.n_stack_disc > 1 else 1
-        return gail_discriminator.Discriminator("Discriminator", self.state_size, self.n_actions, n_stack=n_stack,
+        return gail_discriminator.Discriminator(self.state_size, self.n_actions, n_stack=n_stack,
                                                 img_input=self.img_input, use_expert_actions=self.use_expert_actions,
                                                 learning_rate=self.lr_disc, batch_size=self.batch_size_disc,
                                                 epochs=self.epochs_disc, val_split=self.val_split_disc,

@@ -15,7 +15,7 @@ class Agent(PPOSuper):
                  loss_entropy_beta=0.001, lmbda=0.95, train_steps=10, exploration_noise=1.0, n_stack=1,
                  img_input=False, state_size=None, n_threads=None,tensorboard_dir=None, net_architecture=None,
                  train_action_selection_options=action_selection_options.gaussian_noise,
-                 action_selection_options=action_selection_options.identity, loads_saved_params=True
+                 action_selection_options=action_selection_options.identity
                  ):
         """
         Multithread version of Proximal Policy Optimization (PPO) agent for continuous action spaces.
@@ -76,7 +76,7 @@ class Agent(PPOSuper):
                          img_input=img_input, state_size=state_size, n_threads=n_threads,
                          tensorboard_dir=tensorboard_dir, net_architecture=net_architecture,
                          train_action_selection_options=train_action_selection_options,
-                         action_selection_options=action_selection_options, loads_saved_params=loads_saved_params)
+                         action_selection_options=action_selection_options)
         if self.n_threads is None:
             self.n_threads = multiprocessing.cpu_count()
         self.agent_name = agent_globals.names["ppo_continuous_multithread"]
