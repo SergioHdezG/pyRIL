@@ -363,7 +363,7 @@ def build_disc_conv_net(net_architecture, input_shape, n_actions, use_expert_act
         # input_common = action_model.output.shape[-1] + state_model.output.shape[-1]
         else:
             action_model = None
-
+        # TODO: ver si es mejor opcion hacer que reciba dos vectores en lugar de uno como concatenacion de state+actions
         # build common network
         common_model = Sequential()
         common_model.add(Dense(state_n_neurons[0], activation=state_dense_activation[0], name='disc_common_dense_0'))

@@ -56,7 +56,7 @@ class BehaviorCloning:
         :param optimizer: (keras optimizer o keras optimizer str id) Optimizer to be used in training procedure.
         :param loss: (keras loss, keras loss str id or custom loss based on keras losses interface) Loss metrics for the
             training procedure.
-        :param loss: (keras metric or custom metric based on keras metrics interface) Metrics for the
+        :param metrics: (keras metric or custom metric based on keras metrics interface) Metrics for the
             training procedure.
         :param validation_split: (float in [0., 1.]) Fraction of data to be used for validation.
         :param verbose: (int in [0, 2]) Set verbosity of the function.  0 -> no verbosity.
