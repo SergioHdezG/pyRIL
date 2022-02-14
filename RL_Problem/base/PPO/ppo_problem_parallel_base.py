@@ -95,12 +95,13 @@ class PPOProblemMultithreadBase(PPOProblemBase):
             # Select an action
             action, action_matrix, predicted_action = self.act_train(obs, obs_queue)
 
-            try:
-                if hasattr(self.env_test.action_space, 'low') and hasattr(self.env_test.action_space, 'high'):
-                    action = np.clip(action, self.env_test.action_space.low, self.env_test.action_space.high)
-                    action_matrix = np.clip(action_matrix, self.env_test.action_space.low, self.env_test.action_space.high)
-            except:
-                print('Exception applying boundaries to the actions. ppo_problem_parallel_base.py, line 99.')
+            # TODO: no me termina de gustar esto de limitar las acciones aquí
+            # try:
+            #     if hasattr(self.env_test.action_space, 'low') and hasattr(self.env_test.action_space, 'high'):
+            #         action = np.clip(action, self.env_test.action_space.low, self.env_test.action_space.high)
+            #         action_matrix = np.clip(action_matrix, self.env_test.action_space.low, self.env_test.action_space.high)
+            # except:
+            #     print('Exception applying boundaries to the actions. ppo_problem_parallel_base.py, line 99.')
 
             # Agent act in the environment
             next_obs, reward, done, info = self.env.step(action)
@@ -172,21 +173,23 @@ class PPOProblemMultithreadBase(PPOProblemBase):
 
             if discriminator.stack:
                 if discriminator.use_expert_actions:
-                    agent_traj = [[np.array(o), np.array(a)] for o, a in zip(obs, action)]
+                    agent_traj = np.array([[np.array(o), np.array(a)] for o, a in zip(obs, action)])
                 else:
-                    agent_traj = [np.array(o) for o in obs]
+                    agent_traj = np.array([np.array(o) for o in obs])
             else:
                 if discriminator.use_expert_actions:
-                    agent_traj = [[np.array(o), np.array(a)] for o, a in zip(obs, action)]
+                    agent_traj = np.array([[np.array(o), np.array(a)] for o, a in zip(obs, action)])
                 else:
-                    agent_traj = [np.array(o) for o in obs]
+                    agent_traj = np.array([np.array(o) for o in obs])
 
             train_loss, val_loss = discriminator.train(expert_traj, agent_traj)
 
-            if discriminator.stack:
-                self.rewards_batch = [discriminator.get_reward(o, a, multithread=True) for o, a in zip(self.obs_batch, self.actions_batch)]
-            else:
-                self.rewards_batch = [discriminator.get_reward(o, a, multithread=True) for o, a in zip(self.obs_batch, self.actions_batch)]
+            # TODO: reward substitution already performed in the RL loop. Remove these lines with the intention ok making the discriminator
+            #  optimization step independent from RL optimization step as in the original GAIL work.
+            # if discriminator.stack:
+            #     self.rewards_batch = [discriminator.get_reward(o, a, multithread=True) for o, a in zip(self.obs_batch, self.actions_batch)]
+            # else:
+            #     self.rewards_batch = [discriminator.get_reward(o, a, multithread=True) for o, a in zip(self.obs_batch, self.actions_batch)]
 
             if save_live_histories:
                 if isinstance(save_live_histories, str):
@@ -263,9 +266,9 @@ class PPOProblemMultithreadBase(PPOProblemBase):
             next_obs = np.array([self.preprocess(o) for o in next_obs])
         return done, next_obs, reward, epochs
 
-    def test(self, n_iter=10, render=True, callback=None, verbose=1, smooth_rewards=2):
+    def test(self, n_iter=10, render=True, callback=None, verbose=1, smooth_rewards=2, discriminator=None):
         # Reasignamos el entorno de test al entorno principal para poder usar el método test del padre
         aux_env = self.env
         self.env = self.env_test
-        super().test(n_iter=n_iter, render=render, callback=callback, verbose=verbose, smooth_rewards=smooth_rewards)
+        super().test(n_iter=n_iter, render=render, callback=callback, verbose=verbose, smooth_rewards=smooth_rewards, discriminator=discriminator)
         self.env = aux_env

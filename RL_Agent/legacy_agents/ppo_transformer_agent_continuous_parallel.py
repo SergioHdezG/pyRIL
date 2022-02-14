@@ -657,7 +657,7 @@ class Transformer:
         self.start_token = start_token
         self.final_token = final_token
 
-    # @tf.function
+    @tf.function
     def predict(self, input):
             """ Predict the output sentence for a given input sentence
             Args:

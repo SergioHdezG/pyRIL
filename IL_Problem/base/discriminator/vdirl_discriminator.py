@@ -2,7 +2,7 @@ from IL_Problem.base.discriminator.discriminator_base import DiscriminatorBase
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense, Input, Concatenate
 from tensorflow.keras.optimizers import Adam
-from IL_Problem.base.utils.networks.il_networks import IRLNet
+from IL_Problem.base.utils.networks.il_networks import IRLNet, IRLMinMaxLoss
 from IL_Problem.base.utils.networks.networks_interface import ILNetInterfaz
 import numpy as np
 from IL_Problem.base.utils import discriminator_nn_building
@@ -89,11 +89,12 @@ class Discriminator(DiscriminatorBase):
                 discriminator_net = tf.keras.models.Model(inputs=discriminator_net.inputs, outputs=output)
                 # discriminator_net.add(Dense(1, name='output', activation=last_activation))
 
-            discriminator_model = IRLNet(discriminator_net, tensorboard_dir=self.tensorboard_dir)
+            discriminator_model = IRLMinMaxLoss(discriminator_net, tensorboard_dir=self.tensorboard_dir)
 
             optimizer = tf.keras.optimizers.RMSprop(self.learning_rate)
-            self.loss_selected = losses.deepirl_loss
-            discriminator_model.compile(optimizer=optimizer, loss=self.loss_selected, metrics=tf.keras.metrics.BinaryAccuracy())
+            # self.loss_selected = losses.deepirl_loss
+            self.loss_selected = losses.gail_loss
+            discriminator_model.compile(optimizer=optimizer, loss=self.loss_selected, metrics=tf.keras.metrics.BinaryAccuracy(threshold=0.5))  # metrics=tf.keras.metrics.BinaryAccuracy())
         return discriminator_model
 
     def predict(self, obs, action):

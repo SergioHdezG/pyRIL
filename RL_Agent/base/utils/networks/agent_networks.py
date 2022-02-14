@@ -192,6 +192,20 @@ class PPONet(RLNetModel):
         else:
             dataset = dataset.batch(batch_size)
 
+        if self.train_summary_writer is not None:
+            with self.train_summary_writer.as_default():
+                self.rl_loss_sumaries([np.array(returns),
+                                       np.array(advantages),
+                                       actions,
+                                       act_probs,
+                                       stddev],
+                                      ['returns',
+                                       'advantages',
+                                       'actions',
+                                       'act_probabilities'
+                                       'stddev']
+                                      , self.total_epochs)
+
         history_actor = TrainingHistory()
         history_critic = TrainingHistory()
 
@@ -240,25 +254,14 @@ class PPONet(RLNetModel):
                                         entropy_comp_loss,
                                         critic_discount*critic_comp_loss,
                                         entropy_beta*entropy_comp_loss],
-                                       ['actor_model_loss (a_l + c*c_l + b*e_l)',
+                                       ['actor_model_loss (-a_l + c*c_l - b*e_l)',
                                         'critic_model_loss',
-                                        'actor_loss_component (a_l)',
-                                        'critic_loss_component (c_l)',
-                                        'entropy_loss_component (e_l)',
+                                        'actor_component (a_l)',
+                                        'critic_component (c_l)',
+                                        'entropy_component (e_l)',
                                         '(c*c_l)',
                                         '(b*e_l)'],
                                         self.total_epochs)
-                    self.rl_loss_sumaries([returns.numpy(),
-                                      advantages.numpy(),
-                                      actions,
-                                      act_probs,
-                                      stddev],
-                                     ['returns',
-                                      'advantages',
-                                      'actions',
-                                      'act_probabilities'
-                                      'stddev']
-                                     , self.total_epochs)
 
             self.total_epochs += 1
 
@@ -741,7 +744,7 @@ class DQNNet(RLNetModel):
         # saves actor and critic networks
         self.save_checkpoint(path)
 
-        # TODO: Qeda guardar las funciones de pérdida. De momento confio en las que hay definidad como estandar.
+        # TODO: Queda guardar las funciones de pérdida. De momento confio en las que hay definidas como estandar.
         data = {
             "train_log_dir": self.train_log_dir,
             "total_epochs": self.total_epochs,

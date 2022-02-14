@@ -34,7 +34,7 @@ class IRLNet(ILNetModel):
                                                        max_to_keep=chckpoints_to_keep)
 
 
-    def compile(self, loss, optimizer, metrics=tf.keras.metrics.MeanSquaredError()):
+    def compile(self, loss, optimizer, metrics=tf.keras.metrics.BinaryAccuracy(threshold=0.5)):
         self.loss_func = loss
         self.optimizer = optimizer
         self.metrics = metrics
@@ -98,7 +98,7 @@ class IRLNet(ILNetModel):
             # else:
             #     y_ = self.net(tf.cast(x, tf.float32), training=True)
             y_ = self.net(x, training=True)
-            loss = self.loss_func(y, y_)
+            loss, individual_loss = self.loss_func(y, y_)
 
         self.metrics.update_state(y, y_)
 
@@ -106,7 +106,7 @@ class IRLNet(ILNetModel):
         gradients = tape.gradient(loss, variables)
         self.optimizer.apply_gradients(zip(gradients, variables))
 
-        return loss, gradients, variables
+        return loss, gradients, variables, individual_loss
 
     def evaluate(self, x, y):
         """
@@ -125,7 +125,7 @@ class IRLNet(ILNetModel):
     def _evaluate(self, x, y):
         y_ = self.net(x, training=False)
 
-        loss = self.loss_func(y, y_)
+        loss, _ = self.loss_func(y, y_)
 
         # TODO: las métricas convencionales no valen
         self.metrics.update_state(y, y_)
@@ -191,7 +191,7 @@ class IRLNet(ILNetModel):
             loss_mean = []
             metrics_mean = []
             for batch, (x, y) in enumerate(dataset.take(-1)):
-                loss, gradients, variables = self.train_step(x, y)
+                loss, gradients, variables, individual_loss = self.train_step(x, y)
                 loss_mean.append(loss)
                 metric = self.metrics.result()
                 metrics_mean.append(metric)
@@ -499,6 +499,232 @@ class IRLNet(ILNetModel):
         print("Saved model to disk")
         print(datetime.datetime.now())
 
+class IRLMinMaxLoss(IRLNet):
+    def train_step(self, x_expert, x_agent, y):
+        """
+        Execute one training step (forward pass + backward pass)
+        Args:
+            source_seq: source sequences
+            target_seq_in: input target sequences (<start> + ...)
+            target_seq_out: output target sequences (... + <end>)
+
+        Returns:
+            The loss value of the current pass
+        """
+
+        return self._train_step(x_expert, x_agent, y)
+
+    @tf.function(experimental_relax_shapes=True)
+    def _train_step(self, x_expert, x_agent, y):
+        """
+        Execute one training step (forward pass + backward pass)
+        Args:
+            source_seq: source sequences
+            target_seq_in: input target sequences (<start> + ...)
+            target_seq_out: output target sequences (... + <end>)
+
+        Returns:
+            The loss value of the current pass
+        """
+        with tf.GradientTape() as tape:
+            y_expert = self.net(x_expert, training=True)
+            y_agent = self.net(x_agent, training=True)
+
+            loss, individual_loss = self.loss_func(y_expert, y_agent)
+
+            # TODO: las métricas convencionales no valen
+        self.metrics.update_state(tf.concat(y, axis=0), tf.concat([y_expert, y_agent], axis=0))
+
+        variables = self.net.trainable_variables
+        gradients = tape.gradient(loss, variables)
+        self.optimizer.apply_gradients(zip(gradients, variables))
+
+        return loss, gradients, variables, individual_loss
+
+    def evaluate(self, x_expert, x_agent, y):
+        """
+        Execute one training step (forward pass + backward pass)
+        Args:
+            source_seq: source sequences
+            target_seq_in: input target sequences (<start> + ...)
+            target_seq_out: output target sequences (... + <end>)
+
+        Returns:
+            The loss value of the current pass
+        """
+        return self._evaluate(x_expert, x_agent, y)
+
+    @tf.function(experimental_relax_shapes=True)
+    def _evaluate(self, x_expert, x_agent, y):
+        y_expert = self.net(x_expert, training=False)
+        y_agent = self.net(x_agent, training=False)
+
+        loss, individual_loss = self.loss_func(y_expert, y_agent)
+
+        # TODO: las métricas convencionales no valen
+        self.metrics.update_state( tf.concat(y, axis=0), tf.concat([y_expert, y_agent], axis=0))
+
+        return loss, individual_loss
+
+    def fit(self, expert_traj_s, agent_traj_s, expert_traj_a=None, agent_traj_a=None, epochs=1, batch_size=32, validation_split=0., shuffle=True, verbose=1, callbacks=None, kargs=[]):
+        # Generating labels
+        expert_label = np.ones((expert_traj_s.shape[0], 1))
+        agent_label = np.zeros((agent_traj_s.shape[0], 1))
+
+        if validation_split > 0.:
+            # Validation split for expert traj
+            n_val_split = int(expert_traj_s.shape[0] * validation_split)
+            val_idx = np.random.choice(expert_traj_s.shape[0], n_val_split, replace=False)
+            train_mask = np.array([False if i in val_idx else True for i in
+                                   range(expert_traj_s.shape[0])])
+
+            val_expert_traj_s = expert_traj_s[val_idx]
+            expert_traj_s = expert_traj_s[train_mask]
+
+            val_expert_label = expert_label[val_idx]
+            expert_label = expert_label[train_mask]
+
+            if expert_traj_a is not None:
+                val_expert_traj_a = expert_traj_a[val_idx]
+                expert_traj_a = expert_traj_a[train_mask]
+
+                # Validation split for agent traj
+            n_val_split = int(agent_traj_s.shape[0] * validation_split)
+            val_idx = np.random.choice(agent_traj_s.shape[0], n_val_split, replace=False)
+            train_mask = np.array([False if i in val_idx else True for i in
+                                   range(agent_traj_s.shape[0])])
+
+            val_agent_traj_s = agent_traj_s[val_idx]
+            agent_traj_s = agent_traj_s[train_mask]
+
+            val_agent_label = agent_label[val_idx]
+            agent_label = agent_label[train_mask]
+
+            if agent_traj_a is not None:
+                val_agent_traj_a = agent_traj_a[val_idx]
+                agent_traj_a = agent_traj_a[train_mask]
+
+        if agent_traj_a is not None and expert_traj_a is not None:
+            dataset = tf.data.Dataset.from_tensor_slices(((tf.cast(expert_traj_s, tf.float32),
+                                                          tf.cast(expert_traj_a, tf.float32)),
+
+                                                          (tf.cast(agent_traj_s, tf.float32),
+                                                          tf.cast(agent_traj_a, tf.float32)),
+
+                                                          (tf.cast(expert_label, tf.float32),
+                                                           tf.cast(agent_label, tf.float32))))
+            if validation_split > 0.:
+                val_dataset = tf.data.Dataset.from_tensor_slices(((tf.cast(val_expert_traj_s, tf.float32),
+                                                                 tf.cast(val_expert_traj_a, tf.float32)),
+
+                                                                 (tf.cast(val_agent_traj_s, tf.float32),
+                                                                 tf.cast(val_agent_traj_a, tf.float32)),
+
+                                                                 (tf.cast(val_expert_label, tf.float32),
+                                                                 tf.cast(val_agent_label, tf.float32))))
+            use_actions = True
+        else:
+            dataset = tf.data.Dataset.from_tensor_slices(((tf.cast(expert_traj_s, tf.float32)),
+                                                          (tf.cast(agent_traj_s, tf.float32)),
+
+                                                         (tf.cast(expert_label, tf.float32),
+                                                          tf.cast(agent_label, tf.float32))))
+            if validation_split > 0.:
+                val_dataset = tf.data.Dataset.from_tensor_slices(((tf.cast(val_expert_traj_s, tf.float32)),
+                                                                  (tf.cast(val_agent_traj_s, tf.float32)),
+
+                                                                 (tf.cast(val_expert_label, tf.float32),
+                                                                  tf.cast(val_agent_label, tf.float32))))
+
+        if shuffle:
+            dataset = dataset.shuffle(expert_traj_s.shape[0], reshuffle_each_iteration=True).batch(batch_size)
+        else:
+            dataset = dataset.batch(batch_size)
+        if validation_split > 0.:
+            val_dataset = val_dataset.batch(batch_size)
+
+        history = TrainingHistory()
+
+        start_time = time.time()
+
+        for e in range(epochs):
+            individual_loss_mean = []
+            loss_mean = []
+            metrics_mean = []
+            for batch, (x_expert, x_agent, y) in enumerate(dataset.take(-1)):
+                loss, gradients, variables, individual_loss = self.train_step(x_expert, x_agent, y)
+                loss_mean.append(loss)
+                individual_loss_mean.append(individual_loss)
+                metric = self.metrics.result()
+                metrics_mean.append(metric)
+
+                if batch % int(batch_size / 5) == 1 and verbose == 1:
+                    print(('Epoch {}\t Batch {}\t Loss  {:.4f} ' + self.metrics.name + ' {:.4f} Elapsed time {:.2f}s').format(
+                            e + 1, batch, loss.numpy(), metric,
+                            time.time() - start_time))
+                    start_time = time.time()
+            individual_loss_mean = np.mean(individual_loss_mean, axis=0)
+            loss_mean = np.mean(loss_mean)
+            metrics_mean = np.mean(metrics_mean)
+
+            if validation_split > 0.:
+                val_individual_loss = []
+                val_loss = []
+                val_metrics = []
+                for batch, (x_expert_val, x_agent_val, y_val) in enumerate(val_dataset.take(-1)):
+                    loss, individual_loss = self.evaluate(x_expert_val, x_agent_val, y_val)
+                    val_individual_loss.append(individual_loss)
+                    val_loss.append(loss)
+                    val_metrics.append(self.metrics.result())
+                val_individual_loss = np.mean(val_individual_loss, axis=0)
+                mean_val_loss = np.mean(val_loss)
+                val_metrics_mean = np.mean(val_metrics)
+
+            if verbose >= 1:
+                if validation_split > 0.:
+                    print(('epoch {}\t loss  {:.4f} ' + self.metrics.name + ' {:.4f}' +
+                           ' val_loss  {:.4f} val_' + self.metrics.name + ' {:.4f}').format(e + 1, loss_mean,
+                                                                                              metrics_mean,
+                                                                                              mean_val_loss,
+                                                                                              val_metrics_mean))
+                else:
+                    print(('Epoch {}\t Loss  {:.4f} ' + self.metrics.name + ' {:.4f}').format(e + 1, loss_mean,
+                                                                                              metrics_mean))
+
+            if self.train_summary_writer is not None:
+                with self.train_summary_writer.as_default():
+                    if validation_split > 0.:
+                        self.loss_sumaries([loss_mean, metrics_mean, individual_loss_mean[0],
+                                            individual_loss_mean[1], individual_loss_mean[2],
+                                            mean_val_loss, val_metrics_mean, val_individual_loss[0],
+                                            val_individual_loss[1], val_individual_loss[2]],
+                                           ['discriminator_loss', self.metrics.name,
+                                            'generator_loss', 'expert_loss', 'entropy_loss',
+                                            'discriminator_val_loss',
+                                            'val_'+self.metrics.name, 'val_generator_loss',
+                                            'val_expert_loss', 'val_entropy_loss'],
+                                           self.total_epochs)
+                    else:
+                        self.loss_sumaries([loss_mean, metrics_mean, individual_loss_mean[0],
+                                            individual_loss_mean[1], individual_loss_mean[2]],
+                                           ['discriminator_loss', self.metrics.name,
+                                            'generator_loss', 'expert_loss', 'entropy_loss'],
+                                            self.total_epochs)
+
+            self.total_epochs += 1
+
+            history.history['loss'].append(loss_mean)
+            history.history['acc'].append(metrics_mean)
+
+            if validation_split > 0.:
+                history.history['val_loss'].append(mean_val_loss)
+                history.history['val_acc'].append(val_metrics_mean)
+
+            if callbacks is not None:
+                for cb in callbacks:
+                    cb.on_epoch_end(e)
+
+        return history
 
 class GAILNet(IRLNet):
     def train_step(self, x_expert, x_agent, y):
@@ -534,7 +760,7 @@ class GAILNet(IRLNet):
             y_expert = self.net(x_expert, training=True)
             y_agent = self.net(x_agent, training=True)
 
-            loss = self.loss_func(y_expert, y_agent)
+            loss, individual_loss = self.loss_func(y_expert, y_agent)
 
         # TODO: las métricas convencionales no valen
         self.metrics.update_state(tf.concat([y_expert, y_agent], axis=0), tf.concat(y, axis=0) )
@@ -543,7 +769,7 @@ class GAILNet(IRLNet):
         gradients = tape.gradient(loss, variables)
         self.optimizer.apply_gradients(zip(gradients, variables))
 
-        return loss, gradients, variables
+        return loss, gradients, variables, individual_loss
 
     def evaluate(self, x_expert, x_agent, y):
         """
@@ -563,12 +789,12 @@ class GAILNet(IRLNet):
         y_expert = self.net(x_expert, training=False)
         y_agent = self.net(x_agent, training=False)
 
-        loss = self.loss_func(y_expert, y_agent)
+        loss, individual_loss = self.loss_func(y_expert, y_agent)
 
         # TODO: las métricas convencionales no valen
         self.metrics.update_state(tf.concat([y_expert, y_agent], axis=0), tf.concat(y, axis=0))
 
-        return loss
+        return loss, individual_loss
 
     def fit(self, expert_traj_s, agent_traj_s, expert_traj_a=None, agent_traj_a=None, epochs=1, batch_size=32, validation_split=0., shuffle=True, verbose=1, callbacks=None, kargs=[]):
         # Generating labels
@@ -653,11 +879,13 @@ class GAILNet(IRLNet):
         start_time = time.time()
 
         for e in range(epochs):
+            individual_loss_mean = []
             loss_mean = []
             metrics_mean = []
             for batch, (x_expert, x_agent, y) in enumerate(dataset.take(-1)):
-                loss, gradients, variables = self.train_step(x_expert, x_agent, y)
+                loss, gradients, variables, individual_loss = self.train_step(x_expert, x_agent, y)
                 loss_mean.append(loss)
+                individual_loss_mean.append(individual_loss)
                 metric = self.metrics.result()
                 metrics_mean.append(metric)
                 if batch % int(batch_size / 5) == 1 and verbose == 1:
@@ -666,15 +894,20 @@ class GAILNet(IRLNet):
                             e + 1, batch, loss.numpy(), metric,
                             time.time() - start_time))
                     start_time = time.time()
+            individual_loss_mean = np.mean(individual_loss_mean, axis=0)
             loss_mean = np.mean(loss_mean)
             metrics_mean = np.mean(metrics_mean)
 
             if validation_split > 0.:
+                val_individual_loss = []
                 val_loss = []
                 val_metrics = []
                 for batch, (x_expert_val, x_agent_val, y_val) in enumerate(val_dataset.take(-1)):
-                    val_loss.append(self.evaluate(x_expert_val, x_agent_val, y_val))
+                    loss, individual_loss = self.evaluate(x_expert_val, x_agent_val, y_val)
+                    val_individual_loss.append(individual_loss)
+                    val_loss.append(loss)
                     val_metrics.append(self.metrics.result())
+                val_individual_loss = np.mean(val_individual_loss, axis=0)
                 mean_val_loss = np.mean(val_loss)
                 val_metrics_mean = np.mean(val_metrics)
 
@@ -692,15 +925,21 @@ class GAILNet(IRLNet):
             if self.train_summary_writer is not None:
                 with self.train_summary_writer.as_default():
                     if validation_split > 0.:
-                        self.loss_sumaries([loss_mean, metrics_mean,
-                                            mean_val_loss, val_metrics_mean],
+                        self.loss_sumaries([loss_mean, metrics_mean, individual_loss_mean[0],
+                                            individual_loss_mean[1], individual_loss_mean[2],
+                                            mean_val_loss, val_metrics_mean, val_individual_loss[0],
+                                            val_individual_loss[1], val_individual_loss[2]],
                                            ['discriminator_loss', self.metrics.name,
+                                            'generator_loss', 'expert_loss', 'entropy_loss',
                                             'discriminator_val_loss',
-                                            'val_'+self.metrics.name],
+                                            'val_'+self.metrics.name, 'val_generator_loss',
+                                            'val_expert_loss', 'val_entropy_loss'],
                                            self.total_epochs)
                     else:
-                        self.loss_sumaries([loss_mean, metrics_mean],
-                                           ['discriminator_loss', self.metrics.name],
+                        self.loss_sumaries([loss_mean, metrics_mean, individual_loss_mean[0],
+                                            individual_loss_mean[1], individual_loss_mean[2]],
+                                           ['discriminator_loss', self.metrics.name,
+                                            'generator_loss', 'expert_loss', 'entropy_loss'],
                                             self.total_epochs)
 
             self.total_epochs += 1

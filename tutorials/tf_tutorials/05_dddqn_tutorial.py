@@ -102,7 +102,7 @@ class ActorNet(RLNetModel):
         y_ = self.net(tf.cast(x, tf.float32), training=False)
         return y_
 
-    # @tf.function
+    @tf.function
     def train_step(self, obs, target):
         """ Execute one training step (forward pass + backward pass)
         Args:

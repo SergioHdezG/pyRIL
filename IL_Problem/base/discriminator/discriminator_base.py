@@ -217,7 +217,9 @@ class DiscriminatorBase(object):
             agent_traj_a = [x[1] for x in agent_traj]
         else:
             if self.img_input:
-                if self.stack:
+                # TODO: hacer funcionar para time distributed keras layers en imagenes
+                self.time_distributed_stack = False
+                if self.time_distributed_stack:
                     expert_traj_s = [np.dstack(x) for x in expert_traj]
 
                     if expert_traj_s[0].shape != agent_traj[0].shape:
@@ -241,7 +243,9 @@ class DiscriminatorBase(object):
                 agent_traj_s = np.array(agent_traj)
 
             else:
-                agent_traj_s = [x[0] for x in agent_traj]
+                # TODO: la siguiente instrucción genera problemas de compatibilidad de tamaños
+                # agent_traj_s = [x[0] for x in agent_traj]
+                agent_traj_s = agent_traj
                 # If inputs are stacked but nor the discriminator, select the las one input from each stack
                 if len(agent_traj_s[0].shape) > 1:
                     agent_traj_s = [x[-1, :] for x in agent_traj_s]

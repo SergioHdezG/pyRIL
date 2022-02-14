@@ -403,6 +403,7 @@ def build_disc_stack_nn_net(net_architecture, input_shape, n_actions, use_expert
             if state_custom_net is not None:
                 state_model = state_custom_net(input_shape)
                 state_out_size = tuple([int(x) for x in state_model.output.shape[1:].dims])
+
             else:
                 state_model = Flatten(input_shape=input_shape)
                 state_out_size = input_shape[-2] * input_shape[-1]
@@ -417,7 +418,7 @@ def build_disc_stack_nn_net(net_architecture, input_shape, n_actions, use_expert
                 state_input = tf.keras.layers.Input(input_shape)
                 action_input = tf.keras.layers.Input(n_actions)
 
-                common_size = state_out_size + action_out_size
+                common_size = state_out_size[0] + action_out_size
                 common_model = common_custom_net((common_size,))
 
                 concat = tf.keras.layers.Concatenate(axis=1, name='disc_concatenate')([state_model(state_input), action_model(action_input)])
@@ -426,7 +427,7 @@ def build_disc_stack_nn_net(net_architecture, input_shape, n_actions, use_expert
 
             else:
                 state_input = tf.keras.layers.Input(input_shape)
-                common_model = common_custom_net((state_out_size,))
+                common_model = common_custom_net(state_out_size)
                 output = common_model(state_model(state_input))
                 model = tf.keras.models.Model(inputs=state_input, outputs=output)
 

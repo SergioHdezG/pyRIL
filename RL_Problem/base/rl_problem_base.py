@@ -301,7 +301,7 @@ class RLProblemSuper(object, metaclass=ABCMeta):
             next_obs = self.preprocess(next_obs)
         return done, next_obs, reward, epochs
 
-    def test(self, n_iter=10, render=True, verbose=1, callback=None, smooth_rewards=10):
+    def test(self, n_iter=10, render=True, verbose=1, callback=None, smooth_rewards=10, discriminator=None):
         """ Test a trained agent using only exploitation mode on the environment.
 
         :param n_iter: (int) number of test iterations.
@@ -339,11 +339,20 @@ class RLProblemSuper(object, metaclass=ABCMeta):
                     self.env.render()
 
                 # Select action
+                # TODO: poner bien
+                # action = self.act(obs, obs_queue)
                 action = self.act(obs, obs_queue)
+
                 prev_obs = obs
 
                 obs, reward, done, info = self.env.step(action)
                 obs = self.preprocess(obs)
+
+                if discriminator is not None:
+                    if discriminator.stack:
+                        reward = discriminator.get_reward(obs_queue, action, multithread=False)[0]
+                    else:
+                        reward = discriminator.get_reward(obs, action, multithread=False)[0]
 
                 if callback is not None:
                     callback(prev_obs, obs, action, reward, done, info)

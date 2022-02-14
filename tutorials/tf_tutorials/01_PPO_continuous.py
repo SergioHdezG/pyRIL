@@ -235,7 +235,21 @@ def actor_custom_model(input_shape):
         actor_model = tf.keras.models.Model(inputs=input, outputs=out)
         return Sequential(actor_model)
     return model()
+def critic_custom_model(input_shape):
 
+    lstm = LSTM(64, activation='tanh')
+    dense_1 = Dense(256, input_shape=input_shape, activation='relu')
+    dense_2 = Dense(128, activation='relu')
+    output = Dense(1, activation='linear')
+    def model():
+        input = tf.keras.Input(shape=input_shape)
+        hidden = lstm(input)
+        hidden = dense_1(hidden)
+        hidden = dense_2(hidden)
+        out = output(hidden)
+        actor_model = tf.keras.models.Model(inputs=input, outputs=out)
+        return Sequential(actor_model)
+    return model()
 def critic_custom_model(input_shape):
 
     lstm = LSTM(64, activation='tanh')
@@ -266,10 +280,10 @@ net_architecture = networks.actor_critic_net_architecture(
                     define_custom_output_layer=True,
                     )
 
-agent_cont = ppo_agent_continuous.Agent(actor_lr=1e-5,
+agent_cont = ppo_agent_continuous_parallel.Agent(actor_lr=1e-5,
                                              critic_lr=1e-5,
                                              batch_size=256,
-                                             memory_size=1000,
+                                             memory_size=500,
                                              epsilon=1.0,
                                              epsilon_decay=0.9,
                                              epsilon_min=0.15,
@@ -292,10 +306,10 @@ problem_cont = rl_problem.Problem(environment_cont, agent_cont)
 
 # agent_cont.actor.extract_variable_summaries = extract_variable_summaries
 
-problem_cont.solve(100, render=False, max_step_epi=512, render_after=2090, skip_states=1)
+problem_cont.solve(500, render=False, max_step_epi=512, render_after=2090, skip_states=1)
 problem_cont.test(render=True, n_iter=10)
 #
 # hist = problem_cont.get_histogram_metrics()
 # history_utils.plot_reward_hist(hist, 10)
 #
-agent_saver.save(agent_cont, 'agent_ppo')
+# agent_saver.save(agent_cont, 'agent_ppo')

@@ -98,7 +98,7 @@ class DeepIRL(ILProblemSuper):
         """
         self.rl_problem.compile()
         for it in range(iterations):
-            for element in self.agent_play(self.agent_collect_iter, render=render):
+            for element in self.agent_play(self.agent_collect_iter, render=render, discriminator=self.discriminator):
                 self.agent_traj.append(element)
 
             train_loss, val_loss = self.discriminator.train(self.expert_traj, self.agent_traj)

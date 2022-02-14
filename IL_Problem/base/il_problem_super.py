@@ -120,7 +120,7 @@ class ILProblemSuper(object, metaclass=ABCMeta):
     # def load_expert_data(self):
     #     pass
 
-    def agent_play(self, n_iter, render=False):
+    def agent_play(self, n_iter, render=False, discriminator=None):
         """
         Run the agent in exploitation mode on the environment and record its experiences.
 
@@ -129,7 +129,7 @@ class ILProblemSuper(object, metaclass=ABCMeta):
         """
         # Callback to save in memory agent trajectories
         callback = Callbacks()
-        self.rl_problem.test(render=render, n_iter=n_iter, callback=callback.remember_callback)
+        self.rl_problem.test(render=render, n_iter=n_iter, callback=callback.remember_callback, discriminator=discriminator)
         return callback.get_memory(self.use_expert_actions, self.discriminator.n_stack)
 
 

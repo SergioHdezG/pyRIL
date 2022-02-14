@@ -81,7 +81,11 @@ class Callbacks:
         self.max_iter = iterations
 
 
-def load_expert_memories(path, load_action, n_stack=0, not_formated=False):
+def load_expert_memories(path, load_action, n_stack=0, not_formated=False, img_data=False):
+    """
+    :param not_formated: bool. If true, loaded data won't be formated. If false, loaded data will be formated depending
+        on n_stack value.
+    """
     # data = pd.read_csv(dir+name+".csv")
     data = pd.read_pickle(path)
     # print(data.head())
@@ -99,46 +103,88 @@ def load_expert_memories(path, load_action, n_stack=0, not_formated=False):
         data = [np.array([o, a, r, d]) for o, a, r, d in zip(obs, action, reward, done)]
         return data
     else:
-        data = format_obs(obs, action, load_action, done, n_stack)
+        data = format_obs(obs, action, load_action, done, n_stack, img_data)
         return data
 
 
-def format_obs(obs, action, get_action, done, n_stack=0):
-    if n_stack > 1:
-        data = []
-        obs_stack = deque(maxlen=n_stack)
+def format_obs(obs, action, get_action, done, n_stack=0, img_data=False):
 
-        first_obs = True
-        for i in range(0, obs.shape[0]):
-            if first_obs:
-                for _ in range(n_stack):
-                    obs_stack.append(np.array(obs[i]))
-            else:
-                obs_stack.append(np.array(obs[i]))
-
-            if get_action:
-                # data.append([np.reshape(obs_stack.copy(), (-1, obs_stack.maxlen)), action[i]])
-                # data.append([np.transpose(obs_stack.copy()), action[i]])
-                # ssss = np.array(obs_stack.copy())
-                data.append([np.array(obs_stack.copy()), action[i]])
-            else:
-                data.append(obs_stack.copy())
-            first_obs = done[i]  # Trata de tener en cuenta las primeras observaciones de un episodio,
-            # pero depende de como se hayan recopilado los datos
-
-
-    else:
-        if get_action:
+    if img_data:
+        if n_stack > 1:
             data = []
-            for i in range(obs.shape[0]):
-                # data.append(np.array([obs[i], [action[i]], reward[i], done[i]]))
-                data.append(np.array([obs[i], action[i]], dtype=object))
-                # data.append([obs[i], action[i]])
+            obs_stack = deque(maxlen=n_stack)
+
+            first_obs = True
+            for i in range(0, obs.shape[0]):
+                if first_obs:
+                    for _ in range(n_stack):
+                        obs_stack.append(np.array(obs[i]))
+                else:
+                    obs_stack.append(np.array(obs[i]))
+
+                o_s = np.squeeze(obs_stack.copy(), axis=-1)
+                o_s = o_s.transpose((1, 2, 0))
+                if get_action:
+                    # data.append([np.reshape(obs_stack.copy(), (-1, obs_stack.maxlen)), action[i]])
+                    # data.append([np.transpose(obs_stack.copy()), action[i]])
+                    # ssss = np.array(obs_stack.copy())
+                    data.append([np.array(o_s), action[i]])
+                else:
+                    data.append(o_s)
+                first_obs = done[i]  # Trata de tener en cuenta las primeras observaciones de un episodio,
+                # pero depende de como se hayan recopilado los datos
 
         else:
+            if get_action:
+                data = []
+                for i in range(obs.shape[0]):
+                    # data.append(np.array([obs[i], [action[i]], reward[i], done[i]]))
+                    data.append(np.array([obs[i], action[i]], dtype=object))
+                    # data.append([obs[i], action[i]])
+
+            else:
+                data = []
+                for i in range(obs.shape[0]):
+                    # data.append(np.array([obs[i]], dtype=object))
+                    data.append(np.array(obs[i], dtype=np.float32))
+    else:
+        if n_stack > 1:
             data = []
-            for i in range(obs.shape[0]):
-                # data.append(np.array([obs[i]], dtype=object))
-                data.append(np.array([obs[i]], dtype=np.float32))
+            obs_stack = deque(maxlen=n_stack)
+
+            first_obs = True
+            for i in range(0, obs.shape[0]):
+                if first_obs:
+                    for _ in range(n_stack):
+                        obs_stack.append(np.array(obs[i]))
+                else:
+                    obs_stack.append(np.array(obs[i]))
+
+                if get_action:
+                    # data.append([np.reshape(obs_stack.copy(), (-1, obs_stack.maxlen)), action[i]])
+                    # data.append([np.transpose(obs_stack.copy()), action[i]])
+                    # ssss = np.array(obs_stack.copy())
+                    data.append([np.array(obs_stack.copy()), action[i]])
+                else:
+                    data.append(obs_stack.copy())
+                first_obs = done[i]  # Trata de tener en cuenta las primeras observaciones de un episodio,
+                # pero depende de como se hayan recopilado los datos
+
+        else:
+            if get_action:
+                data = []
+                for i in range(obs.shape[0]):
+                    # data.append(np.array([obs[i], [action[i]], reward[i], done[i]]))
+                    data.append(np.array([obs[i], action[i]], dtype=object))
+                    # data.append([obs[i], action[i]])
+
+            else:
+                data = []
+                for i in range(obs.shape[0]):
+                    # data.append(np.array([obs[i]], dtype=object))
+                    data.append(np.array([obs[i]], dtype=np.float32))
 
     return data
+
+def dummy_preprocess(obs):
+    return obs

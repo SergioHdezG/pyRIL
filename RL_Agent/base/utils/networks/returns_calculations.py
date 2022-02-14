@@ -102,7 +102,7 @@ def naive_n_step_return(rewards, mask, gamma, norm=True, n_step_return=None):
         n_step_discount_returns /= np.std(n_step_discount_returns) + 1e-10  # para evitar valores cero
     return n_step_discount_returns
 
-# @tf.function
+@tf.function
 def gae(values, masks, rewards, gamma, lmbda):
     """
     Generalized Advantage Estimation imlementation

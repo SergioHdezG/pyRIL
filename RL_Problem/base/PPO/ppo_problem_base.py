@@ -120,7 +120,7 @@ class PPOProblemBase(RLProblemSuper):
 
             self.gradient_steps += 1
 
-        self.agent.save_tensorboar_rl_histogram(self.histogram_metrics)
+            self.agent.save_tensorboar_rl_histogram(self.histogram_metrics)
 
     def collect_batch(self, render, render_after, max_step_epi, skip_states, verbose, discriminator=None,
                       expert_traj=None, save_live_histories=False):
@@ -172,12 +172,13 @@ class PPOProblemBase(RLProblemSuper):
 
                 # Agent act in the environment
                 next_obs, reward, done, info = self.env.step(action)
+
+
                 if discriminator is not None:
                     if discriminator.stack:
                         reward = discriminator.get_reward(obs_queue, action)[0]
                     else:
                         reward = discriminator.get_reward(obs, action)[0]
-
 
                 # Store the experience in episode memory
                 next_obs, obs_next_queue, reward, done, epochs, mask = self.store_episode_experience(action,
@@ -251,8 +252,8 @@ class PPOProblemBase(RLProblemSuper):
 
     def store_episode_experience(self, action, done, next_obs, obs, obs_next_queue, obs_queue, reward, skip_states, epochs,
                                  predicted_action, action_matrix):
-
         done, next_obs, reward, epochs = self.frame_skipping(action, done, next_obs, reward, skip_states, epochs)
+
         mask = not done
         if self.n_stack is not None and self.n_stack > 1:
             obs_next_queue.append(next_obs)
