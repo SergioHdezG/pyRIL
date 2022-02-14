@@ -3,11 +3,13 @@ from os import path
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
 from RL_Problem import rl_problem
-from RL_Agent import ppo_transformer_agent_continuous_parallel
+from RL_Problem.base.PPO.ppo_problem_continuous_parallel import PPOProblem
+from RL_Agent.legacy_agents import ppo_transformer_agent_continuous_parallel
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 import gym
-from RL_Agent.base.utils import agent_saver, history_utils, networks as params
+from RL_Agent.base.utils import agent_saver, history_utils
+from RL_Agent.base.utils.networks import networks
 from environments import optimizing_functions
 import numpy as np
 
@@ -22,7 +24,7 @@ def lstm_custom_model(input_shape):
 
     return actor_model
 
-net_architecture = params.actor_critic_net_architecture(
+net_architecture = networks.actor_critic_net_architecture(
                     actor_conv_layers=2,                            critic_conv_layers=2,
                     actor_kernel_num=[32, 32],                      critic_kernel_num=[32, 32],
                     actor_kernel_size=[3, 3],                       critic_kernel_size=[3, 3],
@@ -55,7 +57,8 @@ agent_cont = ppo_transformer_agent_continuous_parallel.Agent(actor_lr=1e-3,
                                                  loss_critic_discount=0.5
                                                  )
 
-problem_cont = rl_problem.Problem(environment, agent_cont)
+
+problem_cont = PPOProblem(environment, agent_cont)
 
 problem_cont.solve(5000, render=True, skip_states=1)
 problem_cont.test(render=True, n_iter=10)

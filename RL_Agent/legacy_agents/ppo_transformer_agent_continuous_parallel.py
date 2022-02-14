@@ -57,7 +57,8 @@ class Agent(PPOSuper):
                          net_architecture=net_architecture)
         if self.n_threads is None:
             self.n_threads = multiprocessing.cpu_count()
-        self.agent_name = agent_globals.names["ppo_transformer_agent_continuous_multithread"]
+        # self.agent_name = agent_globals.names["ppo_transformer_agent_continuous_multithread"]
+        self.agent_name = "ppo_transformer_agent_continuous_multithread"
         self.teacher_forcing = teacher_forcing
         self.seq2seq = seq2seq
         self.decoder_start_token = decoder_start_token
