@@ -168,10 +168,8 @@ class PPONet(RLNetModel):
         batch_obs = np.array_split(obs, int(rewards.shape[0] / batch_size) + 1)
         batch_rewards = np.array_split(rewards, int(rewards.shape[0] / batch_size) + 1)
         batch_mask = np.array_split(mask, int(rewards.shape[0] / batch_size) + 1)
-        batch_returns = np.array_split(returns, int(rewards.shape[0] / batch_size) + 1)
-        batch_advantages = np.array_split(advantages, int(rewards.shape[0] / batch_size) + 1)
 
-        for b_o, b_r, b_m, b_ret, b_a in zip(batch_obs, batch_rewards, batch_mask, batch_returns, batch_advantages):
+        for b_o, b_r, b_m in zip(batch_obs, batch_rewards, batch_mask):
             # values = self.critic_net(b_o)
             values = self.predict_values(b_o)
 
@@ -179,6 +177,7 @@ class PPONet(RLNetModel):
 
             returns.extend(ret)
             advantages.extend(adv)
+
 
         dataset = tf.data.Dataset.from_tensor_slices((tf.cast(obs, tf.float32),
                                                       tf.cast(act_probs, tf.float32),
