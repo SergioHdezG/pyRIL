@@ -15,4 +15,12 @@ pip install tensorflow-gpu==2.2
 ```
 
 We include some jupyter notebooks tutorials on how to use the library. These tutorials are ordered and increasingly 
-include the most important features of this library. 
+include the most important features of this library. To run these tutorials you should install additionally Jupyter Notebook.
+
+Some environments used in some tutorials, like LunarLander and Atari games, occasionally raise some errors related with the gym library installation. In this case try to install gym following the instructions bellow:
+```bash
+pip install swig
+pip install gym
+pip install gym[Box2D]
+pip install gym[atari]
+```

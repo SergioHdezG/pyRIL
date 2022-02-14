@@ -117,7 +117,7 @@ pyparsing==2.4.7
 pyrsistent==0.18.0
 PySocks==1.7.1
 python-dateutil==2.8.1
-pytz2020.1
+pytz==2020.1
 PyWavelets==1.1.1
 PyYAML==5.4.1
 pyzmq==22.3.0
@@ -137,7 +137,6 @@ tensorboard-plugin-wit==1.6.0
 tensorflow==2.2.0
 tensorflow-datasets==4.2.0
 tensorflow-estimator==2.2.0
-tensorflow-examples===400c0fe5f3c3ecc1cda0a36c27b0e0c5d343248f-
 tensorflow-metadata==0.30.0
 tensorflow-probability==0.7.0
 termcolor==1.1.0
