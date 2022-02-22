@@ -7,7 +7,7 @@ from RL_Agent.base.utils.networks import returns_calculations
 # worker class that inits own environment, trains on it and updloads weights to global net
 class A2CQueueSuper(A2CSuper):
     def __init__(self, actor_lr, critic_lr, batch_size, epsilon=1.0, epsilon_decay=1.0, epsilon_min=0.15, gamma=0.9,
-                 n_stack=1, img_input=False,state_size=None, n_step_return=15, memory_size=1000, train_steps=1,
+                 n_stack=1, img_input=False,state_size=None, exploration_noise=0.5, n_step_return=15, memory_size=1000, train_steps=1,
                  loss_entropy_beta=0.01, tensorboard_dir=None, net_architecture=None,
                  train_action_selection_options=None,
                  action_selection_options=None
@@ -51,7 +51,7 @@ class A2CQueueSuper(A2CSuper):
         """
         super().__init__(actor_lr=actor_lr, critic_lr=critic_lr, batch_size=batch_size, epsilon=epsilon,
                          epsilon_decay=epsilon_decay, epsilon_min=epsilon_min, gamma=gamma, n_stack=n_stack,
-                         img_input=img_input, state_size=state_size, n_step_return=n_step_return,
+                         img_input=img_input, state_size=state_size, exploration_noise=exploration_noise, n_step_return=n_step_return,
                          memory_size=memory_size, train_steps=train_steps,
                          loss_entropy_beta=loss_entropy_beta, tensorboard_dir=tensorboard_dir,
                          net_architecture=net_architecture,

@@ -312,3 +312,13 @@ class AgentSuper(AgentInterface):
                 for [total_episodes, episodic_reward, epochs, epsilon, global_steps] in histograms:
                     self.model.rl_sumaries([episodic_reward, epsilon], ['Reward', 'Epsilon'], total_episodes)
 
+    def _reduce_epsilon(self):
+        """
+        Reduce the exploration rate.
+        """
+        if isinstance(self.epsilon_decay, float):
+            if self.epsilon > self.epsilon_min:
+                self.epsilon *= self.epsilon_decay
+        else:
+            self.epsilon = self.epsilon_decay(self.epsilon, self.epsilon_min)
+

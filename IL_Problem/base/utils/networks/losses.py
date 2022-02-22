@@ -22,8 +22,8 @@ def deepirl_loss(y, y_):
     #  return bce(y, y_)
 
 
-@tf.function
-def gail_loss(y_expert, y_agent, entcoeff=0.1):
+# @tf.function
+def gail_loss(y_expert, y_agent, entcoeff=0.0):
     """
     MinMax GAN loss
     """

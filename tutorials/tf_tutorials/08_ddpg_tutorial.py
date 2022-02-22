@@ -226,7 +226,7 @@ class ActorNet(RLNetModel):
 
 
 def actor_custom_model_tf(input_shape):
-    return ActorNet(input_shape=input_shape, tensorboard_dir='../tutorials/transformers_data/')
+    return ActorNet(input_shape=input_shape, tensorboard_dir='/home/serch/TFM/CAPOIRL-TF2/tutorials/tf_tutorials/tensorboard_logs')
 
 def actor_custom_model(input_shape):
     flat = Flatten(input_shape=input_shape)
@@ -259,28 +259,29 @@ def critic_custom_model(input_shape, actor_net):
         return model
     return model()
 
-net_architecture = networks.ddpg_net(use_custom_network=True,
-                                     actor_custom_network=actor_custom_model,
-                                     critic_custom_network=critic_custom_model,
-                                     define_custom_output_layer=True)
+# net_architecture = networks.ddpg_net(use_custom_network=True,
+#                                      actor_custom_network=actor_custom_model,
+#                                      critic_custom_network=critic_custom_model,
+#                                      define_custom_output_layer=True)
 
 net_architecture = networks.actor_critic_net_architecture(
-                    actor_dense_layers=3,                                critic_dense_layers=3,
-                    actor_n_neurons=[128, 128, 128],                     critic_n_neurons=[128, 128, 128],
-                    actor_dense_activation=['relu', 'relu', 'relu'],     critic_dense_activation=['relu', 'relu', 'relu']
+                    actor_dense_layers=2,                        critic_dense_layers=2,
+                    actor_n_neurons=[64, 64],                    critic_n_neurons=[64, 64],
+                    actor_dense_activation=['tanh', 'tanh'],     critic_dense_activation=['tanh', 'tanh']
                     )
 
 
 
-agent = ddpg_agent.Agent(actor_lr=1e-4,
-                            critic_lr=1e-4,
+agent = ddpg_agent.Agent(actor_lr=1e-3,
+                            critic_lr=1e-3,
                             batch_size=64,
-                            epsilon=0.5,
+                            epsilon=1.0,
                             epsilon_decay=0.9999,
                             epsilon_min=0.15,
+                            exploration_noise=0.4,
                             n_stack=1,
                             net_architecture=net_architecture,
-                            tensorboard_dir='/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/tf_tutorials/tensorboard_logs/')
+                            tensorboard_dir='/home/serch/TFM/CAPOIRL-TF2/tutorials/tf_tutorials/tensorboard_logs')
 
 # agent = agent_saver.load('agent_ddpg', agent=ddpg_agent.Agent())
 # agent = agent_saver.load('agent_ddpg', agent=agent, overwrite_attrib=True)
@@ -289,7 +290,7 @@ problem = rl_problem.Problem(environment, agent)
 
 # agent = agent_saver.load('agent_ddpg', agent=problem.agent, overwrite_attrib=True)
 
-problem.solve(500, render=False, render_after=990, skip_states=2)
+problem.solve(500, render=False, render_after=990, skip_states=1)
 problem.test(render=True, n_iter=5)
 
 agent_saver.save(agent, 'agent_ddpg')

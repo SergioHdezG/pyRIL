@@ -102,8 +102,12 @@ def naive_n_step_return(rewards, mask, gamma, norm=True, n_step_return=None):
         n_step_discount_returns /= np.std(n_step_discount_returns) + 1e-10  # para evitar valores cero
     return n_step_discount_returns
 
-@tf.function
 def gae(values, masks, rewards, gamma, lmbda):
+    returns, advantages = _gae(values, masks, rewards, gamma, lmbda)
+    return returns.numpy(), advantages.numpy()
+
+@tf.function
+def _gae(values, masks, rewards, gamma, lmbda):
     """
     Generalized Advantage Estimation imlementation
     """
@@ -118,4 +122,4 @@ def gae(values, masks, rewards, gamma, lmbda):
     returns = tf.convert_to_tensor(returns, dtype=tf.float32)
     adv = returns - values[:-1]
     advantages = (adv - tf.math.reduce_mean(adv)) / (tf.math.reduce_std(adv) + 1e-10)
-    return returns.numpy(), advantages.numpy()
+    return returns, advantages

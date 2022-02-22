@@ -17,7 +17,7 @@ from RL_Agent.base.utils.networks import action_selection_options
 
 class Agent(AgentSuper):
     def __init__(self, actor_lr=1-4, critic_lr=1e-3, batch_size=32, epsilon=1.0, epsilon_decay=0.9999, epsilon_min=0.1,
-                 gamma=0.95, tau=0.001, n_stack=1, img_input=False, state_size=None, memory_size=5000, train_steps=1,
+                 gamma=0.99, tau=0.001, n_stack=1, img_input=False, state_size=None, memory_size=5000, train_steps=1,
                  exploration_noise=1.0, tensorboard_dir=None, net_architecture=None,
                  train_action_selection_options=action_selection_options.gaussian_noise,
                  action_selection_options=action_selection_options.identity
@@ -148,15 +148,15 @@ class Agent(AgentSuper):
             agent_model = net_building.build_nn_net(net_architecture, self.state_size, actor=True)
 
         if isinstance(agent_model, RLNetModel):
-            optimizer_actor = tf.keras.optimizers.RMSprop(self.actor_lr)
-            optimizer_critic = tf.keras.optimizers.RMSprop(self.critic_lr)
+            optimizer_actor = tf.keras.optimizers.Adam(self.actor_lr)
+            optimizer_critic = tf.keras.optimizers.Adam(self.critic_lr)
             agent_model.compile(optimizer=[optimizer_actor, optimizer_critic],
                           loss=[ddpg_actor_loss, ddpg_critic_loss])
         else:
             actor_model = agent_model
             if not define_output_layer:
                 actor_model.add(tf.keras.layers.Dense(units=self.n_actions, activation='tanh',
-                                               kernel_initializer=RandomNormal(mean=0.0, stddev=1e-4, seed=None)))
+                                               kernel_initializer=RandomNormal(mean=0.0, stddev=1e-5, seed=None)))
 
             if self.img_input:  # and (self.stack or not self.stack)
                 critic_model = net_building.build_ddpg_conv_critic_tf(net_architecture, self.state_size, actor_model)
@@ -166,17 +166,16 @@ class Agent(AgentSuper):
                 critic_model = net_building.build_ddpg_nn_critic_tf(net_architecture, self.state_size, actor_model)
 
             if not define_output_layer:
-                critic_out = tf.keras.layers.Dense(units=self.n_actions, activation='tanh',
-                                                     kernel_initializer=RandomNormal(mean=0.0, stddev=1e-4, seed=None))(
+                critic_out = tf.keras.layers.Dense(units=self.n_actions, activation='linear')(
                     critic_model.output)
                 critic_model = tf.keras.models.Model(inputs=critic_model.input, outputs=critic_out)
 
-            model = DDPGNet(actor_model, critic_model, tensorboard_dir=self.tensorboard_dir)
-            optimizer_actor = tf.keras.optimizers.RMSprop(self.actor_lr)
-            optimizer_critic = tf.keras.optimizers.RMSprop(self.critic_lr)
-            model.compile(optimizer=[optimizer_actor, optimizer_critic],
-                                loss=[ddpg_actor_loss, ddpg_critic_loss])
-        return model
+            agent_model = DDPGNet(actor_model, critic_model, tensorboard_dir=self.tensorboard_dir)
+            optimizer_actor = tf.keras.optimizers.Adam(self.actor_lr)
+            optimizer_critic = tf.keras.optimizers.Adam(self.critic_lr)
+            agent_model.compile(optimizer=[optimizer_actor, optimizer_critic],
+                            loss=[ddpg_actor_loss, ddpg_critic_loss])
+        return agent_model
 
     def remember(self, obs, action, reward, next_obs, done):
         """
@@ -187,7 +186,7 @@ class Agent(AgentSuper):
         :param next_obs:  (numpy nd array). Next Observation (Next State), numpy arrays with state shape.
         :param done: (bool). Flag for episode finished. True if next_obs is a final state.
         """
-        self.memory.append([obs, action, reward, next_obs])
+        self.memory.append([obs, action, reward, next_obs, done])
 
     def act_train(self, obs):
         """
@@ -219,16 +218,19 @@ class Agent(AgentSuper):
         :return: ([nd array], [1D array], [float], [nd array])  current observation, one hot action, reward, next observation.
         """
         _, minibatch, _ = self.memory.sample(self.batch_size)
-        obs, action, reward, next_obs = minibatch[:, 0], \
+        obs, action, reward, next_obs, done = minibatch[:, 0], \
                                         minibatch[:, 1], \
                                         minibatch[:, 2], \
-                                        minibatch[:, 3]
+                                        minibatch[:, 3], \
+                                        minibatch[:, 4]
         obs = np.array([np.reshape(x, self.state_size) for x in obs])
         action = np.array([np.reshape(x, self.n_actions) for x in action])
         reward = np.array([np.reshape(x, 1) for x in reward])
         next_obs = np.array([np.reshape(x, self.state_size) for x in next_obs])
+        done = np.array([np.reshape(x, 1) for x in done], dtype=np.int)
 
-        return obs, action, reward, next_obs
+
+        return obs, action, reward, next_obs, done
 
     def replay(self):
         """
@@ -236,14 +238,14 @@ class Agent(AgentSuper):
         """
         if self.memory.len() >= self.batch_size:
 
-            obs, action, rewards, next_obs = self.load_memories()
+            obs, action, rewards, next_obs, done = self.load_memories()
 
             # TODO: Aqui tienen que entrar las variables correspondientes, de momento entran las que hay disponibles.
             actor_loss = self.model.fit(np.float32(obs),
                                         np.float32(next_obs),
                                         np.float32(action),
                                         np.float32(rewards),
-                                        np.float32(rewards),  # TODO: cambiar por argumento done
+                                        np.float32(done),
                                         epochs=self.train_epochs,
                                         batch_size=self.batch_size,
                                         shuffle=False,

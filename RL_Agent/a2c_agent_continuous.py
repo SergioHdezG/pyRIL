@@ -16,8 +16,9 @@ from RL_Agent.base.utils.networks import action_selection_options
 
 # worker class that inits own environment, trains on it and updloads weights to global net
 class Agent(A2CSuper):
-    def __init__(self, actor_lr=1e-4, critic_lr=1e-3, batch_size=32, gamma=0.90, n_stack=1, img_input=False,
-                 state_size=None, n_step_return=15, train_steps=1, loss_entropy_beta=0.001, tensorboard_dir=None,
+    def __init__(self, actor_lr=1e-4, critic_lr=1e-3, batch_size=32, epsilon=1.0, epsilon_decay=0.9999,
+                 epsilon_min=0.1, gamma=0.99, n_stack=1, img_input=False, state_size=None, exploration_noise=1.0,
+                 n_step_return=15, train_steps=1, loss_entropy_beta=0.001, tensorboard_dir=None,
                  net_architecture=None,
                  train_action_selection_options=action_selection_options.identity,
                  action_selection_options=action_selection_options.identity
@@ -50,10 +51,11 @@ class Agent(A2CSuper):
             adapting the action selection procedure to an especial neural network. Some usable functions and
             documentation on how to implement your own function on RL_Agent.base.utils.networks.action_selection_options.
         """
-        super().__init__(actor_lr=actor_lr, critic_lr=critic_lr, batch_size=batch_size, gamma=gamma, n_stack=n_stack,
-                         img_input=img_input, state_size=state_size, n_step_return=n_step_return,
-                         train_steps=train_steps, loss_entropy_beta=loss_entropy_beta, tensorboard_dir=tensorboard_dir,
-                         net_architecture=net_architecture,
+        super().__init__(actor_lr=actor_lr, critic_lr=critic_lr, batch_size=batch_size, epsilon=epsilon,
+                         epsilon_decay=epsilon_decay, epsilon_min=epsilon_min, gamma=gamma, n_stack=n_stack,
+                         img_input=img_input, state_size=state_size, exploration_noise=exploration_noise,
+                         n_step_return=n_step_return, train_steps=train_steps, loss_entropy_beta=loss_entropy_beta,
+                         tensorboard_dir=tensorboard_dir, net_architecture=net_architecture,
                          train_action_selection_options=train_action_selection_options,
                          action_selection_options=action_selection_options
                          )
@@ -94,8 +96,8 @@ class Agent(A2CSuper):
 
         if isinstance(actor_net, RLNetModel):
             agent_model = actor_net
-            actor_optimizer = tf.keras.optimizers.RMSprop(self.actor_lr)
-            critic_optimizer = tf.keras.optimizers.RMSprop(self.critic_lr)
+            actor_optimizer = tf.keras.optimizers.Adam(self.actor_lr)
+            critic_optimizer = tf.keras.optimizers.Adam(self.critic_lr)
 
             agent_model.compile(optimizer=[actor_optimizer, critic_optimizer],
                                 loss=self.loss_selected)
@@ -120,8 +122,8 @@ class Agent(A2CSuper):
 
             agent_model = A2CNetContinuous(actor_net=actor_net, critic_net=critic_model, tensorboard_dir=self.tensorboard_dir)
 
-            actor_optimizer = tf.keras.optimizers.RMSprop(self.actor_lr)
-            critic_optimizer = tf.keras.optimizers.RMSprop(self.critic_lr)
+            actor_optimizer = tf.keras.optimizers.Adam(self.actor_lr)
+            critic_optimizer = tf.keras.optimizers.Adam(self.critic_lr)
 
             agent_model.compile(optimizer=[actor_optimizer, critic_optimizer],
                                 loss=self.loss_selected)
@@ -139,7 +141,7 @@ class Agent(A2CSuper):
         act_pred = self.model.predict(obs)
         action = self.train_action_selection_options(act_pred, self.n_actions, epsilon=self.epsilon, n_env=1)
         action = action[0]
-        action = np.clip(action, a_min=self.action_bound[0], a_max=self.action_bound[1])
+        # action = np.clip(action, a_min=self.action_bound[0], a_max=self.action_bound[1])
         return action
 
     def act(self, obs):
@@ -152,7 +154,7 @@ class Agent(A2CSuper):
         act_pred = self.model.predict(obs)
         action = self.action_selection_options(act_pred, self.n_actions, epsilon=self.epsilon, n_env=1)
         action = action[0]
-        action = np.clip(action, a_min=self.action_bound[0], a_max=self.action_bound[1])
+        # action = np.clip(action, a_min=self.action_bound[0], a_max=self.action_bound[1])
         return action
 
     def remember(self, obs, action, reward, next_obs, done):
@@ -178,3 +180,4 @@ class Agent(A2CSuper):
         Call the neural network training process
         """
         self._replay()
+        self._reduce_epsilon()

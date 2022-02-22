@@ -19,8 +19,8 @@ class ACNet(object):
         self.graph_bc_lr = tf.placeholder(tf.float32, shape=(), name="bc_learing_rate")
 
         self.bc_optimizer = tf.train.AdamOptimizer(self.graph_bc_lr, name='AdamBC')
-        self.actor_optimizer = tf.train.RMSPropOptimizer(self.graph_actor_lr, name='AdamA')  # optimizer for the actor
-        self.critic_optimizer = tf.train.RMSPropOptimizer(self.graph_critic_lr, name='AdamC')  # optimizer for the critic
+        self.actor_optimizer = tf.train.AdamOptimizer(self.graph_actor_lr, name='AdamA')  # optimizer for the actor
+        self.critic_optimizer = tf.train.AdamOptimizer(self.graph_critic_lr, name='AdamC')  # optimizer for the critic
         self.n_actions = n_actions
         self.stack = stack
         self.img_input = img_input

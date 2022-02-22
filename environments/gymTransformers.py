@@ -43,7 +43,7 @@ class gymTr(EnvInterface):
         :return: observation. numpy array of state shape
         """
         self.iter_count = 0
-        return self.e.reset()
+        return self.e.reset
 
     # def step(self, action):
     #     """

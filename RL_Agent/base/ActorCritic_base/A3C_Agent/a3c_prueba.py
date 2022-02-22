@@ -38,8 +38,8 @@ A_BOUND = [env.action_space.low, env.action_space.high]  # action bounds
 class ACNet(object):
     def __init__(self, scope, sess, globalAC=None):
         self.sess = sess
-        self.actor_optimizer = tf.train.RMSPropOptimizer(LR_A, name='RMSPropA')  # optimizer for the actor
-        self.critic_optimizer = tf.train.RMSPropOptimizer(LR_C, name='RMSPropC')  # optimizer for the critic
+        self.actor_optimizer = tf.train.AdamOptimizer(LR_A, name='AdamA')  # optimizer for the actor
+        self.critic_optimizer = tf.train.AdamOptimizer(LR_C, name='AdamC')  # optimizer for the critic
 
         if scope == GLOBAL_NET_SCOPE:  # get global network
             with tf.variable_scope(scope):

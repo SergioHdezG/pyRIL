@@ -554,7 +554,7 @@ class IRLMinMaxLoss(IRLNet):
         """
         return self._evaluate(x_expert, x_agent, y)
 
-    @tf.function(experimental_relax_shapes=True)
+    # @tf.function(experimental_relax_shapes=True)
     def _evaluate(self, x_expert, x_agent, y):
         y_expert = self.net(x_expert, training=False)
         y_agent = self.net(x_agent, training=False)

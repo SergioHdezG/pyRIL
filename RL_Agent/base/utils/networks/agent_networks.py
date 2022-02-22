@@ -1284,8 +1284,8 @@ class DDPGNet(RLNetModel):
         y_ = self.actor_net(tf.cast(x, tf.float32), training=False)
         return y_
 
-    @tf.function(experimental_relax_shapes=True)
-    def train_step(self, obs, actions, rewards, gamma):
+    # @tf.function(experimental_relax_shapes=True)
+    def train_step(self, obs, actions, next_obs, rewards, done, gamma):
         """ Execute one training step (forward pass + backward pass)
         Args:
             source_seq: source sequences
@@ -1296,25 +1296,59 @@ class DDPGNet(RLNetModel):
             The loss value of the current pass
         """
         with tf.GradientTape() as tape:
-            p_target = self.actor_target_net(obs)
-            q_target = self.critic_target_net([obs, p_target])
-            q_target = rewards + gamma * q_target
-            # TODO: actions or self.predict(obs)
+            p_target = self.actor_target_net(next_obs)
+            q_target = self.critic_target_net([next_obs, p_target])
+            q_target = rewards + (1 - done) * gamma * q_target
+            q_ = self.critic_net([obs, actions])
+            loss_critic, loss_components_actor = self.loss_critic(q_, q_target)
+
+        variables_critic = self.critic_net.trainable_variables
+        gradients_critic = tape.gradient(loss_critic, variables_critic)
+        self.optimizer_critic.apply_gradients(zip(gradients_critic, variables_critic))
+
+        with tf.GradientTape() as tape:
             a_ = self.actor_net(obs)
             q_ = self.critic_net([obs, a_])
-            loss_critic, loss_components_actor = self.loss_critic(q_target, q_)
             loss_actor, loss_components_critic = self.loss_actor(q_)
 
         variables_actor = self.actor_net.trainable_variables
-        variables_critic = self.critic_net.trainable_variables
-        gradients_actor, gradients_critic = tape.gradient([loss_actor, loss_critic],
-                                                          [variables_actor, variables_critic])
-
+        gradients_actor = tape.gradient(loss_actor, variables_actor)
         self.optimizer_actor.apply_gradients(zip(gradients_actor, variables_actor))
-        self.optimizer_critic.apply_gradients(zip(gradients_critic, variables_critic))
 
         return [loss_actor, loss_critic], [gradients_actor, gradients_critic], [variables_actor, variables_critic], \
                [loss_components_actor, loss_components_critic]
+
+    # @tf.function(experimental_relax_shapes=True)
+    # def train_step(self, obs, actions, next_obs, rewards, gamma):
+    #     """ Execute one training step (forward pass + backward pass)
+    #     Args:
+    #         source_seq: source sequences
+    #         target_seq_in: input target sequences (<start> + ...)
+    #         target_seq_out: output target sequences (... + <end>)
+    #
+    #     Returns:
+    #         The loss value of the current pass
+    #     """
+    #     with tf.GradientTape() as tape:
+    #         p_target = self.actor_target_net(obs)
+    #         q_target = self.critic_target_net([next_obs, p_target])
+    #         q_target = rewards + gamma * q_target
+    #         # TODO: actions or self.predict(obs)
+    #         a_ = self.actor_net(obs)
+    #         q_ = self.critic_net([obs, a_])
+    #         loss_critic, loss_components_actor = self.loss_critic(q_target, q_)
+    #         loss_actor, loss_components_critic = self.loss_actor(q_)
+    #
+    #     variables_actor = self.actor_net.trainable_variables
+    #     variables_critic = self.critic_net.trainable_variables
+    #     gradients_actor, gradients_critic = tape.gradient([loss_actor, loss_critic],
+    #                                                       [variables_actor, variables_critic])
+    #
+    #     self.optimizer_actor.apply_gradients(zip(gradients_actor, variables_actor))
+    #     self.optimizer_critic.apply_gradients(zip(gradients_critic, variables_critic))
+    #
+    #     return [loss_actor, loss_critic], [gradients_actor, gradients_critic], [variables_actor, variables_critic], \
+    #            [loss_components_actor, loss_components_critic]
 
     def fit(self, obs, next_obs, actions, rewards, done, epochs, batch_size, validation_split=0.,
             shuffle=True, verbose=1, callbacks=None, kargs=[]):
@@ -1324,7 +1358,8 @@ class DDPGNet(RLNetModel):
         dataset = tf.data.Dataset.from_tensor_slices((obs,
                                                       next_obs,
                                                       actions,
-                                                      rewards))
+                                                      rewards,
+                                                      done))
 
         if shuffle:
             dataset = dataset.shuffle(len(obs), reshuffle_each_iteration=True).batch(batch_size)
@@ -1340,11 +1375,14 @@ class DDPGNet(RLNetModel):
             for batch, (bach_obs,
                         bach_next_obs,
                         bach_actions,
-                        bach_rewards) in enumerate(dataset.take(-1)):
+                        bach_rewards,
+                        batch_done) in enumerate(dataset.take(-1)):
 
                 loss, gradients, variables, loss_components = self.train_step(bach_obs,
                                                              bach_actions,
+                                                             bach_next_obs,
                                                              bach_rewards,
+                                                             batch_done,
                                                              gamma)
 
                 if batch % int(batch_size / 5) == 0 and verbose == 1:
@@ -1956,7 +1994,7 @@ class A2CNetContinuous(A2CNetDiscrete):
         y_ = np.random.normal(y_[0].numpy(), y_[1].numpy())
         return y_
 
-    @tf.function(experimental_relax_shapes=True)
+    # @tf.function(experimental_relax_shapes=True)
     def train_step(self, x, y, returns, entropy_beta=0.001):
         """
         Execute one training step (forward pass + backward pass)
@@ -1975,10 +2013,10 @@ class A2CNetContinuous(A2CNetDiscrete):
             normal_dist = tfp.distributions.Normal(y_[0], y_[1])
 
             log_prob = normal_dist.log_prob(y)
-            td = returns - values
+            adv = returns - values
             entropy = normal_dist.entropy()
 
-            loss_actor, [act_comp_loss, entropy_comp_loss] = self.loss_func_actor(log_prob, td, entropy_beta, entropy)
+            loss_actor, [act_comp_loss, entropy_comp_loss] = self.loss_func_actor(log_prob, adv, entropy_beta, entropy)
             loss_critic, loss_components_critic = self.loss_func_critic(returns, values)
 
         y_sampled = normal_dist.sample((1,))[0]
@@ -2003,7 +2041,7 @@ class A2CNetContinuous(A2CNetDiscrete):
         entropy_beta = kargs[1]
         n_step_return = kargs[2]
 
-        returns = self.calculate_returns(rewards, np.logical_not(done), gamma, norm=True, n_step_return=n_step_return)
+        returns = self.calculate_returns(rewards, np.logical_not(done), gamma, norm=False, n_step_return=n_step_return)
 
         dataset = tf.data.Dataset.from_tensor_slices((np.float32(obs),
                                                       np.float32(next_obs),

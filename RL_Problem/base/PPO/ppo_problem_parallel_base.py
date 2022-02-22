@@ -79,10 +79,11 @@ class PPOProblemMultithreadBase(PPOProblemBase):
             for i in range(self.n_stack):
                 zero_obs = np.zeros(obs[0].shape)
                 for o, queue, next_queue in zip(obs, obs_queue, obs_next_queue):
-                    # [queue.append(zero_obs) for i in range(self.n_stack)]
-                    # [next_queue.append(zero_obs) for i in range(self.n_stack)]
-                    [queue.append(o) for i in range(self.n_stack)]
-                    [next_queue.append(o) for i in range(self.n_stack)]
+                    # TODO: Activo la version que rellena con ceros a ver que pasa
+                    [queue.append(zero_obs) for i in range(self.n_stack)]
+                    [next_queue.append(zero_obs) for i in range(self.n_stack)]
+                    # [queue.append(o) for i in range(self.n_stack)]
+                    # [next_queue.append(o) for i in range(self.n_stack)]
 
                 for o, queue, next_queue in zip(obs, obs_queue, obs_next_queue):
                     queue.append(o)

@@ -99,8 +99,8 @@ class Agent(A2CSuper):
 
         if isinstance(actor_net, RLNetModel):
             agent_model = actor_net
-            actor_optimizer = tf.keras.optimizers.RMSprop(self.actor_lr)
-            critic_optimizer = tf.keras.optimizers.RMSprop(self.critic_lr)
+            actor_optimizer = tf.keras.optimizers.Adam(self.actor_lr)
+            critic_optimizer = tf.keras.optimizers.Adam(self.critic_lr)
 
             agent_model.compile(optimizer=[actor_optimizer, critic_optimizer],
                                 loss=self.loss_selected)

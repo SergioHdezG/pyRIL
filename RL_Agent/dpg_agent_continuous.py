@@ -111,7 +111,7 @@ class Agent(DpgAgent):
             model = net_building.build_nn_net(net_architecture, self.state_size)
 
         if isinstance(model, RLNetModel):
-            optimizer = tf.keras.optimizers.RMSprop(self.learning_rate)
+            optimizer = tf.keras.optimizers.Adam(self.learning_rate)
             model.compile(optimizer=[optimizer],
                           loss=[dpg_loss_continuous])
         else:
@@ -120,7 +120,7 @@ class Agent(DpgAgent):
                 model.add(Dense(self.n_actions, activation='linear'))
 
             model = DPGNet(net=model, tensorboard_dir=self.tensorboard_dir)
-            optimizer = tf.keras.optimizers.RMSprop(self.learning_rate)
+            optimizer = tf.keras.optimizers.Adam(self.learning_rate)
             model.compile(optimizer=[optimizer],
                           loss=[dpg_loss_continuous])
 

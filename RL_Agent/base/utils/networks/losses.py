@@ -24,6 +24,15 @@ def dpg_loss_continuous(pred, actions, returns):
     loss = tf.math.reduce_mean(log_prob * returns)
     return loss, [log_prob, returns]
 
+@tf.function
+def dpg_loss_continuous_beta(pred, actions, returns):
+    alpha_pred, beta_pred = tf.split(pred, num_or_size_splits=2, axis=1)
+    dist = tfp.distributions.Beta(alpha_pred, beta_pred)
+    log_prob = - dist.log_prob(actions)
+    returns = tf.expand_dims(returns, axis=-1)
+
+    loss = tf.math.reduce_mean(log_prob * returns)
+    return loss, [log_prob, returns]
 
 @tf.function(experimental_relax_shapes=True)
 def ddpg_actor_loss(values):
@@ -32,14 +41,20 @@ def ddpg_actor_loss(values):
 
 
 @tf.function(experimental_relax_shapes=True)
-def ddpg_critic_loss(q_target, q):
-    loss = mse(q_target, q)
+def ddpg_critic_loss(q, q_target):
+    loss = mse(q, q_target)
     return loss, []
 
 @tf.function(experimental_relax_shapes=True)
 def log10(x):
   numerator = tf.math.log(x)
   denominator = tf.math.log(tf.constant(10, dtype=numerator.dtype))
+  return numerator / denominator
+
+@tf.function(experimental_relax_shapes=True)
+def log2(x):
+  numerator = tf.math.log(x)
+  denominator = tf.math.log(tf.constant(2, dtype=numerator.dtype))
   return numerator / denominator
 
 # @tf.function(experimental_relax_shapes=True)
@@ -139,9 +154,7 @@ def ppo_loss_continuous(y_true, y_pred, advantage, old_prediction, returns, valu
 
     actor_loss = tf.reduce_mean(tf.math.minimum(p1, p2))
     critic_loss = tf.reduce_mean(tf.math.square(returns - values))
-    entr_prob = tf.math.exp(- tf.math.square(y_true - y_pred) / (2 * tf.math.square(tf.math.reduce_std(y_pred)))) / tf.math.sqrt(2 * pi)*tf.math.reduce_std(y_pred)
-    entropy = entr_prob * log10(entr_prob + 1e-10)
-    # entropy = new_prob * log10(new_prob + 1e-10)
+    entropy = new_prob * log2(new_prob + 1e-20)
     shannon_entropy = -tf.reduce_mean(entropy)
 
     # _y_t = y_true.numpy()
@@ -169,6 +182,112 @@ def ppo_loss_continuous(y_true, y_pred, advantage, old_prediction, returns, valu
 
     return -actor_loss + critic_discount * critic_loss - entropy_beta * shannon_entropy, [-actor_loss, critic_loss, -shannon_entropy]
 
+# @tf.function(experimental_relax_shapes=True)
+def ppo_loss_continuous_beta(y_true, y_pred, advantage, old_prediction, returns, values, stddev=1.0, loss_clipping=0.3,
+                        critic_discount=0.5, entropy_beta=0.001):
+    """
+    f(x) = (1/σ√2π)exp(-(1/2σ^2)(x−μ)^2)
+    X∼N(μ, σ)
+    """
+    alpha_pred, beta_pred = tf.split(y_pred, num_or_size_splits=2, axis=1)
+    alpha_old, beta_old = tf.split(old_prediction, num_or_size_splits=2, axis=1)
+
+    new_dist = tfp.distributions.Beta(alpha_pred, beta_pred)
+    old_dist = tfp.distributions.Beta(alpha_old, beta_old)
+
+    new_prob = new_dist.prob(y_true)
+    old_prob = old_dist.prob(y_true)
+
+    # ratio = (new_prob) / (old_prob + 1e-20)
+    ratio = tf.exp(tf.math.log(new_prob) - tf.math.log(old_prob))  # pnew / pold
+
+    p1 = ratio * advantage
+    p2 = tf.math.multiply(tf.clip_by_value(ratio, clip_value_min=1 - loss_clipping,
+                                           clip_value_max=1 + loss_clipping), advantage)
+
+    actor_loss = tf.reduce_mean(tf.math.minimum(p1, p2))
+    critic_loss = tf.reduce_mean(tf.math.square(returns - values))
+    entropy = new_prob * log2(new_prob + 1e-20)
+    shannon_entropy = -tf.reduce_mean(entropy)
+
+    # _y_t = y_true.numpy()
+    # _y_p = y_pred.numpy()
+    # _a_ = advantage.numpy()
+    # _o_p = old_prediction.numpy()
+    # _n_p = new_prob.numpy()
+    # _r_ = returns.numpy()
+    # _v_ = values.numpy()
+    # _o_p = old_prob.numpy()
+    # _rat = ratio.numpy()
+    # _p_min = tf.math.minimum(p1, p2).numpy()
+    # _p1_ = p1.numpy()
+    # _p2_ = p2.numpy()
+    # _a_l = actor_loss.numpy()
+    # _c_l = critic_loss.numpy()
+    # _s_e_ = shannon_entropy.numpy()
+    # _std_n = tf.math.reduce_std(y_true).numpy()
+    # _std_o = tf.math.reduce_std(old_prediction).numpy()
+    #
+    # if np.any(np.isnan(_a_l)) or np.any(np.isinf(_a_l)):
+    #     print('actor_loss = nan or inf')
+    # if np.any(np.isnan(_s_e_)) or np.any(np.isinf(_s_e_)):
+    #     print('entropy_loss = nan or inf')
+
+    return -actor_loss + critic_discount * critic_loss - entropy_beta * shannon_entropy, [-actor_loss, critic_loss, -shannon_entropy]
+
+# TODO: Al hacer esta pérdida correctamente se desconecta el grafo por que hay que usar fsolve para sacar alpha y beta
+# @tf.function(experimental_relax_shapes=True)
+def ppo_loss_continuous_beta_explore(y_true, y_pred, advantage, old_prediction, returns, values, stddev=1.0, loss_clipping=0.3,
+                        critic_discount=0.5, entropy_beta=0.001):
+    """
+    f(x) = (1/σ√2π)exp(-(1/2σ^2)(x−μ)^2)
+    X∼N(μ, σ)
+    """
+    alpha_pred, beta_pred = tf.split(y_pred, num_or_size_splits=2, axis=1)
+    alpha_old, beta_old = tf.split(old_prediction, num_or_size_splits=2, axis=1)
+
+    new_dist = tfp.distributions.Beta(alpha_pred, beta_pred)
+    old_dist = tfp.distributions.Beta(alpha_old, beta_old)
+
+    new_prob = new_dist.prob(y_true)
+    old_prob = old_dist.prob(y_true)
+
+    # ratio = (new_prob) / (old_prob + 1e-20)
+    ratio = tf.exp(tf.math.log(new_prob) - tf.math.log(old_prob))  # pnew / pold
+
+    p1 = ratio * advantage
+    p2 = tf.math.multiply(tf.clip_by_value(ratio, clip_value_min=1 - loss_clipping,
+                                           clip_value_max=1 + loss_clipping), advantage)
+
+    actor_loss = tf.reduce_mean(tf.math.minimum(p1, p2))
+    critic_loss = tf.reduce_mean(tf.math.square(returns - values))
+    entropy = new_prob * log2(new_prob + 1e-20)
+    shannon_entropy = -tf.reduce_mean(entropy)
+
+    # _y_t = y_true.numpy()
+    # _y_p = y_pred.numpy()
+    # _a_ = advantage.numpy()
+    # _o_p = old_prediction.numpy()
+    # _n_p = new_prob.numpy()
+    # _r_ = returns.numpy()
+    # _v_ = values.numpy()
+    # _o_p = old_prob.numpy()
+    # _rat = ratio.numpy()
+    # _p_min = tf.math.minimum(p1, p2).numpy()
+    # _p1_ = p1.numpy()
+    # _p2_ = p2.numpy()
+    # _a_l = actor_loss.numpy()
+    # _c_l = critic_loss.numpy()
+    # _s_e_ = shannon_entropy.numpy()
+    # _std_n = tf.math.reduce_std(y_true).numpy()
+    # _std_o = tf.math.reduce_std(old_prediction).numpy()
+    #
+    # if np.any(np.isnan(_a_l)) or np.any(np.isinf(_a_l)):
+    #     print('actor_loss = nan or inf')
+    # if np.any(np.isnan(_s_e_)) or np.any(np.isinf(_s_e_)):
+    #     print('entropy_loss = nan or inf')
+
+    return -actor_loss + critic_discount * critic_loss - entropy_beta * shannon_entropy, [-actor_loss, critic_loss, -shannon_entropy]
 # @tf.function(experimental_relax_shapes=True)
 # def ppo_loss_continuous(y_true, y_pred, advantage, old_prediction, returns, values, stddev=1.0, loss_clipping=0.3,
 #                         critic_discount=0.5, entropy_beta=0.001):
@@ -253,11 +372,22 @@ def ppo_loss_discrete(y_true, y_pred, advantage, old_prediction, returns, values
 
 
 @tf.function(experimental_relax_shapes=True)
-def a2c_actor_loss(log_prob, td, entropy_beta, entropy):
-    loss = tf.math.reduce_mean(- log_prob * td)
+def a2c_actor_loss(log_prob, adv, entropy_beta, entropy):
+    loss = - tf.math.reduce_mean(log_prob * adv)
     entropy = - tf.math.reduce_mean(entropy)
     return tf.math.reduce_mean(loss + (entropy*entropy_beta)), [loss, entropy]
 
+@tf.function(experimental_relax_shapes=True)
+def a2c_actor_loss_beta(y_true, y_pred , values, returns, entropy_beta=0.0):
+    alpha_, beta_ = tf.split(y_pred, num_or_size_splits=2, axis=1)
+    dist = tfp.distributions.Beta(alpha_, beta_)
+
+    log_prob = dist.log_prob(y_true)
+    adv = returns - values
+    entropy = dist.entropy()
+    loss = - tf.math.reduce_mean(log_prob * adv)
+    entropy = - tf.math.reduce_mean(entropy)
+    return tf.math.reduce_mean(loss + (entropy*entropy_beta)), [loss, entropy]
 
 @tf.function(experimental_relax_shapes=True)
 def a2c_critic_loss(y, y_):

@@ -18,8 +18,8 @@ from RL_Agent.base.utils.networks import action_selection_options
 # worker class that inits own environment, trains on it and updloads weights to global net
 class Agent(A2CQueueSuper):
     def __init__(self, actor_lr=1e-4, critic_lr=1e-3, batch_size=32, gamma=0.90, n_stack=1, img_input=False,
-                 state_size=None, n_step_return=15, train_steps=1, loss_entropy_beta=0.001, memory_size=5000,
-                 tensorboard_dir=None, net_architecture=None,
+                 state_size=None, epsilon=1.0, epsilon_decay=0.999, epsilon_min=0.15, exploration_noise=0.5, n_step_return=15,
+                 train_steps=1, loss_entropy_beta=0.001, memory_size=5000, tensorboard_dir=None, net_architecture=None,
                  train_action_selection_options=action_selection_options.identity,
                  action_selection_options=action_selection_options.identity
                  ):
@@ -54,7 +54,8 @@ class Agent(A2CQueueSuper):
             documentation on how to implement your own function on RL_Agent.base.utils.networks.action_selection_options.
         """
         super().__init__(actor_lr=actor_lr, critic_lr=critic_lr, batch_size=batch_size, gamma=gamma, n_stack=n_stack,
-                         img_input=img_input, state_size=state_size, n_step_return=n_step_return,
+                         img_input=img_input, state_size=state_size, epsilon=epsilon, epsilon_decay=epsilon_decay,
+                         epsilon_min=epsilon_min, exploration_noise=exploration_noise, n_step_return=n_step_return,
                          memory_size=memory_size, loss_entropy_beta=loss_entropy_beta, train_steps=train_steps,
                          tensorboard_dir=tensorboard_dir, net_architecture=net_architecture,
                          train_action_selection_options=train_action_selection_options,
@@ -97,8 +98,8 @@ class Agent(A2CQueueSuper):
 
         if isinstance(actor_net, RLNetModel):
             agent_model = actor_net
-            actor_optimizer = tf.keras.optimizers.RMSprop(self.actor_lr)
-            critic_optimizer = tf.keras.optimizers.RMSprop(self.critic_lr)
+            actor_optimizer = tf.keras.optimizers.Adam(self.actor_lr)
+            critic_optimizer = tf.keras.optimizers.Adam(self.critic_lr)
 
             agent_model.compile(optimizer=[actor_optimizer, critic_optimizer],
                                 loss=self.loss_selected)
@@ -126,8 +127,8 @@ class Agent(A2CQueueSuper):
             agent_model = A2CNetQueueContinuous(actor_net=actor_net, critic_net=critic_model,
                                            tensorboard_dir=self.tensorboard_dir)
 
-            actor_optimizer = tf.keras.optimizers.RMSprop(self.actor_lr)
-            critic_optimizer = tf.keras.optimizers.RMSprop(self.critic_lr)
+            actor_optimizer = tf.keras.optimizers.Adam(self.actor_lr)
+            critic_optimizer = tf.keras.optimizers.Adam(self.critic_lr)
 
             agent_model.compile(optimizer=[actor_optimizer, critic_optimizer],
                                 loss=self.loss_selected)

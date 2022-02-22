@@ -94,7 +94,7 @@ class Discriminator(DiscriminatorBase):
 
         if isinstance(discriminator_net, ILNetInterfaz):
             discriminator_model = discriminator_net
-            optimizer = tf.keras.optimizers.RMSprop(self.learning_rate)
+            optimizer = tf.keras.optimizers.Adam(self.learning_rate)
             self.loss_selected = losses.gail_loss
             discriminator_model.compile(optimizer=optimizer, loss=self.loss_selected, metrics=tf.keras.metrics.MeanSquaredError())
         else:
@@ -105,7 +105,7 @@ class Discriminator(DiscriminatorBase):
 
             discriminator_model = GAILNet(discriminator_net, tensorboard_dir=self.tensorboard_dir)
 
-            optimizer = tf.keras.optimizers.RMSprop(self.learning_rate)
+            optimizer = tf.keras.optimizers.Adam(self.learning_rate)
             self.loss_selected = losses.gail_loss
             discriminator_model.compile(optimizer=optimizer, loss=self.loss_selected, metrics=tf.keras.metrics.MeanSquaredError())
         return discriminator_model

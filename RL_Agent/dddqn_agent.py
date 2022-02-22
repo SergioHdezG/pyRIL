@@ -120,7 +120,7 @@ class Agent(DQNAgentSuper):
             model = net_building.build_nn_net(net_architecture, self.state_size, common=True)
 
         if isinstance(model, RLNetModel):
-            optimizer = tf.keras.optimizers.RMSprop(self.learning_rate)
+            optimizer = tf.keras.optimizers.Adam(self.learning_rate)
             model.compile(optimizer=optimizer,
                           loss=dqn_loss)
         else:
@@ -157,7 +157,7 @@ class Agent(DQNAgentSuper):
             duelingDQN = Model(inputs=model_c.inputs, outputs=output)
 
             model = DDDQNNet(net=duelingDQN, tensorboard_dir=self.tensorboard_dir)
-            optimizer = tf.keras.optimizers.RMSprop(self.learning_rate)
+            optimizer = tf.keras.optimizers.Adam(self.learning_rate)
             model.compile(optimizer=[optimizer],
                           loss=[dqn_loss])
 
