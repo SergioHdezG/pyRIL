@@ -532,7 +532,6 @@ class IRLMinMaxLoss(IRLNet):
 
             loss, individual_loss = self.loss_func(y_expert, y_agent)
 
-            # TODO: las métricas convencionales no valen
         self.metrics.update_state(tf.concat(y, axis=0), tf.concat([y_expert, y_agent], axis=0))
 
         variables = self.net.trainable_variables
@@ -762,8 +761,8 @@ class GAILNet(IRLNet):
 
             loss, individual_loss = self.loss_func(y_expert, y_agent)
 
-        # TODO: las métricas convencionales no valen
-        self.metrics.update_state(tf.concat([y_expert, y_agent], axis=0), tf.concat(y, axis=0) )
+        # TODO: Revisar esto
+        self.metrics.update_state(tf.concat(y, axis=0), tf.concat([y_expert, y_agent], axis=0))
 
         variables = self.net.trainable_variables
         gradients = tape.gradient(loss, variables)
@@ -1197,3 +1196,32 @@ class GAILNet(IRLNet):
 
         print("Saved model to disk")
         print(datetime.datetime.now())
+
+class WGAILNet(GAILNet):
+    # @tf.function(experimental_relax_shapes=True)
+    def _train_step(self, x_expert, x_agent, y):
+        """
+        Execute one training step (forward pass + backward pass)
+        Args:
+            source_seq: source sequences
+            target_seq_in: input target sequences (<start> + ...)
+            target_seq_out: output target sequences (... + <end>)
+
+        Returns:
+            The loss value of the current pass
+        """
+        with tf.GradientTape() as tape:
+            y_expert = self.net(x_expert, training=True)
+            y_agent = self.net(x_agent, training=True)
+
+            loss, individual_loss = self.loss_func(y_expert, y_agent)
+
+        # TODO: Revisar esto
+        self.metrics.update_state(tf.concat(y, axis=0), tf.concat([y_expert, y_agent], axis=0))
+
+        variables = self.net.trainable_variables
+        gradients = tape.gradient(loss, variables)
+        self.optimizer.apply_gradients(zip(gradients, variables))
+        self.net.trainable_variables = self.net.trainable_variables = tf.clip_by_value(self.net.trainable_variables, -0.01, 0.01)
+        return loss, gradients, variables, individual_loss
+

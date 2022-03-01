@@ -339,13 +339,13 @@ def build_ddpg_stack_critic_tf(net_architecture, input_shape, actor_net):
         return model
 
 
-def build_ddpg_nn_critic_tf(net_architecture, input_shape, actor_net):
+def build_ddpg_nn_critic_tf(net_architecture, input_shape, actor_net, n_actions):
     _, _, _, _, _, n_dense_layers, n_neurons, dense_activation, use_custom_net, \
     custom_net, define_custom_output_layer = read_net_params(net_architecture, actor=False, critic=True)
 
     if use_custom_net:
         try:
-            return custom_net(input_shape, actor_net)
+            return custom_net(input_shape, n_actions)
         except:
             from termcolor import colored
             print(colored('Custom critic network for DDPG requires two arguments as input: input_shape and actor_net. '

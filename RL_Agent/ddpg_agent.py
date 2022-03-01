@@ -159,11 +159,11 @@ class Agent(AgentSuper):
                                                kernel_initializer=RandomNormal(mean=0.0, stddev=1e-5, seed=None)))
 
             if self.img_input:  # and (self.stack or not self.stack)
-                critic_model = net_building.build_ddpg_conv_critic_tf(net_architecture, self.state_size, actor_model)
+                critic_model = net_building.build_ddpg_conv_critic_tf(net_architecture, self.state_size, actor_model, self.n_actions)
             elif self.stack:
-                critic_model = net_building.build_ddpg_stack_critic_tf(net_architecture, self.state_size, actor_model)
+                critic_model = net_building.build_ddpg_stack_critic_tf(net_architecture, self.state_size, actor_model, self.n_actions)
             else:
-                critic_model = net_building.build_ddpg_nn_critic_tf(net_architecture, self.state_size, actor_model)
+                critic_model = net_building.build_ddpg_nn_critic_tf(net_architecture, self.state_size, actor_model, self.n_actions)
 
             if not define_output_layer:
                 critic_out = tf.keras.layers.Dense(units=self.n_actions, activation='linear')(

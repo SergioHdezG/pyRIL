@@ -9,13 +9,13 @@ def dqn_loss(y, y_):
     return mse(y, y_), []
     # return tf.math.reduce_mean(tf.math.square(y-y_))
 
-@tf.function
+@tf.function(experimental_relax_shapes=True)
 def dpg_loss(pred, actions, returns):
     log_prob = tf.keras.losses.CategoricalCrossentropy(reduction=tf.keras.losses.Reduction.NONE)(actions, pred)
     loss = tf.math.reduce_mean(log_prob * returns)
     return loss, [log_prob, returns]
 
-@tf.function
+@tf.function(experimental_relax_shapes=True)
 def dpg_loss_continuous(pred, actions, returns):
     prob = tfp.distributions.Normal(pred, tf.math.reduce_std(pred))
     log_prob = - prob.log_prob(actions)
@@ -24,7 +24,7 @@ def dpg_loss_continuous(pred, actions, returns):
     loss = tf.math.reduce_mean(log_prob * returns)
     return loss, [log_prob, returns]
 
-@tf.function
+@tf.function(experimental_relax_shapes=True)
 def dpg_loss_continuous_beta(pred, actions, returns):
     alpha_pred, beta_pred = tf.split(pred, num_or_size_splits=2, axis=1)
     dist = tfp.distributions.Beta(alpha_pred, beta_pred)
@@ -182,7 +182,7 @@ def ppo_loss_continuous(y_true, y_pred, advantage, old_prediction, returns, valu
 
     return -actor_loss + critic_discount * critic_loss - entropy_beta * shannon_entropy, [-actor_loss, critic_loss, -shannon_entropy]
 
-# @tf.function(experimental_relax_shapes=True)
+@tf.function(experimental_relax_shapes=True)
 def ppo_loss_continuous_beta(y_true, y_pred, advantage, old_prediction, returns, values, stddev=1.0, loss_clipping=0.3,
                         critic_discount=0.5, entropy_beta=0.001):
     """

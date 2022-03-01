@@ -38,7 +38,7 @@ class env(EnvInterface):
 
     def reset(self):
         self.episodes_count += 1
-        obs = self.gym_env.reset()
+        obs = self.gym_env.reset
         for i in range(45):
             obs, reward, done, info = self.gym_env.step([0, 0.0, 0.0])
         obs = np.reshape(obs / 255, (1, obs.shape[0], obs.shape[1], obs.shape[2]))

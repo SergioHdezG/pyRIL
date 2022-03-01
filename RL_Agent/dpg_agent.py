@@ -20,7 +20,8 @@ from RL_Agent.base.utils.networks import action_selection_options
 
 class Agent(AgentSuper):
     # TODO: Quizás debería incluir epsilon por si el usuario lo quiere utilizar.
-    def __init__(self, learning_rate=1e-3, batch_size=32, gamma=0.95, n_stack=1, img_input=False, state_size=None,
+    def __init__(self, learning_rate=1e-3, batch_size=32, epsilon=1.0, epsilon_decay=0.999, epsilon_min=0.15,
+                 exploration_noise=0.5, gamma=0.95, n_stack=1, img_input=False, state_size=None,
                  train_steps=1, tensorboard_dir=None, net_architecture=None,
                  train_action_selection_options=action_selection_options.random_choice,
                  action_selection_options=action_selection_options.random_choice
@@ -50,7 +51,8 @@ class Agent(AgentSuper):
             adapting the action selection procedure to an especial neural network. Some usable functions and
             documentation on how to implement your own function on RL_Agent.base.utils.networks.action_selection_options.
         """
-        super().__init__(learning_rate=learning_rate, batch_size=batch_size, gamma=gamma, train_steps=train_steps,
+        super().__init__(learning_rate=learning_rate, batch_size=batch_size, epsilon=epsilon, epsilon_decay=epsilon_decay,
+                         epsilon_min=epsilon_min, exploration_noise=exploration_noise, gamma=gamma, train_steps=train_steps,
                          n_stack=n_stack, img_input=img_input, state_size=state_size, tensorboard_dir=tensorboard_dir,
                          net_architecture=net_architecture,
                          train_action_selection_options=train_action_selection_options,
@@ -80,7 +82,7 @@ class Agent(AgentSuper):
         # self.optimizer = tf.train.AdamOptimizer
         # self._build_graph(self.net_architecture)
 
-        self.epsilon = 0.  # Is not used here
+        # self.epsilon = 0.  # Is not used here
 
     def _build_model(self, net_architecture):
         """
@@ -216,6 +218,8 @@ class Agent(AgentSuper):
                                 kargs=[self.gamma])
 
             self.done = False
+
+        self._reduce_epsilon()
         return loss
 
     def _load(self, path, checkpoint=False):

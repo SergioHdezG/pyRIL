@@ -175,7 +175,7 @@ class RLProblemSuper(object, metaclass=ABCMeta):
             self._feedback_print(self.total_episodes, episodic_reward, epochs, verbose, rew_mean_list)
             self.total_episodes += 1
 
-        self.agent.save_tensorboar_rl_histogram(self.histogram_metrics)
+            self.agent.save_tensorboar_rl_histogram(self.histogram_metrics)
         return
 
     def copy_next_obs(self, next_obs, obs, obs_next_queue, obs_queue):

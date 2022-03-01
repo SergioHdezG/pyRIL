@@ -976,7 +976,7 @@ class DPGNet(RLNetModel):
         y_ = self.net(tf.cast(x, tf.float32), training=False)
         return y_
 
-    @tf.function(experimental_relax_shapes=True)
+    # @tf.function(experimental_relax_shapes=True)
     def train_step(self, obs, actions, returns):
         """ Execute one training step (forward pass + backward pass)
         Args:
@@ -1392,12 +1392,12 @@ class DDPGNet(RLNetModel):
                             time.time() - start_time))
                     start_time = time.time()
 
-            if self.train_summary_writer is not None:
-                with self.train_summary_writer.as_default():
-                    self.loss_sumaries([loss[0], loss[1]], ['loss actor', 'loss critic'], self.total_epochs)
-                    self.rl_loss_sumaries([np.float32(np.expand_dims(actions, axis=-1))],
-                                     ['actions'],
-                                     self.total_epochs)
+                if self.train_summary_writer is not None:
+                    with self.train_summary_writer.as_default():
+                        self.loss_sumaries([loss[0], loss[1]], ['loss actor', 'loss critic'], self.total_epochs)
+                        self.rl_loss_sumaries([np.float32(np.expand_dims(actions, axis=-1))],
+                                         ['actions'],
+                                         self.total_epochs)
             self.total_epochs += 1
 
             history.history['loss'].append(loss[0].numpy())
@@ -2088,27 +2088,27 @@ class A2CNetContinuous(A2CNetDiscrete):
                             time.time() - start_time))
                     start_time = time.time()
 
-            if self.train_summary_writer is not None:
-                with self.train_summary_writer.as_default():
-                    self.loss_sumaries([loss[0],
-                                        loss[1],
-                                        tf.math.reduce_mean(act_comp_loss),
-                                        tf.math.reduce_mean(entropy_comp_loss),
-                                        tf.math.reduce_mean(entropy_beta * entropy_comp_loss)],
-                                       ['actor_model_loss (a_l + b*e_l)',
-                                        'critic_model_loss (mse)',
-                                        'actor_loss_component (a_l)',
-                                        'entropy_loss_component (e_l)',
-                                        '(b*el)'], self.total_epochs)
-                    self.rl_loss_sumaries([np.float32(np.expand_dims(actions, axis=-1)),
-                                      np.float32(np.expand_dims(returns, axis=-1)),
-                                      np.float32(np.expand_dims(pred_act, axis=-1)),
-                                      np.float32(np.expand_dims(pred_std, axis=-1))],
-                                     ['actions',
-                                      'returns',
-                                      'predicted action',
-                                      'predicted stddev'],
-                                     self.total_epochs)
+                if self.train_summary_writer is not None:
+                    with self.train_summary_writer.as_default():
+                        self.loss_sumaries([loss[0],
+                                            loss[1],
+                                            tf.math.reduce_mean(act_comp_loss),
+                                            tf.math.reduce_mean(entropy_comp_loss),
+                                            tf.math.reduce_mean(entropy_beta * entropy_comp_loss)],
+                                           ['actor_model_loss (a_l + b*e_l)',
+                                            'critic_model_loss (mse)',
+                                            'actor_loss_component (a_l)',
+                                            'entropy_loss_component (e_l)',
+                                            '(b*el)'], self.total_epochs)
+                        self.rl_loss_sumaries([np.float32(np.expand_dims(actions, axis=-1)),
+                                          np.float32(np.expand_dims(returns, axis=-1)),
+                                          np.float32(np.expand_dims(pred_act, axis=-1)),
+                                          np.float32(np.expand_dims(pred_std, axis=-1))],
+                                         ['actions',
+                                          'returns',
+                                          'predicted action',
+                                          'predicted stddev'],
+                                         self.total_epochs)
             self.total_epochs += 1
 
             history_actor.history['loss'].append(loss[0].numpy())

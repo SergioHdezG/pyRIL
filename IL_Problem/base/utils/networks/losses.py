@@ -22,7 +22,7 @@ def deepirl_loss(y, y_):
     #  return bce(y, y_)
 
 
-# @tf.function
+@tf.function
 def gail_loss(y_expert, y_agent, entcoeff=0.0):
     """
     MinMax GAN loss
@@ -35,17 +35,17 @@ def gail_loss(y_expert, y_agent, entcoeff=0.0):
     loss_entropy = -entcoeff * entropy
     total_loss = loss_agent + loss_expert #+ loss_entropy
 
-    l_e = loss_expert.numpy()
-    l_a = loss_agent.numpy()
-    p = probs.numpy()
-    e_ = entropy_.numpy()
-    e = entropy.numpy()
-    l_ent = loss_entropy.numpy()
-    t_l = total_loss.numpy()
-
-    if np.isnan(t_l) or np.isinf(t_l):
-        print('nan')
-        print('l_e, l_a, p, e_, e, l_ent, t_l:', l_e, l_a, p, e_, e, l_ent, t_l)
+    # l_e = loss_expert.numpy()
+    # l_a = loss_agent.numpy()
+    # p = probs.numpy()
+    # e_ = entropy_.numpy()
+    # e = entropy.numpy()
+    # l_ent = loss_entropy.numpy()
+    # t_l = total_loss.numpy()
+    #
+    # if np.isnan(t_l) or np.isinf(t_l):
+    #     print('nan')
+    #     print('l_e, l_a, p, e_, e, l_ent, t_l:', l_e, l_a, p, e_, e, l_ent, t_l)
     return total_loss, [loss_agent, loss_expert, loss_entropy]
 
 @tf.function

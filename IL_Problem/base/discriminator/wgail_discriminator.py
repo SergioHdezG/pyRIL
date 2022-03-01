@@ -6,7 +6,9 @@ from IL_Problem.base.discriminator.discriminator_base import DiscriminatorBase
 from IL_Problem.base.utils import discriminator_nn_building
 from RL_Agent.base.utils.networks.default_networks import irl_net
 from IL_Problem.base.utils.networks.il_networks import GAILNet
+from IL_Problem.base.utils.networks.il_networks import WGAILNet
 from IL_Problem.base.utils.networks.networks_interface import ILNetInterfaz
+from IL_Problem.base.discriminator import gail_discriminator
 from IL_Problem.base.utils.networks import losses
 import numpy as np
 
@@ -20,40 +22,7 @@ def logit_bernoulli_entropy(logits):
     ent = (1.-tf.nn.sigmoid(logits))*logits - logsigmoid(logits)
     return ent
 
-class Discriminator(DiscriminatorBase):
-    def __init__(self, state_size, n_actions, n_stack=1, img_input=False, use_expert_actions=False,
-                 learning_rate=1e-3, batch_size=5, epochs=5, val_split=0.15, discrete=False, net_architecture=None,
-                 preprocess=None, tensorboard_dir=None):
-        """
-        :param state_size: (tuple of ints) State size. Shape of the state that must match network's inputs. This shape
-            must include the number of stacked states.
-        :param n_actions: (int) Number of action of the agent.
-        :param n_stack: (int) Number of time steps stacked on the state.
-        :param img_input: (bool)  Flag for using a images as states. If True, the states are supposed to be images (3D
-            array).
-        :param use_expert_actions: (bool) If True, the discriminator will use the states and the actions related to each
-            state as input. If False, the discriminator only use states as inputs.
-        :param learning_rate: (float) Learning rate for training the neural network.
-        :param batch_size: (int) Size of training batches.
-        :param epochs: (int) Number of epochs for training the discriminator in each iteration of the algorithm.
-        :param val_split: (float in [0., 1.]) Fraction of data to be used for validation in discriminator training.
-        :param discrete: (bool) Set to True when discrete action spaces are used. Set to False when continuous action
-            spaces are used.
-        :param net_architecture: (dict) Define the net architecture. Is recommended use dicts from
-            IL_Problem.base.utils.networks.networks_dictionaries.py.
-        :param preprocess: (function) Function for preprocessing the states. Signature shape: preprocess(state). Must
-            return a nd array of the selected state_size.
-        :param tensorboard_dir: (str) path to store tensorboard summaries.
-        """
-        super().__init__(state_size=state_size, n_actions=n_actions, n_stack=n_stack, img_input=img_input,
-                         use_expert_actions=use_expert_actions, learning_rate=learning_rate, batch_size=batch_size,
-                         epochs=epochs, val_split=val_split, discrete=discrete, preprocess=preprocess,
-                         tensorboard_dir=tensorboard_dir)
-
-        self.entropy_beta = 0.001
-        self.model = self._build_model(net_architecture)
-
-
+class Discriminator(gail_discriminator.DiscriminatorBase):
     def _build_net(self, state_size, net_architecture, last_activation='sigmoid'):
         """
         Build the neural network
@@ -94,7 +63,7 @@ class Discriminator(DiscriminatorBase):
 
         if isinstance(discriminator_net, ILNetInterfaz):
             discriminator_model = discriminator_net
-            optimizer = tf.keras.optimizers.RMSprop(self.learning_rate)
+            optimizer = tf.keras.optimizers.Adam(self.learning_rate)
             self.loss_selected = losses.gail_loss
             discriminator_model.compile(optimizer=optimizer, loss=self.loss_selected, metrics=tf.keras.metrics.BinaryCrossentropy())
         else:
@@ -103,9 +72,9 @@ class Discriminator(DiscriminatorBase):
                 discriminator_net = tf.keras.models.Model(inputs=discriminator_net.inputs, outputs=output)
                 # discriminator_net.add(Dense(1, name='output', activation=last_activation))
 
-            discriminator_model = GAILNet(discriminator_net, tensorboard_dir=self.tensorboard_dir)
+            discriminator_model = WGAILNet(discriminator_net, tensorboard_dir=self.tensorboard_dir)
 
-            optimizer = tf.keras.optimizers.RMSprop(self.learning_rate)
+            optimizer = tf.keras.optimizers.Adam(self.learning_rate)
             self.loss_selected = losses.gail_loss
             discriminator_model.compile(optimizer=optimizer, loss=self.loss_selected, metrics=tf.keras.metrics.BinaryCrossentropy())
         return discriminator_model
@@ -153,7 +122,7 @@ class Discriminator(DiscriminatorBase):
             self.loss = -expectation
 
         self.expectations = [agent_expectation, expert_expectation]  # , entropy]
-        optimizer = tf.train.RMSpropOptimizer(learning_rate=self.learning_rate)
+        optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
         self.train_op = optimizer.minimize(self.loss)
 
         self.reward = -sig_agent_net + 1
