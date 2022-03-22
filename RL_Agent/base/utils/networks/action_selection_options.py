@@ -1,6 +1,5 @@
 import random
 import numpy as np
-
 """
 These functions uses different strategies for choice the actions to perform given the outputs of the network. 
 Each function have the next structure and  must be respected in order to implement a custom function:
@@ -59,3 +58,14 @@ def gaussian_noise(act_pred, n_actions, epsilon=0., n_env=1, exploration_noise=1
 def random_normal(act_pred, n_actions, epsilon=0., n_env=1, exploration_noise=0.5):
     action = np.random.normal(act_pred, np.clip(exploration_noise, 0., exploration_noise))
     return action
+
+def beta_estimation(beta_estimator):
+
+    def act_selection(act_pred, n_actions, epsilon=0., n_env=1, exploration_noise=0.5):
+        beta_estimator.calculate_new_params_in_change(epsilon*exploration_noise)
+        alpha, beta = beta_estimator.get_alpha_beta(act_pred)
+        action = np.concatenate([alpha, beta], axis=-1)
+
+        return action
+
+    return act_selection

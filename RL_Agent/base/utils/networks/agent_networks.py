@@ -112,7 +112,7 @@ class PPONet(RLNetModel):
         return self._train_step(x, old_prediction, y, returns, advantages, stddev, loss_clipping,
                    critic_discount, entropy_beta)
 
-    @tf.function(experimental_relax_shapes=True)
+    # @tf.function(experimental_relax_shapes=True)
     def _train_step(self, x, old_prediction, y, returns, advantages, stddev=None, loss_clipping=0.3,
                    critic_discount=0.5, entropy_beta=0.001):
         """
