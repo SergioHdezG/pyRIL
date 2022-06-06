@@ -26,7 +26,7 @@ python-dateutil==2.8.1
 pytz==2020.1
 PyWavelets==1.1.1
 PyYAML==5.4.1
-tensorboard==2.3.0
+tensorboard==2.2.0
 tensorflow==2.2.0
 tensorflow-datasets==4.2.0
 tensorflow-estimator==2.2.0
