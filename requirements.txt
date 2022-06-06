@@ -1,4 +1,5 @@
 numpy==1.16.5
+python-dateutil==2.8.2
 atari-py==0.2.6
 box2d-py==2.3.8
 cloudpickle==1.3.0
