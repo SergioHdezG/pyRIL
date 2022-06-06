@@ -1,4 +1,4 @@
-# CAPOIRL TF2
+# pyRIL (Python Reinforcement and Imitation Learning Library)
 ## Install
 
 This library has been tested on Python 3.7 and TensorFlow 2.2.  
