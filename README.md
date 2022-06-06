@@ -1,9 +1,15 @@
 # pyRIL (Python Reinforcement and Imitation Learning Library)
 
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/SergioHdezG/pyRIL/HEAD)
+
 ## Installation
 
 This library has been tested on Python 3.7 and TensorFlow 2.2.  
-We provide two installation option depending on the use of TensorFlow with CPU or GPU.
+We provide the complete list of packages in requirements.txt. Install it inside your virtual environment by:
+
+```bash
+pip install -r requirements.txt
+```
 
 ### TensorFlow CPU
 
@@ -15,8 +21,10 @@ If tensorflow is not working on GPU try to install it through:
 pip install tensorflow-gpu==2.2
 ```
 
+### Tutorials
 We include some jupyter notebooks tutorials on how to use the library. These tutorials are ordered and increasingly 
-include the most important features of this library. To run these tutorials you should install additionally Jupyter Notebook.
+include the most important features of this library. To run these tutorials you can click on the binder badge. Or you 
+can run it in your computer by installing Jupyter Notebook (not included in requirements.txt).
 
 Some environments used in some tutorials, like LunarLander and Atari games, occasionally raise some errors related with the gym library installation. In this case try to install gym following the instructions bellow:
 ```bash
