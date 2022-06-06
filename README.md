@@ -1,5 +1,6 @@
 # pyRIL (Python Reinforcement and Imitation Learning Library)
-## Install
+
+## Installation
 
 This library has been tested on Python 3.7 and TensorFlow 2.2.  
 We provide two installation option depending on the use of TensorFlow with CPU or GPU.
