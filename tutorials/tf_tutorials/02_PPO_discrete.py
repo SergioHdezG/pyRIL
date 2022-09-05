@@ -7,14 +7,16 @@ from RL_Agent import ppo_agent_discrete_parallel, ppo_agent_discrete
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, Flatten
 import gym
+from gym_miniworld.envs.maze import MazeS3Fast
 from RL_Agent.base.utils.networks import networks, losses, returns_calculations, tensor_board_loss_functions
 from tutorials.transformers_models import *
 from RL_Agent.base.utils.networks.networks_interface import RLNetModel
 from RL_Agent.base.utils.networks.agent_networks import PPONet
 from RL_Agent.base.utils import agent_saver, history_utils
 
-environment_disc = "LunarLander-v2"
-environment_disc = gym.make(environment_disc)
+# environment_disc = "MiniWorld-MazeS3Fast-v0"
+# environment_disc = gym.make(environment_disc)
+environment_disc = MazeS3Fast()
 
 # Los algoritmos Ator-Critic utilizan dos redes neronales, una el Actor y otra el Crítico, la forma rápida de crearlas
 # es la siguiente (Anunque en este experimento solo se van autilizar capas densas se definen también capas
@@ -211,17 +213,18 @@ class ActorNet(RLNetModel):
         return history_actor, history_critic
 
 def actor_custom_model_tf(input_shape):
-    return PPONet(input_shape=input_shape, tensorboard_dir='/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/transformers_data/')
+    return PPONet(input_shape=input_shape, tensorboard_dir='/home/carlos/resultados')
 
 def actor_custom_model(input_shape):
 
     lstm = LSTM(32, activation='tanh')
     dense_1 = Dense(128, input_shape=input_shape, activation='relu')
     dense_2 = Dense(128, activation='relu')
-    output = Dense(4, activation='softmax')
+    output = Dense(3, activation='softmax')
     def model():
         input = tf.keras.Input(shape=input_shape)
-        hidden = lstm(input)
+        hidden = tf.keras.layers.Flatten()(input)
+        # hidden = lstm(hidden)
         hidden = dense_1(hidden)
         hidden = dense_2(hidden)
         out = output(hidden)
@@ -237,7 +240,8 @@ def critic_custom_model(input_shape):
     output = Dense(1, activation='linear')
     def model():
         input = tf.keras.Input(shape=input_shape)
-        hidden = lstm(input)
+        hidden = tf.keras.layers.Flatten()(input)
+        # hidden = lstm(hidden)
         hidden = dense_1(hidden)
         hidden = dense_2(hidden)
         out = output(hidden)
@@ -259,7 +263,7 @@ net_architecture = networks.actor_critic_net_architecture(
                     define_custom_output_layer=True
                     )
 
-agent_cont = ppo_agent_discrete_parallel.Agent(actor_lr=1e-4,
+agent_cont = ppo_agent_discrete.Agent(actor_lr=1e-4,
                                                  critic_lr=1e-4,
                                                  batch_size=128,
                                                  memory_size=1000,
@@ -267,17 +271,17 @@ agent_cont = ppo_agent_discrete_parallel.Agent(actor_lr=1e-4,
                                                  epsilon_decay=0.95,
                                                  epsilon_min=0.15,
                                                  net_architecture=net_architecture,
-                                                 n_stack=3,
-                                                 img_input=False,
+                                                 n_stack=1,
+                                                 img_input=True,
                                                  state_size=None,
                                                  loss_critic_discount=0.001,
                                                  loss_entropy_beta=0.001,
                                                  exploration_noise=1.0,
-                                                  tensorboard_dir='/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/tf_tutorials/tensorboard_logs/')
+                                                 tensorboard_dir='/home/carlos/resultados/')
 
 # Descomentar para ejecutar el ejemplo continuo
 # agent_cont = agent_saver.load('agent_discrete_ppo', agent=ppo_agent_discrete_parallel.Agent(), overwrite_attrib=False)
-agent_cont = agent_saver.load('agent_discrete_ppo', agent=agent_cont, overwrite_attrib=True)
+# agent_cont = agent_saver.load('agent_discrete_ppo', agent=agent_cont, overwrite_attrib=True)
 
 problem_cont = rl_problem.Problem(environment_disc, agent_cont)
 
@@ -285,7 +289,7 @@ problem_cont = rl_problem.Problem(environment_disc, agent_cont)
 
 # agent_cont.actor.extract_variable_summaries = extract_variable_summaries
 
-problem_cont.solve(10, render=False, max_step_epi=512, render_after=2090, skip_states=1)
+problem_cont.solve(episodes=200, render=False)
 problem_cont.test(render=True, n_iter=10)
 #
 hist = problem_cont.get_histogram_metrics()
