@@ -1,5 +1,8 @@
 import sys
 from os import path
+
+from RL_Agent.base.utils.networks.action_selection_options import greedy_random_choice, random_choice
+
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
 from RL_Problem import rl_problem
@@ -17,6 +20,7 @@ from RL_Agent.base.utils import agent_saver, history_utils
 # environment_disc = "MiniWorld-MazeS3Fast-v0"
 # environment_disc = gym.make(environment_disc)
 environment_disc = MazeS3Fast()
+
 
 # Los algoritmos Ator-Critic utilizan dos redes neronales, una el Actor y otra el Crítico, la forma rápida de crearlas
 # es la siguiente (Anunque en este experimento solo se van autilizar capas densas se definen también capas
@@ -148,7 +152,6 @@ class ActorNet(RLNetModel):
         batch_advantages = np.array_split(advantages, int(rewards.shape[0] / batch_size) + 1)
 
         for b_o, b_r, b_m, b_ret, b_a in zip(batch_obs, batch_rewards, batch_mask, batch_returns, batch_advantages):
-
             values = self.critic_net.predict(b_o)
             ret, adv = self.calculate_advantages(values, b_m, b_r, gamma, lmbda)
 
@@ -183,25 +186,26 @@ class ActorNet(RLNetModel):
                         batch_returns,
                         batch_advantages) in enumerate(dataset.take(-1)):
                 loss, gradients, variables, returns, advantages = self.train_step(batch_obs,
-                                                             batch_act_probs,
-                                                             batch_actions,
-                                                             batch_returns,
-                                                             batch_advantages,
-                                                             stddev=stddev,
-                                                             loss_clipping=loss_clipping,
-                                                             critic_discount=critic_discount,
-                                                             entropy_beta=entropy_beta)
-
+                                                                                  batch_act_probs,
+                                                                                  batch_actions,
+                                                                                  batch_returns,
+                                                                                  batch_advantages,
+                                                                                  stddev=stddev,
+                                                                                  loss_clipping=loss_clipping,
+                                                                                  critic_discount=critic_discount,
+                                                                                  entropy_beta=entropy_beta)
 
                 if batch % int(batch_size / 5) == 0 and verbose == 1:
                     print('Epoch {}\t Batch {}\t Actor\Critic {:.4f}\{:.4f} Acc {:.4f} Elapsed time {:.2f}s'.format(
-                        e + 1, batch, loss[0].numpy(), loss[1].numpy(), self.metrics.result(), time.time() - start_time))
+                        e + 1, batch, loss[0].numpy(), loss[1].numpy(), self.metrics.result(),
+                        time.time() - start_time))
                     start_time = time.time()
 
             if self.train_summary_writer is not None:
                 with self.train_summary_writer.as_default():
                     self.loss_sumaries(loss, self.total_epochs)
-                    self.rl_loss_sumaries(returns.numpy(), advantages.numpy(), actions, act_probs, stddev, self.total_epochs)
+                    self.rl_loss_sumaries(returns.numpy(), advantages.numpy(), actions, act_probs, stddev,
+                                          self.total_epochs)
             self.total_epochs += 1
 
             history_actor.history['loss'].append(loss[0].numpy())
@@ -212,15 +216,17 @@ class ActorNet(RLNetModel):
                     cb.on_epoch_end(e)
         return history_actor, history_critic
 
+
 def actor_custom_model_tf(input_shape):
     return PPONet(input_shape=input_shape, tensorboard_dir='/home/carlos/resultados')
 
-def actor_custom_model(input_shape):
 
+def actor_custom_model(input_shape):
     lstm = LSTM(32, activation='tanh')
     dense_1 = Dense(128, input_shape=input_shape, activation='relu')
     dense_2 = Dense(128, activation='relu')
     output = Dense(3, activation='softmax')
+
     def model():
         input = tf.keras.Input(shape=input_shape)
         hidden = tf.keras.layers.Flatten()(input)
@@ -230,14 +236,16 @@ def actor_custom_model(input_shape):
         out = output(hidden)
         actor_model = tf.keras.models.Model(inputs=input, outputs=out)
         return Sequential(actor_model)
+
     return model()
 
-def critic_custom_model(input_shape):
 
+def critic_custom_model(input_shape):
     lstm = LSTM(32, activation='tanh')
     dense_1 = Dense(128, input_shape=input_shape, activation='relu')
     dense_2 = Dense(128, activation='relu')
     output = Dense(1, activation='linear')
+
     def model():
         input = tf.keras.Input(shape=input_shape)
         hidden = tf.keras.layers.Flatten()(input)
@@ -247,37 +255,40 @@ def critic_custom_model(input_shape):
         out = output(hidden)
         actor_model = tf.keras.models.Model(inputs=input, outputs=out)
         return Sequential(actor_model)
+
     return model()
 
+
 net_architecture = networks.actor_critic_net_architecture(
-                    actor_conv_layers=2,                            critic_conv_layers=2,
-                    actor_kernel_num=[32, 32],                      critic_kernel_num=[32, 32],
-                    actor_kernel_size=[3, 3],                       critic_kernel_size=[3, 3],
-                    actor_kernel_strides=[2, 2],                    critic_kernel_strides=[2, 2],
-                    actor_conv_activation=['relu', 'relu'],         critic_conv_activation=['relu', 'relu'],
-                    actor_dense_layers=2,                           critic_dense_layers=2,
-                    actor_n_neurons=[512, 256],                     critic_n_neurons=[512, 256],
-                    actor_dense_activation=['relu', 'relu'],        critic_dense_activation=['relu', 'relu'],
-                    use_custom_network=True,
-                    actor_custom_network=actor_custom_model,         critic_custom_network=critic_custom_model,
-                    define_custom_output_layer=True
-                    )
+    actor_conv_layers=2, critic_conv_layers=2,
+    actor_kernel_num=[32, 32], critic_kernel_num=[32, 32],
+    actor_kernel_size=[3, 3], critic_kernel_size=[3, 3],
+    actor_kernel_strides=[2, 2], critic_kernel_strides=[2, 2],
+    actor_conv_activation=['relu', 'relu'], critic_conv_activation=['relu', 'relu'],
+    actor_dense_layers=2, critic_dense_layers=2,
+    actor_n_neurons=[512, 256], critic_n_neurons=[512, 256],
+    actor_dense_activation=['relu', 'relu'], critic_dense_activation=['relu', 'relu'],
+    use_custom_network=True,
+    actor_custom_network=actor_custom_model, critic_custom_network=critic_custom_model,
+    define_custom_output_layer=True
+)
 
 agent_cont = ppo_agent_discrete.Agent(actor_lr=1e-4,
-                                                 critic_lr=1e-4,
-                                                 batch_size=128,
-                                                 memory_size=1000,
-                                                 epsilon=1.0,
-                                                 epsilon_decay=0.95,
-                                                 epsilon_min=0.15,
-                                                 net_architecture=net_architecture,
-                                                 n_stack=1,
-                                                 img_input=True,
-                                                 state_size=None,
-                                                 loss_critic_discount=0.001,
-                                                 loss_entropy_beta=0.001,
-                                                 exploration_noise=1.0,
-                                                 tensorboard_dir='/home/carlos/resultados/')
+                                      critic_lr=1e-4,
+                                      batch_size=128,
+                                      memory_size=1000,
+                                      epsilon=1.0,
+                                      epsilon_decay=0.95,
+                                      epsilon_min=0.15,
+                                      net_architecture=net_architecture,
+                                      n_stack=1,
+                                      img_input=True,
+                                      state_size=None,
+                                      train_action_selection_options=greedy_random_choice,
+                                      loss_critic_discount=0.001,
+                                      loss_entropy_beta=0.001,
+                                      exploration_noise=1.0,
+                                      tensorboard_dir='/home/carlos/resultados/')
 
 # Descomentar para ejecutar el ejemplo continuo
 # agent_cont = agent_saver.load('agent_discrete_ppo', agent=ppo_agent_discrete_parallel.Agent(), overwrite_attrib=False)
