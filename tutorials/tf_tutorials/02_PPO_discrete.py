@@ -301,7 +301,7 @@ problem_cont = rl_problem.Problem(environment_disc, agent_cont)
 # agent_cont.actor.extract_variable_summaries = extract_variable_summaries
 
 problem_cont.solve(episodes=200, render=False)
-problem_cont.test(render=True, n_iter=10)
+problem_cont.test(render=False, n_iter=10)
 #
 hist = problem_cont.get_histogram_metrics()
 history_utils.plot_reward_hist(hist, 10)
