@@ -89,7 +89,6 @@ class ActorNet(RLNetModel):
         """ Predict the output sentence for a given input sentence
             Args:
                 test_source_text: input sentence (raw string)
-
             Returns:
                 The encoder's attention vectors
                 The decoder's bottom attention vectors
@@ -108,7 +107,6 @@ class ActorNet(RLNetModel):
             source_seq: source sequences
             target_seq_in: input target sequences (<start> + ...)
             target_seq_out: output target sequences (... + <end>)
-
         Returns:
             The loss value of the current pass
         """
