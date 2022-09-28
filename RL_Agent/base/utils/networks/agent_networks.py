@@ -238,12 +238,12 @@ class PPONet(RLNetModel):
                                                                         critic_discount=tf.cast(critic_discount, tf.float32),
                                                                         entropy_beta=tf.cast(entropy_beta, tf.float32))
 
-                if batch % int(batch_size / 5) == 0 and verbose == 1:
-                    print(
-                        'Epoch {}\t Batch {}\t Loss Actor\Critic {:.4f}\{:.4f} Acc {:.4f} Elapsed time {:.2f}s'.format(
-                            e + 1, batch, loss[0].numpy(), loss[1].numpy(), self.metrics.result(),
-                            time.time() - start_time))
-                    start_time = time.time()
+            if verbose:
+                print(
+                    'Epoch {}\t Loss Actor\Critic {:.4f}\{:.4f} Acc {:.4f} Elapsed time {:.2f}s'.format(
+                        e + 1, loss[0].numpy(), loss[1].numpy(), self.metrics.result(),
+                        time.time() - start_time))
+                start_time = time.time()
 
             if self.train_summary_writer is not None:
                 with self.train_summary_writer.as_default():

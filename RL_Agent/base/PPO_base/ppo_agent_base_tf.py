@@ -21,7 +21,7 @@ class PPOSuper(AgentSuper):
     """
     def __init__(self, actor_lr, critic_lr, batch_size, epsilon=0., epsilon_decay=0., epsilon_min=0.,
                  gamma=0.95, n_step_return=10, memory_size=512, loss_clipping=0.2, loss_critic_discount=0.5,
-                 loss_entropy_beta=0.001, lmbda=0.95, train_steps=1, exploration_noise=1.0, n_stack=1, img_input=False,
+                 loss_entropy_beta=0.001, lmbda=0.95, train_epochs=1, exploration_noise=1.0, n_stack=1, img_input=False,
                  state_size=None, net_architecture=None, n_threads=None, tensorboard_dir=None,
                  train_action_selection_options=None, action_selection_options=None):
         """
@@ -49,7 +49,7 @@ class PPOSuper(AgentSuper):
             * entropy_loss. Entropy term is used to improve the exploration, higher values will result in a more
             explorative training process.
         :param lmbda: (float) PPO lambda factor.
-        :param train_steps: (int > 0) Number of epochs for training the agent network in each iteration of the algorithm.
+        :param train_epochs: (int > 0) Number of epochs for training the agent network in each iteration of the algorithm.
         :param exploration_noise: (float [0, 1]) Maximum value of noise for action selection in exploration mode. By
             default is used as maximum stddev for selecting actions from a normal distribution during exploration and it
             is multiplied by epsilon to reduce the stddev. This result on exploration factor reduction through the time
@@ -77,7 +77,7 @@ class PPOSuper(AgentSuper):
                          epsilon_decay=epsilon_decay, epsilon_min=epsilon_min, gamma=gamma, n_step_return=n_step_return,
                          memory_size=memory_size, loss_clipping=loss_clipping,
                          loss_critic_discount=loss_critic_discount, loss_entropy_beta=loss_entropy_beta, lmbda=lmbda,
-                         train_steps=train_steps, exploration_noise=exploration_noise, n_stack=n_stack,
+                         train_epochs=train_epochs, exploration_noise=exploration_noise, n_stack=n_stack,
                          img_input=img_input, state_size=state_size, n_threads=n_threads,
                          tensorboard_dir=tensorboard_dir, net_architecture=net_architecture,
                          train_action_selection_options=train_action_selection_options,
@@ -212,7 +212,7 @@ class PPOSuper(AgentSuper):
                                     epochs=self.train_epochs,
                                     batch_size=self.batch_size,
                                     shuffle=True,
-                                    verbose=False,
+                                    verbose=True,
                                     kargs=[np.float32(old_prediction),
                                            np.float32(mask),
                                            np.float32(self.exploration_noise * self.epsilon),

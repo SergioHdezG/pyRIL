@@ -38,7 +38,7 @@ class ActorNet(RLNetModel):
         if tensorboard_dir is not None:
             current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
             train_log_dir = os.path.join(tensorboard_dir, 'logs/gradient_tape/' + current_time + '/train')
-            self.train_summary_writer = tf.summary.create_file_writer(train_log_dir)
+            self.train_sum,  mary_writer = tf.summary.create_file_writer(train_log_dir)
         else:
             self.train_summary_writer = None
         self.total_epochs = 0

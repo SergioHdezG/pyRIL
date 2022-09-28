@@ -118,7 +118,7 @@ class AgentSuper(AgentInterface):
     """
     def __init__(self, learning_rate=None, actor_lr=None, critic_lr=None, batch_size=None, epsilon=None,
                  epsilon_decay=None, epsilon_min=None, gamma=None, tau=None, n_step_return=None, memory_size=None,
-                 loss_clipping=None, loss_critic_discount=None, loss_entropy_beta=None, lmbda=None, train_steps=None,
+                 loss_clipping=None, loss_critic_discount=None, loss_entropy_beta=None, lmbda=None, train_epochs=None,
                  exploration_noise=None, n_stack=None, img_input=None, state_size=None, n_threads=None,
                  tensorboard_dir=None, net_architecture=None, train_action_selection_options=None,
                  action_selection_options=None):
@@ -178,7 +178,7 @@ class AgentSuper(AgentInterface):
         self.critic_discount = loss_critic_discount
         self.entropy_beta = loss_entropy_beta
         self.lmbda = lmbda
-        self.train_epochs = train_steps
+        self.train_epochs = train_epochs
         self.exploration_noise = exploration_noise
 
         self.n_step_return = n_step_return

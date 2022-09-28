@@ -399,12 +399,12 @@ class RLProblemSuper(object, metaclass=ABCMeta):
             return epochs >= max_steps or done
         return done
 
-    def _feedback_print(self, episode, episodic_reward, epochs, verbose, epi_rew_list, test=False):
+    def _feedback_print(self, episode, episodic_reward, steps, verbose, epi_rew_list, test=False):
         """
         Print on terminal information about the training process.
         :param episode: (int) Current episode.
         :param episodic_reward: (float) Cumulative reward of the last episode.
-        :param epochs: (int) Episode epochs counter.
+        :param steps: (int) Episode steps counter.
         :param verbose: (int) in range [0, 3]. If 0 no training information will be displayed, if 1 lots of
            information will be displayed, if 2 fewer information will be displayed and 3 a minimum of information will
            be displayed.
@@ -419,7 +419,7 @@ class RLProblemSuper(object, metaclass=ABCMeta):
             episode_str = 'Episode: '
         if verbose == 1:
             if (episode + 1) % 1 == 0:
-                print(episode_str, episode + 1, 'Epochs: ', epochs, ' Reward: {:.1f}'.format(episodic_reward),
+                print(episode_str, episode + 1, 'Steps: ', steps, ' Reward: {:.1f}'.format(episodic_reward),
                       'Smooth Reward: {:.1f}'.format(rew_mean), ' Epsilon: {:.4f}'.format(self.agent.epsilon))
 
         if verbose == 2:

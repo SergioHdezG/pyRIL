@@ -24,10 +24,12 @@ from RL_Agent.base.utils.networks.networks_interface import RLNetModel
 from RL_Agent.base.utils.networks.agent_networks import PPONet
 from RL_Agent.base.utils import agent_saver, history_utils
 
-environment = habitat_envs.HM3DRLEnv(config_paths="/media/archivos/home/PycharmProjects2022/Habitat-RL/pyRIL-habitat/configs/RL/objectnav_hm3d_RL.yaml",
-                                     result_path=os.path.join("/media/archivos/home/PycharmProjects2022/Habitat-RL/pyRIL/resultados",
+environment = habitat_envs.HM3DRLEnv(config_paths="/home/carlos/repositorios/pyRIL/configs/RL/objectnav_hm3d_RL.yaml",
+                                     result_path=os.path.join("/home/carlos/resultados",
                                                               "images"),
-                                     render_on_screen=True)
+                                     render_on_screen=False,
+                                     save_video=False)
+
 
 # Los algoritmos Ator-Critic utilizan dos redes neronales, una el Actor y otra el Crítico, la forma rápida de crearlas
 # es la siguiente (Anunque en este experimento solo se van autilizar capas densas se definen también capas
@@ -225,8 +227,7 @@ environment = habitat_envs.HM3DRLEnv(config_paths="/media/archivos/home/PycharmP
 
 
 # def actor_custom_model_tf(input_shape):
-#     return PPONet(input_shape=input_shape, tensorboard_dir='/home/carlos/resultados')
-
+#     return PPONet(input_shape=input_shape, tensorboard_dir='/home/carlos/resultados'
 def actor_custom_model(input_shape):
     dense_1 = Dense(128, input_shape=input_shape, activation='relu')
     dense_2 = Dense(128, activation='relu')
@@ -268,38 +269,32 @@ net_architecture = networks.actor_critic_net_architecture(
 )
 
 agent = ppo_agent_discrete.Agent(actor_lr=1e-4,
-                                         critic_lr=1e-4,
-                                         batch_size=128,
-                                         memory_size=10,
-                                         epsilon=1.0,
-                                         epsilon_decay=0.95,
-                                         epsilon_min=0.15,
-                                         net_architecture=net_architecture,
-                                         n_stack=1,
-                                         img_input=True,
-                                         state_size=None,
-                                         train_action_selection_options=greedy_random_choice,
-                                         loss_critic_discount=0.001,
-                                         loss_entropy_beta=0.001,
-                                         exploration_noise=1.0)
+                                 critic_lr=1e-4,
+                                 batch_size=10,
+                                 memory_size=100,
+                                 epsilon=0.8,
+                                 epsilon_decay=0.95,
+                                 epsilon_min=0.30,
+                                 net_architecture=net_architecture,
+                                 n_stack=1,
+                                 img_input=True,
+                                 state_size=None,
+                                 train_action_selection_options=greedy_random_choice,
+                                 loss_critic_discount=0,
+                                 loss_entropy_beta=0,
+                                 tensorboard_dir='/home/carlos/resultados/')
 
-#
-# tensorboard_dir='/home/carlos/resultados/')
-
-# Descomentar para ejecutar el ejemplo continuo
-# agent_cont = agent_saver.load('agent_discrete_ppo', agent=ppo_agent_discrete_parallel.Agent(), overwrite_attrib=False)
-# agent_cont = agent_saver.load('agent_discrete_ppo', agent=agent_cont, overwrite_attrib=True)
-
+# Define the problem
 problem = rl_problem.Problem(environment, agent)
 
-# agent_cont = agent_saver.load('agent_discrete_ppo', agent=problem_cont.agent, overwrite_attrib=True)
+# Add preprocessing to the observations
+# problem.preprocess = "Preprocess function"
 
-# agent_cont.actor.extract_variable_summaries = extract_variable_summaries
+# Solve (train the agent) and test it
+problem.solve(episodes=200, render=False)
+problem.test(render=True, n_iter=5, max_step_epi=250)
 
-problem.solve(episodes=20, render=False)
-problem.test(render=True, n_iter=10, max_step_epi=250)
-#
+# Plot some data
 hist = problem.get_histogram_metrics()
 history_utils.plot_reward_hist(hist, 10)
-#
-# agent_saver.save(agent, 'agent_discrete_ppo')
+

@@ -11,15 +11,15 @@ We provide the complete list of packages in requirements.txt. Install it inside 
 pip install -r requirements.txt
 ```
 
-### TensorFlow CPU
+### GPU Support
 
-A requirements.txt file is provide with the minimum required dependencies.
-complete_requirements.txt include an extended list of dependencies in case that requirements.txt where not enough.
+We provide an additional `environment.yml` file to create a conda environment that comes with all the necessary packages (CUDA and cudnn) in order to run tensorflow with a GPU. You only need to have the drivers installed in your system. To create it just run:
 
-If tensorflow is not working on GPU try to install it through:
 ```bash
-pip install tensorflow-gpu==2.2
+conda env create -f environment.yml
 ```
+
+This environment is tested for a GeForce 3090 on Ubuntu 22.04.
 
 ### Tutorials
 We include some jupyter notebooks tutorials on how to use the library. These tutorials are ordered and increasingly 
