@@ -119,7 +119,7 @@ class AgentSuper(AgentInterface):
     def __init__(self, learning_rate=None, actor_lr=None, critic_lr=None, batch_size=None, epsilon=None,
                  epsilon_decay=None, epsilon_min=None, gamma=None, tau=None, n_step_return=None, memory_size=None,
                  loss_clipping=None, loss_critic_discount=None, loss_entropy_beta=None, lmbda=None, train_epochs=None,
-                 exploration_noise=None, n_stack=None, img_input=None, state_size=None, n_threads=None,
+                 exploration_noise=None, n_stack=None, img_input=None, is_habitat=None, state_size=None, n_threads=None,
                  tensorboard_dir=None, net_architecture=None, train_action_selection_options=None,
                  action_selection_options=None):
         """
@@ -148,6 +148,7 @@ class AgentSuper(AgentInterface):
             training.
         :param n_stack: (int) Number of time steps stacked on the state (observation stacked).
         :param img_input: (bool) Flag for using a images as states. True state are images (3D array).
+        : param is habitat: (bool) Flag to specify if the observations come from an habitat environment.
         :param state_size: (tuple of ints) State size. Needed if the original environment state size is modified by any
             preprocessing.
         :param n_threads: (int) Number of parallel environments when using A3C or PPO. By default number of cpu
@@ -185,6 +186,7 @@ class AgentSuper(AgentInterface):
 
         self.n_stack = n_stack
         self.img_input = img_input
+        self.is_habitat = is_habitat
         self.state_size = state_size
         self.env_state_size = state_size
 
@@ -196,7 +198,7 @@ class AgentSuper(AgentInterface):
 
         self.optimizer = None
 
-        self.tensorboard_dir=tensorboard_dir
+        self.tensorboard_dir = tensorboard_dir
         self.agent_builded = False
         # self.loads_saved_params = loads_saved_params
 
@@ -226,9 +228,15 @@ class AgentSuper(AgentInterface):
     def _format_obs_act(self, obs):
         """
         Reshape the observation (state) to fits the neural network inputs.
-        :param obs: (nd array) Observation (state) array of state shape.
+        :param obs: Observation (state) array of state shape.
         :return: (nd array)
         """
+        if self.is_habitat and isinstance(obs, dict):
+            # TODO: CARLOS -> format habitat inputs to the neural networks
+            target_encoding = obs['objectgoal']
+            rgb = np.array(obs['rgb'])
+            # Provisional
+            obs = rgb
         if self.img_input:
             if self.stack:
                 obs = np.dstack(obs)

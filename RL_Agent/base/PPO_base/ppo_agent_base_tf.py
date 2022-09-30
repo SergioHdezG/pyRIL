@@ -13,16 +13,18 @@ from RL_Agent.base.utils.networks.networks_interface import RLNetModel as RLNetM
 import tensorflow as tf
 from RL_Agent.base.utils.networks.agent_networks import PPONet
 
+
 # worker class that inits own environment, trains on it and updloads weights to global net
 class PPOSuper(AgentSuper):
     """
     Super class for implementing Proximal Policy Optimization (PPO) agents.
     Abstract class as a base for implementing PPO algorithms.
     """
+
     def __init__(self, actor_lr, critic_lr, batch_size, epsilon=0., epsilon_decay=0., epsilon_min=0.,
                  gamma=0.95, n_step_return=10, memory_size=512, loss_clipping=0.2, loss_critic_discount=0.5,
                  loss_entropy_beta=0.001, lmbda=0.95, train_epochs=1, exploration_noise=1.0, n_stack=1, img_input=False,
-                 state_size=None, net_architecture=None, n_threads=None, tensorboard_dir=None,
+                 is_habitat=False, state_size=None, net_architecture=None, n_threads=None, tensorboard_dir=None,
                  train_action_selection_options=None, action_selection_options=None):
         """
         Super class for implementing Proximal Policy Optimization (PPO) agents.
@@ -57,6 +59,7 @@ class PPOSuper(AgentSuper):
         :param n_stack: (int) Number of time steps stacked on the state.
         :param img_input: (bool) Flag for using a images as states. If True, the states are supposed to be images (3D
             array).
+        : param is habitat: (bool) Flag to specify if the observations come from an habitat environment.
         :param state_size: (tuple of ints) State size. Only needed if the original state size is modified by any
             preprocessing. Shape of the state that must match network's inputs. This shape must include the number of
             stacked states.
@@ -78,7 +81,7 @@ class PPOSuper(AgentSuper):
                          memory_size=memory_size, loss_clipping=loss_clipping,
                          loss_critic_discount=loss_critic_discount, loss_entropy_beta=loss_entropy_beta, lmbda=lmbda,
                          train_epochs=train_epochs, exploration_noise=exploration_noise, n_stack=n_stack,
-                         img_input=img_input, state_size=state_size, n_threads=n_threads,
+                         img_input=img_input, is_habitat=is_habitat, state_size=state_size, n_threads=n_threads,
                          tensorboard_dir=tensorboard_dir, net_architecture=net_architecture,
                          train_action_selection_options=train_action_selection_options,
                          action_selection_options=action_selection_options)
@@ -122,6 +125,12 @@ class PPOSuper(AgentSuper):
         :param done: If the episode is finished
         :return:
         """
+        if self.is_habitat:
+            rgb = [ob['rgb'] for ob in obs]
+            target_encoding = [ob['objectgoal'] for ob in obs]
+            # TODO: CARLOS -> add rgb and target encoding as an observation
+            obs = rgb
+
         obs = np.array(obs)
         action = np.array(action)
         pred_act = np.array([a[0] for a in pred_act])
@@ -144,11 +153,20 @@ class PPOSuper(AgentSuper):
         """
 
         if self.img_input:
-                # TODO: Probar img en color en pc despacho, en personal excede la memoria
-                if len(np.array(obs).shape) > 4:
-                    obs = np.transpose(obs, axes=(1, 0, 2, 3, 4))
-                else:
-                    obs = np.transpose(obs, axes=(1, 0, 2, 3))
+            # TODO: Probar img en color en pc despacho, en personal excede la memoria
+            if len(np.array(obs).shape) > 4:
+                obs = np.transpose(obs, axes=(1, 0, 2, 3, 4))
+            else:
+                obs = np.transpose(obs, axes=(1, 0, 2, 3))
+        elif self.is_habitat:
+            rgb = obs['rgb']
+            if len(np.array(rgb).shape) > 4:
+                rgb = np.transpose(rgb, axes=(1, 0, 2, 3, 4))
+            else:
+                rgb = np.transpose(rgb, axes=(1, 0, 2, 3))
+            # TODO: CARLOS -> add rgb and target encoding as an observation
+            target_encoding = obs['objectgoal']
+            obs = rgb
         elif self.stack:
             obs = np.transpose(obs, axes=(1, 0, 2, 3))
         else:
@@ -205,22 +223,22 @@ class PPOSuper(AgentSuper):
 
         # TODO: Aqui tienen que entrar las variables correspondientes, de momento entran las que hay disponibles.
         actor_loss, critic_loss = self.model.fit(np.float32(obs),
-                                    np.float32(obs),
-                                    np.float32(action),
-                                    np.float32(rewards),
-                                    np.float32(np.logical_not(mask)),
-                                    epochs=self.train_epochs,
-                                    batch_size=self.batch_size,
-                                    shuffle=True,
-                                    verbose=True,
-                                    kargs=[np.float32(old_prediction),
-                                           np.float32(mask),
-                                           np.float32(self.exploration_noise * self.epsilon),
-                                           np.float32(self.loss_clipping),
-                                           np.float32(self.critic_discount),
-                                           np.float32(self.entropy_beta),
-                                           np.float32(self.gamma),
-                                           np.float32(self.lmbda)])
+                                                 np.float32(obs),
+                                                 np.float32(action),
+                                                 np.float32(rewards),
+                                                 np.float32(np.logical_not(mask)),
+                                                 epochs=self.train_epochs,
+                                                 batch_size=self.batch_size,
+                                                 shuffle=True,
+                                                 verbose=True,
+                                                 kargs=[np.float32(old_prediction),
+                                                        np.float32(mask),
+                                                        np.float32(self.exploration_noise * self.epsilon),
+                                                        np.float32(self.loss_clipping),
+                                                        np.float32(self.critic_discount),
+                                                        np.float32(self.entropy_beta),
+                                                        np.float32(self.gamma),
+                                                        np.float32(self.lmbda)])
 
         self._reduce_epsilon()
         return actor_loss, critic_loss
@@ -381,13 +399,15 @@ class PPOSuper(AgentSuper):
         """
         Clase para suplantar tf.keras.callbacks.History() cuando no se está usando keras.
         """
+
         class historial:
             def __init__(self, loss):
                 self.history = {"loss": [loss]}
 
         return historial(loss)
 
-    def proximal_policy_optimization_loss_continuous(self, y_true, y_pred, advantage, old_prediction, returns, values, stddev=None):
+    def proximal_policy_optimization_loss_continuous(self, y_true, y_pred, advantage, old_prediction, returns, values,
+                                                     stddev=None):
 
         """
         f(x) = (1/σ√2π)exp(-(1/2σ^2)(x−μ)^2)
@@ -431,7 +451,8 @@ class PPOSuper(AgentSuper):
 
         return -actor_loss + self.critic_discount * critic_loss - self.entropy_beta * entropy
 
-    def proximal_policy_optimization_loss_discrete(self, y_true, y_pred, advantage, old_prediction, returns, values, stddev=None):
+    def proximal_policy_optimization_loss_discrete(self, y_true, y_pred, advantage, old_prediction, returns, values,
+                                                   stddev=None):
         # new_prob = tf.math.multiply(y_true, y_pred)
         # new_prob = tf.reduce_mean(new_prob, axis=-1)
         new_prob = K.sum(y_true * y_pred, axis=-1)
@@ -458,7 +479,6 @@ class PPOSuper(AgentSuper):
 
         return - actor_loss + self.critic_discount * critic_loss - self.entropy_beta * entropy
 
-
     def _tensorboard_aux_loss_continuous(self, advantage, old_prediction, rewards, values, stddev):
 
         def loss(y_true, y_pred):
@@ -474,8 +494,8 @@ class PPOSuper(AgentSuper):
             denom = stddev * np.sqrt(2. * pi)
 
             # exp(-((x−μ)^2/2σ^2))
-            prob_num = np.exp((-1./2.) * np.square((y_true - y_pred) / (stddev)))
-            old_prob_num = np.exp((-1./2.) * np.square((y_true - old_prediction) / (stddev)))
+            prob_num = np.exp((-1. / 2.) * np.square((y_true - y_pred) / (stddev)))
+            old_prob_num = np.exp((-1. / 2.) * np.square((y_true - old_prediction) / (stddev)))
 
             # exp(-((x−μ)^2/2σ^2))/(σ√2π)
             new_prob = prob_num / denom
@@ -490,7 +510,6 @@ class PPOSuper(AgentSuper):
             critic_loss = np.mean(np.square(rewards - values))
             entropy = np.mean(-(new_prob * np.log(new_prob + 1e-10)))
             # entropy = np.mean(-(new_prob * np.log(new_prob + 1e-10)))
-
 
             return actor_loss, critic_loss, entropy, ratio, p1, p2, var, np.mean(new_prob)
 
@@ -525,8 +544,9 @@ class PPOSuper(AgentSuper):
         return obs
 
     # TODO: behavioral cloning fit
-    def bc_fit_legacy(self, expert_traj, epochs, batch_size, learning_rate=1e-3, shuffle=False, optimizer=Adam(), loss='mse',
-        validation_split=0.15):
+    def bc_fit_legacy(self, expert_traj, epochs, batch_size, learning_rate=1e-3, shuffle=False, optimizer=Adam(),
+                      loss='mse',
+                      validation_split=0.15):
 
         expert_traj_s = np.array([x[0] for x in expert_traj])
         expert_traj_a = np.array([x[1] for x in expert_traj])
@@ -538,8 +558,8 @@ class PPOSuper(AgentSuper):
         optimizer.lr = learning_rate
         self.model.compile(optimizer=optimizer, loss=loss)
         hist = self.model.fit([expert_traj_s, dummy_advantage, dummy_old_prediction, dummy_rewards, dummy_values],
-                       [expert_traj_a], batch_size=batch_size, shuffle=shuffle, epochs=epochs, verbose=2,
-                       validation_split=validation_split)
+                              [expert_traj_a], batch_size=batch_size, shuffle=shuffle, epochs=epochs, verbose=2,
+                              validation_split=validation_split)
 
     def _actions_to_onehot(self, actions):
         return actions
@@ -550,6 +570,3 @@ class PPOSuper(AgentSuper):
                 self.epsilon *= self.epsilon_decay
         else:
             self.epsilon = self.epsilon_decay(self.epsilon, self.epsilon_min)
-
-
-
