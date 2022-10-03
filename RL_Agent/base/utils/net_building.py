@@ -119,6 +119,7 @@ def read_net_params(net_architecture, actor=False, critic=False, action=False, v
 
     return n_conv_layers, kernel_num, kernel_size, strides, conv_activation, n_dense_layers, n_neurons, \
            dense_activation, use_custom_net, custom_net, define_custom_output_layer
+
 def build_conv_net(net_architecture, input_shape, actor=False, critic=False, common=False):
     n_conv_layers, kernel_num, kernel_size, strides, conv_activation, \
     n_dense_layers, n_neurons, dense_activation, use_custom_net, \

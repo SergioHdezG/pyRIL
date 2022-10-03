@@ -355,7 +355,10 @@ class PPOSuper(AgentSuper):
             define_output_layer = net_architecture['define_custom_output_layer']
 
         # Building actor
-        if self.img_input:
+        if self.is_habitat:
+            # TODO: [Sergio] Revisar state_size cuando usamos habitat. Incluir la dim. de imagen y del objectgoal
+            actor_net = net_building.build_conv_net(net_architecture, self.state_size, actor=True)
+        elif self.img_input:
             actor_net = net_building.build_conv_net(net_architecture, self.state_size, actor=True)
         elif self.stack:
             actor_net = net_building.build_stack_net(net_architecture, self.state_size, actor=True)

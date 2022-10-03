@@ -25,8 +25,8 @@ from RL_Agent.base.utils.networks.agent_networks import PPONet
 from RL_Agent.base.utils import agent_saver, history_utils
 from utils.preprocess import preprocess_habitat
 
-environment = habitat_envs.HM3DRLEnv(config_paths="/home/carlos/repositorios/pyRIL/configs/RL/objectnav_hm3d_RL.yaml",
-                                     result_path=os.path.join("/home/carlos/resultados",
+environment = habitat_envs.HM3DRLEnv(config_paths="/media/archivos/home/PycharmProjects2022/Habitat-RL/pyRIL-habitat/configs/RL/objectnav_hm3d_RL.yaml",
+                                     result_path=os.path.join("/media/archivos/home/PycharmProjects2022/Habitat-RL/pyRIL/resultados",
                                                               "images"),
                                      render_on_screen=False,
                                      save_video=False)
@@ -82,11 +82,12 @@ agent = ppo_agent_discrete.Agent(actor_lr=1e-4,
                                  net_architecture=net_architecture,
                                  n_stack=1,
                                  is_habitat=True,
+                                 img_input=True,
                                  state_size=None,
                                  train_action_selection_options=greedy_random_choice,
                                  loss_critic_discount=0,
-                                 loss_entropy_beta=0,
-                                 tensorboard_dir='/home/carlos/resultados/')
+                                 loss_entropy_beta=0,)
+                                 # tensorboard_dir='/home/carlos/resultados/')
 
 # Define the problem
 problem = rl_problem.Problem(environment, agent)
