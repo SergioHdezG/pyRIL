@@ -375,7 +375,9 @@ class PPOSuper(AgentSuper):
         else:
 
             # Building actor
-            if self.img_input:
+            if self.is_habitat:
+                critic_model = net_building.build_conv_net(net_architecture, self.state_size, critic=True)
+            elif self.img_input:
                 critic_model = net_building.build_conv_net(net_architecture, self.state_size, critic=True)
             elif self.stack:
                 critic_model = net_building.build_stack_net(net_architecture, self.state_size, critic=True)

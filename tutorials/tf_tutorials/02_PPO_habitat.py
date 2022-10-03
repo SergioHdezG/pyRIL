@@ -25,52 +25,69 @@ from RL_Agent.base.utils.networks.agent_networks import PPONet
 from RL_Agent.base.utils import agent_saver, history_utils
 from utils.preprocess import preprocess_habitat
 
-environment = habitat_envs.HM3DRLEnv(config_paths="/media/archivos/home/PycharmProjects2022/Habitat-RL/pyRIL-habitat/configs/RL/objectnav_hm3d_RL.yaml",
-                                     result_path=os.path.join("/media/archivos/home/PycharmProjects2022/Habitat-RL/pyRIL/resultados",
+tensorboard_path = None #'/home/carlos/resultados/'
+environment = habitat_envs.HM3DRLEnv(config_paths="configs/RL/objectnav_hm3d_RL.yaml",
+                                     result_path=os.path.join("resultados",
                                                               "images"),
                                      render_on_screen=False,
                                      save_video=False)
 
+class CustomNet(PPONet):
+    def __init__(self, input_shape, actor_net, critic_net, tensorboard_dir=None):
+        super().__init__(actor_net(input_shape), critic_net(input_shape), tensorboard_dir=tensorboard_dir)
+
+    # @tf.function(experimental_relax_shapes=True)
+    def _predict(self, x):
+        """ Predict the output sentence for a given input sentence
+            Args:
+                test_source_text: input sentence (raw string)
+
+            Returns:
+                The encoder's attention vectors
+                The decoder's bottom attention vectors
+                The decoder's middle attention vectors
+                The input string array (input sentence split by ' ')
+                The output string array
+            """
+        out = self.actor_net([tf.cast(x[0], tf.float32), tf.cast(x[1], tf.float32)], training=False)
+        y_ = tf.keras.activations.tanh(out)
+        return y_
+
+    # @tf.function(experimental_relax_shapes=True)
+    def _predict_values(self, x):
+        y_ = self.critic_net([tf.cast(x[0], tf.float32), tf.cast(x[1], tf.float32)], training=False)
+        return y_
 
 def actor_custom_model(input_shape):
-    dense_1 = Dense(128, input_shape=input_shape, activation='relu')
-    dense_2 = Dense(128, activation='relu')
-    output = Dense(6, activation='softmax')
+    rgb_input = tf.keras.Input(shape=input_shape[0])
+    objectgoal_input = tf.keras.Input(shape=input_shape[1])
 
-    def model():
-        input = tf.keras.Input(shape=input_shape)
-        hidden = tf.keras.layers.Flatten()(input)
-        hidden = dense_1(hidden)
-        hidden = dense_2(hidden)
-        out = output(hidden)
-        actor_model = tf.keras.models.Model(inputs=input, outputs=out)
-        return Sequential(actor_model)
-
-    return model()
-
+    flat = tf.keras.layers.Flatten()(rgb_input)
+    concat = tf.keras.layers.Concatenate(axis=-1)([flat, objectgoal_input])
+    hidden = Dense(128, activation='relu')(concat)
+    hidden = Dense(128, activation='relu')(hidden)
+    out = Dense(6, activation='softmax')(hidden)
+    actor_model = tf.keras.models.Model(inputs=[rgb_input, objectgoal_input], outputs=out)
+    return actor_model
 
 def critic_custom_model(input_shape):
-    dense_1 = Dense(128, input_shape=input_shape, activation='relu')
-    dense_2 = Dense(128, activation='relu')
-    output = Dense(1, activation='linear')
+    rgb_input = tf.keras.Input(shape=input_shape[0])
+    objectgoal_input = tf.keras.Input(shape=input_shape[1])
 
-    def model():
-        input = tf.keras.Input(shape=input_shape)
-        hidden = tf.keras.layers.Flatten()(input)
-        hidden = dense_1(hidden)
-        hidden = dense_2(hidden)
-        out = output(hidden)
-        actor_model = tf.keras.models.Model(inputs=input, outputs=out)
-        return Sequential(actor_model)
+    flat = tf.keras.layers.Flatten()(rgb_input)
+    concat = tf.keras.layers.Concatenate(axis=-1)([flat, objectgoal_input])
+    hidden = Dense(128, activation='relu')(concat)
+    hidden = Dense(128, activation='relu')(hidden)
+    out = Dense(1, activation='linear')(hidden)
+    critic_model = tf.keras.models.Model(inputs=[rgb_input, objectgoal_input], outputs=out)
+    return critic_model
 
-    return model()
+def custom_model(input_shape):
+    return CustomNet(input_shape, actor_custom_model, critic_custom_model, tensorboard_dir=tensorboard_path)
 
 
-net_architecture = networks.actor_critic_net_architecture(
-    use_custom_network=True,
-    actor_custom_network=actor_custom_model, critic_custom_network=critic_custom_model,
-    define_custom_output_layer=True
-)
+net_architecture = networks.dpg_net(use_tf_custom_model=True,
+                                       tf_custom_model=custom_model)
 
 agent = ppo_agent_discrete.Agent(actor_lr=1e-4,
                                  critic_lr=1e-4,
@@ -83,11 +100,11 @@ agent = ppo_agent_discrete.Agent(actor_lr=1e-4,
                                  n_stack=1,
                                  is_habitat=True,
                                  img_input=True,
-                                 state_size=None,
+                                 state_size=[(460, 640, 3), (12)],  # TODO: [Sergio] Revisar y automaticar el control del state_size cuando is_habitat=True
                                  train_action_selection_options=greedy_random_choice,
                                  loss_critic_discount=0,
                                  loss_entropy_beta=0,)
-                                 # tensorboard_dir='/home/carlos/resultados/')
+                                 # tensorboard_dir=tensorboard_path)
 
 # Define the problem
 problem = rl_problem.Problem(environment, agent)

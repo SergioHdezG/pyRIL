@@ -233,10 +233,9 @@ class AgentSuper(AgentInterface):
         """
         if self.is_habitat and isinstance(obs, dict):
             # TODO: CARLOS -> format habitat inputs to the neural networks
-            target_encoding = obs['objectgoal']
-            rgb = np.array([obs['rgb']])
-            # Provisional
-            obs = rgb
+            obs = [[obs['rgb'].astype(np.float32)], [obs['objectgoal'].astype(np.float32)]]
+            return obs
+
         elif self.img_input:
             if self.stack:
                 obs = np.dstack(obs)
