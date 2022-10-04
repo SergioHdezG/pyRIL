@@ -181,6 +181,7 @@ class PPOProblemBase(RLProblemSuper):
                         reward = discriminator.get_reward(obs, action)[0]
 
                 # Store the experience in episode memory
+                # Here we apply the preprocess/formatting function
                 next_obs, obs_next_queue, reward, done, epochs, mask = self.store_episode_experience(action,
                                                                                                     done,
                                                                                                     next_obs,
@@ -252,6 +253,7 @@ class PPOProblemBase(RLProblemSuper):
 
     def store_episode_experience(self, action, done, next_obs, obs, obs_next_queue, obs_queue, reward, skip_states, epochs,
                                  predicted_action, action_matrix):
+        # Here we apply the preprocess/formatting function
         done, next_obs, reward, epochs = self.frame_skipping(action, done, next_obs, reward, skip_states, epochs)
 
         mask = not done

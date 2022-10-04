@@ -129,9 +129,9 @@ class PPOSuper(AgentSuper):
             rgb = [ob['rgb'] for ob in obs]
             target_encoding = [ob['objectgoal'] for ob in obs]
             # TODO: CARLOS -> add rgb and target encoding as an observation
-            obs = rgb
-
-        obs = np.array(obs)
+            obs = [rgb, target_encoding]
+        else:
+            obs = np.array(obs)
         action = np.array(action)
         pred_act = np.array([a[0] for a in pred_act])
         rewards = np.array(rewards)
@@ -221,9 +221,13 @@ class PPOSuper(AgentSuper):
         """
         obs, action, old_prediction, rewards, mask = self.load_memories()
 
+        # TODO: [Sergio] Hay alguna manera de hacer esto mejor? Me parece un parche esta soluci
+        if not self.is_habitat:
+            obs = np.float32(obs)
+
         # TODO: Aqui tienen que entrar las variables correspondientes, de momento entran las que hay disponibles.
-        actor_loss, critic_loss = self.model.fit(np.float32(obs),
-                                                 np.float32(obs),
+        actor_loss, critic_loss = self.model.fit(obs,
+                                                 obs,  # TODO: [Sergio] aquí habria que pasar nex_obs pero no se están guardando en el collect_memories
                                                  np.float32(action),
                                                  np.float32(rewards),
                                                  np.float32(np.logical_not(mask)),
