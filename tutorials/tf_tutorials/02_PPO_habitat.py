@@ -40,7 +40,7 @@ class CustomNet(PPONet):
     Define Custom Net for habitat
     """
     def __init__(self, input_shape, actor_net, critic_net, tensorboard_dir=None):
-        super().__init__(actor_net(), critic_net(), tensorboard_dir=tensorboard_dir)
+        super().__init__(actor_net, critic_net, tensorboard_dir=tensorboard_dir)
 
     # @tf.function(experimental_relax_shapes=True)
     def _predict(self, x):
@@ -240,12 +240,15 @@ class CustomNet(PPONet):
 
 class ActorCustomModel():
 
-    def __int__(self):
+    def __init__(self):
         self.layers = []
         self.layers.append(Dense(128, activation='relu', name='actor_dense1'))
         self.layers.append(Dense(128, activation='relu', name='actor_dense2'))
         self.layers.append(Dense(6, activation='softmax', name='actor_out'))
-        self.trainable_variables = [l.trainable_variables for l in self.layers]
+
+    @property
+    def trainable_variables(self):
+        return [l.trainable_variables for l in self.layers]
 
     # @tf.function(experimental_relax_shapes=True)
     def __call__(self, input_rgb, input_goal, training=True):
@@ -258,12 +261,15 @@ class ActorCustomModel():
 
 
 class CriticCustomModel():
-    def __int__(self):
+    def __init__(self):
         self.layers = []
         self.layers.append(Dense(128, activation='relu', name='critic_dense1'))
         self.layers.append(Dense(128, activation='relu', name='critic_dense2'))
         self.layers.append(Dense(1, activation='linear', name='critic_out'))
-        self.trainable_variables = [l.trainable_variables for l in self.layers]
+
+    @property
+    def trainable_variables(self):
+        return [l.trainable_variables for l in self.layers]
 
     # @tf.function(experimental_relax_shapes=True)
     def __call__(self, input_rgb, input_goal, training=True):
