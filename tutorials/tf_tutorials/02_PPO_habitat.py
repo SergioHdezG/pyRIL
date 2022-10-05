@@ -8,6 +8,7 @@ Matterport annotated objects: ["wall", "objects", "door", "chair", "window", "ce
 import os
 import sys
 from os import path
+import time
 
 from RL_Agent.base.utils.networks.action_selection_options import greedy_random_choice, random_choice
 
@@ -20,37 +21,26 @@ from tensorflow.keras.layers import Dense, LSTM, Flatten
 from environments import habitat_envs
 from RL_Agent.base.utils.networks import networks, losses, returns_calculations, tensor_board_loss_functions
 from tutorials.transformers_models import *
-from RL_Agent.base.utils.networks.networks_interface import RLNetModel
+from RL_Agent.base.utils.networks.networks_interface import RLNetModel, TrainingHistory
 from RL_Agent.base.utils.networks.agent_networks import PPONet
 from RL_Agent.base.utils import agent_saver, history_utils
 from utils.preprocess import preprocess_habitat
 
+
 tensorboard_path = None #'/home/carlos/resultados/'
-environment = habitat_envs.HM3DRLEnv(config_paths="configs/RL/objectnav_hm3d_RL.yaml",
+environment = habitat_envs.HM3DRLEnv(config_paths="/home/carlos/repositorios/pyRIL/configs/RL/objectnav_hm3d_RL.yaml",
                                      result_path=os.path.join("../../resultados",
                                                               "images"),
                                      render_on_screen=False,
                                      save_video=False)
 
+
 class CustomNet(PPONet):
+    """
+    Define Custom Net for habitat
+    """
     def __init__(self, input_shape, actor_net, critic_net, tensorboard_dir=None):
         super().__init__(actor_net(), critic_net(), tensorboard_dir=tensorboard_dir)
-    #     self._build_critic_layer()
-    #     self._build_actor_layer()
-    #
-    # def _build_actor_layer(self):
-    #     self.act_dense1 = Dense(128, activation='relu', name='actor_dense1')
-    #     self.act_dense2 = Dense(128, activation='relu', name='actor_dense2')
-    #     self.act_out = Dense(6, activation='softmax', name='actor_out')
-    #
-    # def _build_critic_layer(self):
-    #     self.critic_dense1 = Dense(128, activation='relu', name='critic_dense1')
-    #     self.critic_dense2 = Dense(128, activation='relu', name='critic_dense2')
-    #     self.critic_out = Dense(1, activation='linear', name='critic_out')
-
-    def predict_values(self, x):
-        y_ = self._predict_values(x)
-        return y_.numpy()
 
     # @tf.function(experimental_relax_shapes=True)
     def _predict(self, x):
@@ -73,6 +63,181 @@ class CustomNet(PPONet):
         y_ = self.critic_net(tf.cast(np.array(x[0]), tf.float32), tf.cast(np.array(x[1]), tf.float32), training=False)
         return y_
 
+    def fit(self, obs, next_obs, actions, rewards, done, epochs, batch_size, validation_split=0.,
+            shuffle=True, verbose=1, callbacks=None, kargs=[]):
+        act_probs = kargs[0]
+        mask = kargs[1]
+        stddev = kargs[2]
+        loss_clipping = kargs[3]
+        critic_discount = kargs[4]
+        entropy_beta = kargs[5]
+        gamma = kargs[6]
+        lmbda = kargs[7]
+
+        # Calculate returns and advantages
+        returns = []
+        advantages = []
+
+        # TODO: [CARLOS] check if this split makes sense at all (specially the +1). Maybe using a ceiling instead of
+        #   int in order to fit the rest of the observations.
+        batch_obs = np.array_split(obs[0], int(rewards.shape[0] / batch_size) + 1)
+        batch_target = np.array_split(obs[1], int(rewards.shape[0] / batch_size) + 1)
+        batch_rewards = np.array_split(rewards, int(rewards.shape[0] / batch_size) + 1)
+        batch_mask = np.array_split(mask, int(rewards.shape[0] / batch_size) + 1)
+
+        for b_o, b_t, b_r, b_m in zip(batch_obs, batch_target, batch_rewards, batch_mask):
+            values = self.predict_values([b_o, b_t])
+            ret, adv = self.calculate_advantages(values, b_m, b_r, gamma, lmbda)
+            returns.extend(ret)
+            advantages.extend(adv)
+
+        dataset = tf.data.Dataset.from_tensor_slices((tf.cast(obs[0], tf.float32),
+                                                      tf.cast(obs[1], tf.float32),
+                                                      tf.cast(act_probs, tf.float32),
+                                                      tf.cast(rewards, tf.float32),
+                                                      tf.cast(actions, tf.float32),
+                                                      tf.cast(mask, tf.float32),
+                                                      tf.cast(returns, tf.float32),
+                                                      tf.cast(advantages, tf.float32)))
+
+        if shuffle:
+            dataset = dataset.shuffle(len(obs[0]), reshuffle_each_iteration=True).batch(batch_size)
+        else:
+            dataset = dataset.batch(batch_size)
+
+        if self.train_summary_writer is not None:
+            with self.train_summary_writer.as_default():
+                self.rl_loss_sumaries([np.array(returns),
+                                       np.array(advantages),
+                                       actions,
+                                       act_probs,
+                                       stddev],
+                                      ['returns',
+                                       'advantages',
+                                       'actions',
+                                       'act_probabilities'
+                                       'stddev']
+                                      , self.total_epochs)
+
+        history_actor = TrainingHistory()
+        history_critic = TrainingHistory()
+
+        start_time = time.time()
+
+        for e in range(epochs):
+            loss = [0., 0.]
+            act_comp_loss = 0.
+            critic_comp_loss = 0.
+            entropy_comp_loss = 0.
+            for batch, (batch_obs,
+                        batch_target,
+                        batch_act_probs,
+                        batch_rewards,
+                        batch_actions,
+                        batch_mask,
+                        batch_returns,
+                        batch_advantages) in enumerate(dataset.take(-1)):
+                loss, \
+                gradients, \
+                variables, \
+                returns, \
+                advantages, \
+                [act_comp_loss, critic_comp_loss, entropy_comp_loss] = self.train_step([batch_obs, batch_target],
+                                                                                       batch_act_probs,
+                                                                                       batch_actions,
+                                                                                       batch_returns,
+                                                                                       batch_advantages,
+                                                                                       stddev=tf.cast(stddev,
+                                                                                                      tf.float32),
+                                                                                       loss_clipping=tf.cast(
+                                                                                           loss_clipping,
+                                                                                           tf.float32),
+                                                                                       critic_discount=tf.cast(
+                                                                                           critic_discount,
+                                                                                           tf.float32),
+                                                                                       entropy_beta=tf.cast(
+                                                                                           entropy_beta,
+                                                                                           tf.float32))
+
+            if verbose:
+                print(
+                    'Epoch {}\t Loss Actor\Critic {:.4f}\{:.4f} Acc {:.4f} Elapsed time {:.2f}s'.format(
+                        e + 1, loss[0].numpy(), loss[1].numpy(), self.metrics.result(),
+                        time.time() - start_time))
+                start_time = time.time()
+
+            if self.train_summary_writer is not None:
+                with self.train_summary_writer.as_default():
+                    self.loss_sumaries([loss[0],
+                                        loss[1],
+                                        act_comp_loss,
+                                        critic_comp_loss,
+                                        entropy_comp_loss,
+                                        critic_discount * critic_comp_loss,
+                                        entropy_beta * entropy_comp_loss],
+                                       ['actor_model_loss (-a_l + c*c_l - b*e_l)',
+                                        'critic_model_loss',
+                                        'actor_component (a_l)',
+                                        'critic_component (c_l)',
+                                        'entropy_component (e_l)',
+                                        '(c*c_l)',
+                                        '(b*e_l)'],
+                                       self.total_epochs)
+
+            self.total_epochs += 1
+
+            history_actor.history['loss'].append(loss[0].numpy())
+            history_critic.history['loss'].append(loss[1].numpy())
+
+            if callbacks is not None:
+                for cb in callbacks:
+                    cb.on_epoch_end(e)
+
+        return history_actor, history_critic
+
+    # @tf.function(experimental_relax_shapes=True)
+    def _train_step(self, x, old_prediction, y, returns, advantages, stddev=None, loss_clipping=0.3,
+                    critic_discount=0.5, entropy_beta=0.001):
+        """
+        Execute one training step (forward pass + backward pass)
+        Args:
+            source_seq: source sequences
+            target_seq_in: input target sequences (<start> + ...)
+            target_seq_out: output target sequences (... + <end>)
+
+        Returns:
+            The loss value of the current pass
+        """
+        with tf.GradientTape() as tape:
+            values = self.critic_net(x[0], x[1], training=True)
+            y_ = self.actor_net(x[0], x[1], training=True)
+            loss_actor, [act_comp_loss, critic_comp_loss, entropy_comp_loss] = self.loss_func_actor(y, y_,
+                                                                                                    advantages,
+                                                                                                    old_prediction,
+                                                                                                    returns, values,
+                                                                                                    stddev,
+                                                                                                    loss_clipping,
+                                                                                                    critic_discount,
+                                                                                                    entropy_beta)
+            loss_critic = self.loss_func_critic(returns, values)
+
+        self.metrics.update_state(y, y_)
+
+        variables_actor = self.actor_net.trainable_variables
+        variables_critic = self.critic_net.trainable_variables
+        gradients_actor, gradients_critic = tape.gradient([loss_actor, loss_critic],
+                                                          [variables_actor, variables_critic])
+        self.optimizer_actor.apply_gradients(zip(gradients_actor, variables_actor))
+        self.optimizer_critic.apply_gradients(zip(gradients_critic, variables_critic))
+
+        return [loss_actor, loss_critic], \
+               [gradients_actor, gradients_critic], \
+               [variables_actor, variables_critic], \
+               returns, \
+               advantages, \
+               [act_comp_loss, critic_comp_loss, entropy_comp_loss]
+
+
 def actor_custom_model():
     act_dense1 = Dense(128, activation='relu', name='actor_dense1')
     act_dense2 = Dense(128, activation='relu', name='actor_dense2')
@@ -85,8 +250,10 @@ def actor_custom_model():
         hidden = act_dense1(concat, training=training)
         hidden = act_dense2(hidden, training=training)
         out = act_out(hidden, training=training)
-        return out
+        actor_model = tf.keras.models.Model(inputs=concat, outputs=out)
+        return actor_model
     return model
+
 
 def critic_custom_model():
     critic_dense1 = Dense(128, activation='relu', name='critic_dense1')
@@ -100,15 +267,17 @@ def critic_custom_model():
         hidden = critic_dense1(concat, training=training)
         hidden = critic_dense2(hidden, training=training)
         out = critic_out(hidden, training=training)
-        return out
+        critic_model = tf.keras.models.Model(inputs=input, outputs=out)
+        return critic_model
     return model
+
 
 def custom_model(input_shape):
     return CustomNet(input_shape, actor_custom_model, critic_custom_model, tensorboard_dir=tensorboard_path)
 
 
 net_architecture = networks.ppo_net(use_tf_custom_model=True,
-                                       tf_custom_model=custom_model)
+                                    tf_custom_model=custom_model)
 
 agent = ppo_agent_discrete.Agent(actor_lr=1e-4,
                                  critic_lr=1e-4,

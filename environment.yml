@@ -1,4 +1,4 @@
-name: pyril
+name: pyril-headless
 channels:
   - aihabitat
   - conda-forge
@@ -178,12 +178,10 @@ dependencies:
     - dill==0.3.5.1
     - gym==0.23.0
     - gym-notices==0.0.8
-    - habitat==0.2.2
-    - habitat-sim==0.2.2
     - numpy==1.21.1
     - opencv-python==4.6.0.66
     - pickle5==0.0.12
     - pyyaml==6.0
     - tensorflow-probability==0.12.0
     - yacs==0.1.8
-prefix: /home/carlos/miniconda3/envs/pyril
+prefix: /home/carlos/miniconda3/envs/pyril-headless

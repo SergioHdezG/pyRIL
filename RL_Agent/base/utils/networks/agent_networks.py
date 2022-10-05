@@ -165,16 +165,16 @@ class PPONet(RLNetModel):
         returns = []
         advantages = []
 
+        # TODO: [CARLOS] check if this split makes sense at all (specially the +1). Maybe using a ceiling instead of
+        #   int in order to fit the rest of the observations.
+
         batch_obs = np.array_split(obs, int(rewards.shape[0] / batch_size) + 1)
         batch_rewards = np.array_split(rewards, int(rewards.shape[0] / batch_size) + 1)
         batch_mask = np.array_split(mask, int(rewards.shape[0] / batch_size) + 1)
 
         for b_o, b_r, b_m in zip(batch_obs, batch_rewards, batch_mask):
-            # values = self.critic_net(b_o)
             values = self.predict_values(b_o)
-
             ret, adv = self.calculate_advantages(values, b_m, b_r, gamma, lmbda)
-
             returns.extend(ret)
             advantages.extend(adv)
 
