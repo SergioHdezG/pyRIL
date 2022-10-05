@@ -28,8 +28,8 @@ from utils.preprocess import preprocess_habitat
 
 
 tensorboard_path = None #'/home/carlos/resultados/'
-environment = habitat_envs.HM3DRLEnv(config_paths="/home/carlos/repositorios/pyRIL/configs/RL/objectnav_hm3d_RL.yaml",
-                                     result_path=os.path.join("../../resultados",
+environment = habitat_envs.HM3DRLEnv(config_paths="configs/RL/objectnav_hm3d_RL.yaml",
+                                     result_path=os.path.join("resultados",
                                                               "images"),
                                      render_on_screen=False,
                                      save_video=False)
@@ -238,42 +238,44 @@ class CustomNet(PPONet):
                [act_comp_loss, critic_comp_loss, entropy_comp_loss]
 
 
-def actor_custom_model():
-    act_dense1 = Dense(128, activation='relu', name='actor_dense1')
-    act_dense2 = Dense(128, activation='relu', name='actor_dense2')
-    act_out = Dense(6, activation='softmax', name='actor_out')
+class ActorCustomModel():
+
+    def __int__(self):
+        self.layers = []
+        self.layers.append(Dense(128, activation='relu', name='actor_dense1'))
+        self.layers.append(Dense(128, activation='relu', name='actor_dense2'))
+        self.layers.append(Dense(6, activation='softmax', name='actor_out'))
+        self.trainable_variables = [l.trainable_variables for l in self.layers]
 
     # @tf.function(experimental_relax_shapes=True)
-    def model(input_rgb, input_goal, training=True):
+    def __call__(self, input_rgb, input_goal, training=True):
         flat = tf.keras.layers.Flatten()(input_rgb)
-        concat = tf.keras.layers.Concatenate(axis=-1)([flat, input_goal])
-        hidden = act_dense1(concat, training=training)
-        hidden = act_dense2(hidden, training=training)
-        out = act_out(hidden, training=training)
-        actor_model = tf.keras.models.Model(inputs=concat, outputs=out)
-        return actor_model
-    return model
+        hidden = tf.keras.layers.Concatenate(axis=-1)([flat, input_goal])
+        for layer in self.layers:
+            hidden = layer(hidden, training=training)
+        return hidden
 
 
-def critic_custom_model():
-    critic_dense1 = Dense(128, activation='relu', name='critic_dense1')
-    critic_dense2 = Dense(128, activation='relu', name='critic_dense2')
-    critic_out = Dense(1, activation='linear', name='critic_out')
+
+class CriticCustomModel():
+    def __int__(self):
+        self.layers = []
+        self.layers.append(Dense(128, activation='relu', name='critic_dense1'))
+        self.layers.append(Dense(128, activation='relu', name='critic_dense2'))
+        self.layers.append(Dense(1, activation='linear', name='critic_out'))
+        self.trainable_variables = [l.trainable_variables for l in self.layers]
 
     # @tf.function(experimental_relax_shapes=True)
-    def model(input_rgb, input_goal, training=True):
+    def __call__(self, input_rgb, input_goal, training=True):
         flat = tf.keras.layers.Flatten()(input_rgb)
-        concat = tf.keras.layers.Concatenate(axis=-1)([flat, input_goal])
-        hidden = critic_dense1(concat, training=training)
-        hidden = critic_dense2(hidden, training=training)
-        out = critic_out(hidden, training=training)
-        critic_model = tf.keras.models.Model(inputs=input, outputs=out)
-        return critic_model
-    return model
+        hidden = tf.keras.layers.Concatenate(axis=-1)([flat, input_goal])
+        for layer in self.layers:
+            hidden = layer(hidden, training=training)
+        return hidden
 
 
 def custom_model(input_shape):
-    return CustomNet(input_shape, actor_custom_model, critic_custom_model, tensorboard_dir=tensorboard_path)
+    return CustomNet(input_shape, ActorCustomModel(), CriticCustomModel(), tensorboard_dir=tensorboard_path)
 
 
 net_architecture = networks.ppo_net(use_tf_custom_model=True,
