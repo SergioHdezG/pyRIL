@@ -195,7 +195,7 @@ class CustomNet(PPONet):
 
         return history_actor, history_critic
 
-    # @tf.function(experimental_relax_shapes=True)
+    @tf.function(experimental_relax_shapes=True)
     def _train_step(self, x, old_prediction, y, returns, advantages, stddev=None, loss_clipping=0.3,
                     critic_discount=0.5, entropy_beta=0.001):
         """
@@ -238,8 +238,10 @@ class CustomNet(PPONet):
                [act_comp_loss, critic_comp_loss, entropy_comp_loss]
 
 
-class ActorCustomModel():
 
+
+class ActorCustomModel:
+    # TODO: [CARLOS] Standarize model's API in order to be model agnostic.
     def __init__(self):
         self.layers = []
         self.layers.append(Dense(128, activation='relu', name='actor_dense1'))
@@ -248,10 +250,14 @@ class ActorCustomModel():
 
     @property
     def trainable_variables(self):
-        return [l.trainable_variables for l in self.layers]
+        vars = []
+        for layer in self.layers:
+            for var in layer.trainable_variables:
+                vars.append(var)
+        return vars
 
-    # @tf.function(experimental_relax_shapes=True)
-    def __call__(self, input_rgb, input_goal, training=True):
+    @tf.function(experimental_relax_shapes=False)
+    def __call__(self, input_rgb, input_goal, training=False):
         flat = tf.keras.layers.Flatten()(input_rgb)
         hidden = tf.keras.layers.Concatenate(axis=-1)([flat, input_goal])
         for layer in self.layers:
@@ -259,8 +265,7 @@ class ActorCustomModel():
         return hidden
 
 
-
-class CriticCustomModel():
+class CriticCustomModel:
     def __init__(self):
         self.layers = []
         self.layers.append(Dense(128, activation='relu', name='critic_dense1'))
@@ -269,10 +274,14 @@ class CriticCustomModel():
 
     @property
     def trainable_variables(self):
-        return [l.trainable_variables for l in self.layers]
+        vars = []
+        for layer in self.layers:
+            for var in layer.trainable_variables:
+                vars.append(var)
+        return vars
 
-    # @tf.function(experimental_relax_shapes=True)
-    def __call__(self, input_rgb, input_goal, training=True):
+    @tf.function(experimental_relax_shapes=False)
+    def __call__(self, input_rgb, input_goal, training=False):
         flat = tf.keras.layers.Flatten()(input_rgb)
         hidden = tf.keras.layers.Concatenate(axis=-1)([flat, input_goal])
         for layer in self.layers:
