@@ -4,6 +4,14 @@ Matterport annotated objects: ["wall", "objects", "door", "chair", "window", "ce
 "stairs", "railing", "column", "counter", "stool", "bed", "sofa", "shower", "appliances", "toilet", "tv",
 "seating", "clothes", "fireplace", "bathtub", "beam", "furniture", "gym equip", "blinds", "board"]
 """
+import tensorflow as tf
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+    try:
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+    except RuntimeError as e:
+        print(e)
 
 import os
 import sys
@@ -40,10 +48,16 @@ class CustomNet(PPONet):
     Define Custom Net for habitat
     """
     def __init__(self, input_shape, actor_net, critic_net, tensorboard_dir=None):
-        super().__init__(actor_net, critic_net, tensorboard_dir=tensorboard_dir)
+        super().__init__(actor_net(input_shape), critic_net(input_shape), tensorboard_dir=tensorboard_dir)
 
-    # @tf.function(experimental_relax_shapes=True)
-    def _predict(self, x):
+    # TODO: [Sergio]: Standardize the inputs to _train_step(). We have two inputs (x[0]=rgb y x[1]=objectgoal) but in
+    #   a generic problem we may have a different number of inputs.
+    def predict(self, x):
+        y_ = self._predict(np.array(x[0]), np.array(x[1]))
+        return y_.numpy()
+
+    @tf.function(experimental_relax_shapes=False)
+    def _predict(self, x1, x2):
         """ Predict the output sentence for a given input sentence
             Args:
                 test_source_text: input sentence (raw string)
@@ -55,13 +69,21 @@ class CustomNet(PPONet):
                 The input string array (input sentence split by ' ')
                 The output string array
             """
-        out = self.actor_net(tf.cast(np.array(x[0]), tf.float32), tf.cast(np.array(x[1]), tf.float32), training=False)
+        # out = self.actor_net(tf.cast(np.array(x[0]), tf.float32), tf.cast(np.array(x[1]), tf.float32), training=False)
+        out = self.actor_net([x1, x2], training=False)
+
         return out
 
-    # @tf.function(experimental_relax_shapes=True)
-    def _predict_values(self, x):
-        y_ = self.critic_net(tf.cast(np.array(x[0]), tf.float32), tf.cast(np.array(x[1]), tf.float32), training=False)
-        return y_
+    # TODO: [Sergio]: Standardize the inputs to _train_step(). We have two inputs (x[0]=rgb y x[1]=objectgoal) but in
+    #   a generic problem we may have a different number of inputs.
+    def predict_values(self, x):
+        y_ = self._predict_values(np.array(x[0]), np.array(x[1]))
+        return y_.numpy()
+
+    @tf.function(experimental_relax_shapes=False)
+    def _predict_values(self, x1, x2):
+        out = self.critic_net([x1, x2], training=False)
+        return out
 
     def fit(self, obs, next_obs, actions, rewards, done, epochs, batch_size, validation_split=0.,
             shuffle=True, verbose=1, callbacks=None, kargs=[]):
@@ -195,8 +217,27 @@ class CustomNet(PPONet):
 
         return history_actor, history_critic
 
+    def train_step(self, x, old_prediction, y, returns, advantages, stddev=None, loss_clipping=0.3,
+                   critic_discount=0.5, entropy_beta=0.001):
+        """
+        Execute one training step (forward pass + backward pass)
+        Args:
+            source_seq: source sequences
+            target_seq_in: input target sequences (<start> + ...)
+            target_seq_out: output target sequences (... + <end>)
+
+        Returns:
+            The loss value of the current pass
+        """
+        # TODO: [Sergio]: Standardize the inputs to _train_step(). We have two inputs (x[0]=rgb y x[1]=objectgoal) but in
+        #   a generic problem we may have a different number of inputs.
+        return self._train_step(x[0], x[1], old_prediction, y, returns, advantages, stddev, loss_clipping,
+                   critic_discount, entropy_beta)
+
+    # TODO: [Sergio]: Standardize the inputs to _train_step(). We have two inputs (x[0]=rgb y x[1]=objectgoal) but in
+    #   a generic problem we may have a different number of inputs.
     @tf.function(experimental_relax_shapes=True)
-    def _train_step(self, x, old_prediction, y, returns, advantages, stddev=None, loss_clipping=0.3,
+    def _train_step(self, x_rgb, x_objgoal, old_prediction, y, returns, advantages, stddev=None, loss_clipping=0.3,
                     critic_discount=0.5, entropy_beta=0.001):
         """
         Execute one training step (forward pass + backward pass)
@@ -209,8 +250,8 @@ class CustomNet(PPONet):
             The loss value of the current pass
         """
         with tf.GradientTape() as tape:
-            values = self.critic_net(x[0], x[1], training=True)
-            y_ = self.actor_net(x[0], x[1], training=True)
+            values = self.critic_net([x_rgb, x_objgoal], training=True)
+            y_ = self.actor_net([x_rgb, x_objgoal], training=True)
             loss_actor, [act_comp_loss, critic_comp_loss, entropy_comp_loss] = self.loss_func_actor(y, y_,
                                                                                                     advantages,
                                                                                                     old_prediction,
@@ -239,58 +280,39 @@ class CustomNet(PPONet):
 
 
 
+def actor_model(input_shape):
+    input_rgb = tf.keras.Input(input_shape[0])
+    input_goal = tf.keras.Input(input_shape[1])
 
-class ActorCustomModel:
-    # TODO: [CARLOS] Standarize model's API in order to be model agnostic.
-    def __init__(self):
-        self.layers = []
-        self.layers.append(Dense(128, activation='relu', name='actor_dense1'))
-        self.layers.append(Dense(128, activation='relu', name='actor_dense2'))
-        self.layers.append(Dense(6, activation='softmax', name='actor_out'))
+    conv1 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(input_rgb)
+    conv2 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(conv1)
+    flat = tf.keras.layers.Flatten()(conv2)
+    hidden = tf.keras.layers.Concatenate(axis=-1)([flat, input_goal])
+    hidden = Dense(256, activation='tanh')(hidden)
+    hidden = Dense(256, activation='tanh')(hidden)
+    out = Dense(6, activation='softmax')(hidden)
 
-    @property
-    def trainable_variables(self):
-        vars = []
-        for layer in self.layers:
-            for var in layer.trainable_variables:
-                vars.append(var)
-        return vars
+    actor_model = tf.keras.models.Model(inputs=[input_rgb, input_goal], outputs=out)
+    return actor_model
 
-    @tf.function(experimental_relax_shapes=False)
-    def __call__(self, input_rgb, input_goal, training=False):
-        flat = tf.keras.layers.Flatten()(input_rgb)
-        hidden = tf.keras.layers.Concatenate(axis=-1)([flat, input_goal])
-        for layer in self.layers:
-            hidden = layer(hidden, training=training)
-        return hidden
+def critic_model(input_shape):
+    input_rgb = tf.keras.Input(input_shape[0])
+    input_goal = tf.keras.Input(input_shape[1])
 
+    conv1 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(input_rgb)
+    conv2 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(conv1)
+    flat = tf.keras.layers.Flatten()(conv2)
+    hidden = tf.keras.layers.Concatenate(axis=-1)([flat, input_goal])
+    hidden = Dense(256, activation='tanh')(hidden)
+    hidden = Dense(256, activation='tanh')(hidden)
+    out = Dense(1, activation='linear')(hidden)
 
-class CriticCustomModel:
-    def __init__(self):
-        self.layers = []
-        self.layers.append(Dense(128, activation='relu', name='critic_dense1'))
-        self.layers.append(Dense(128, activation='relu', name='critic_dense2'))
-        self.layers.append(Dense(1, activation='linear', name='critic_out'))
+    critic_model = tf.keras.models.Model(inputs=[input_rgb, input_goal], outputs=out)
 
-    @property
-    def trainable_variables(self):
-        vars = []
-        for layer in self.layers:
-            for var in layer.trainable_variables:
-                vars.append(var)
-        return vars
-
-    @tf.function(experimental_relax_shapes=False)
-    def __call__(self, input_rgb, input_goal, training=False):
-        flat = tf.keras.layers.Flatten()(input_rgb)
-        hidden = tf.keras.layers.Concatenate(axis=-1)([flat, input_goal])
-        for layer in self.layers:
-            hidden = layer(hidden, training=training)
-        return hidden
-
+    return critic_model
 
 def custom_model(input_shape):
-    return CustomNet(input_shape, ActorCustomModel(), CriticCustomModel(), tensorboard_dir=tensorboard_path)
+    return CustomNet(input_shape, actor_model, critic_model, tensorboard_dir=tensorboard_path)
 
 
 net_architecture = networks.ppo_net(use_tf_custom_model=True,
@@ -307,11 +329,11 @@ agent = ppo_agent_discrete.Agent(actor_lr=1e-4,
                                  n_stack=1,
                                  is_habitat=True,
                                  img_input=True,
-                                 state_size=[(460, 640, 3), (12)],  # TODO: [Sergio] Revisar y automaticar el control del state_size cuando is_habitat=True
+                                 state_size=[(480, 640, 3), (12)],  # TODO: [Sergio] Revisar y automaticar el control del state_size cuando is_habitat=True
                                  train_action_selection_options=greedy_random_choice,
                                  loss_critic_discount=0,
                                  loss_entropy_beta=0,)
-                                 # tensorboard_dir=tensorboard_path)
+                                 # tensorboard_dir=tensorboard_path # Se le pasa la ruta directamente a la clase CustomNet)
 
 # Define the problem
 problem = rl_problem.Problem(environment, agent)
