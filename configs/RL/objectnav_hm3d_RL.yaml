@@ -33,7 +33,7 @@ SIMULATOR:
     POSITION: [0, 0.88, 0]
 TASK:
   TYPE: ObjectNav-v1
-  POSSIBLE_ACTIONS: ["STOP", "MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "LOOK_UP", "LOOK_DOWN"]
+  POSSIBLE_ACTIONS: ["MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "LOOK_UP", "LOOK_DOWN"]
 
   SENSORS: ['OBJECTGOAL_SENSOR']
   GOAL_SENSOR_UUID: objectgoal
@@ -41,11 +41,12 @@ TASK:
 
   DISTANCE_TO_GOAL:
     DISTANCE_TO: VIEW_POINTS
+  SUCCESS_MEASURE: success
   SUCCESS:
     SUCCESS_DISTANCE: 0.2
 
 DATASET:
   TYPE: ObjectNav-v1
   SPLIT: train
-  DATA_PATH: "data/datasets/objectnav/hm3d/v1/{split}/{split}.json.gz"
+  DATA_PATH: "data/datasets/objectnav/hm3d/v1/custom/one_scene_chair.json.gz"
   SCENES_DIR: "data/scene_datasets/"

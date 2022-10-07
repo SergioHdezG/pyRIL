@@ -418,9 +418,27 @@ class RLProblemSuper(object, metaclass=ABCMeta):
         else:
             episode_str = 'Episode: '
         if verbose == 1:
+
             if (episode + 1) % 1 == 0:
-                print(episode_str, episode + 1, 'Steps: ', steps, ' Reward: {:.1f}'.format(episodic_reward),
-                      'Smooth Reward: {:.1f}'.format(rew_mean), ' Epsilon: {:.4f}'.format(self.agent.epsilon))
+
+                if hasattr(self.env, "current_episode"):
+                    # It is a habitat env so we use its info
+                    print(episode_str, episode,
+                          '| Steps: ', steps,
+                          '| Reward: {:.1f}'.format(episodic_reward),
+                          '| Smooth Reward: {:.1f}'.format(rew_mean),
+                          '| Epsilon: {:.4f}'.format(self.agent.epsilon),
+                          '| Current Episode: {}'.format(self.env.current_episode.episode_id),
+                          '| Current Scene: {}'.format(self.env.current_episode.scene_id.split('/')[4]),
+                          '| SPL: {:.1f}'.format(self.env.get_info(None)['spl']),
+                          '| Distance to Goal: {:.1f}'.format(self.env.get_info(None)['distance_to_goal']),
+                          '| Episode Success: {:.1f}'.format(self.env.get_success()))
+                else:
+                    print(episode_str, episode,
+                          '| Steps: ', steps,
+                          '| Reward: {:.1f}'.format(episodic_reward),
+                          '| Smooth Reward: {:.1f}'.format(rew_mean),
+                          '| Epsilon: {:.4f}'.format(self.agent.epsilon))
 
         if verbose == 2:
             print(episode_str, episode + 1, 'Mean Reward: ', rew_mean)

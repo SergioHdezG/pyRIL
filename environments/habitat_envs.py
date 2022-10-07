@@ -39,7 +39,8 @@ class HM3DRLEnv(habitat.RLEnv):
                  result_path=os.path.join("development", "images"),
                  task=None,
                  render_on_screen=False,
-                 save_video=False):
+                 save_video=False,
+                 oracle_stop=False):
         print(f"{bcolors.OKBLUE}Creando un nuevo entorno.{bcolors.ENDC}")
 
         if not os.path.exists(result_path):
@@ -61,23 +62,42 @@ class HM3DRLEnv(habitat.RLEnv):
         self.metadata = {
             'render.modes': ['rgb']
         }
-        self.action_space = spaces.Discrete(6)  # FORWARD, LEFT, RIGHT, LOOK_UP, LOOK_DOWN, STOP
-        self.action_list = [HabitatSimActions.MOVE_FORWARD,
-                            HabitatSimActions.TURN_LEFT,
-                            HabitatSimActions.TURN_RIGHT,
-                            HabitatSimActions.LOOK_UP,
-                            HabitatSimActions.LOOK_DOWN,
-                            HabitatSimActions.STOP]
+        self.action_space = spaces.Discrete(len(self.config.TASK.POSSIBLE_ACTIONS))  # FORWARD, LEFT, RIGHT, LOOK_UP, LOOK_DOWN, STOP
+        self.action_list = range(len(self.config.TASK.POSSIBLE_ACTIONS))
+
+        # TODO [CARLOS]: I tried using habitat actions to fill action_list, but if the actions are not the
+        #  default ones it fails
+        # # Get actions from self.config:
+        # self.action_list = list()
+        #
+        # for action in self.config.TASK.POSSIBLE_ACTIONS:
+        #     if action == 'MOVE_FORWARD':
+        #         self.action_list.append(HabitatSimActions.MOVE_FORWARD)
+        #     elif action == 'TURN_LEFT':
+        #         self.action_list.append(HabitatSimActions.TURN_LEFT)
+        #     elif action == 'TURN_RIGHT':
+        #         self.action_list.append(HabitatSimActions.TURN_RIGHT)
+        #     elif action == 'LOOK_UP':
+        #         self.action_list.append(HabitatSimActions.LOOK_UP)
+        #     elif action == 'LOOK_DOWN':
+        #         self.action_list.append(HabitatSimActions.LOOK_DOWN)
+        #     elif action == 'STOP':
+        #         self.action_list.append(HabitatSimActions.STOP)
 
         # self.observation_space = spaces.Tuple((spaces.Box(low=0, high=255, shape=(480, 640, 3), dtype=np.uint8),
         #                                        spaces.Box(low=-20.0, high=20.0, shape=(2,), dtype=np.float32)))
-        self.observation_space = spaces.Box(low=0, high=255, shape=(480, 640, 3), dtype=np.uint8)
+        self.observation_space = spaces.Box(low=0,
+                                            high=255,
+                                            shape=(self.config.SIMULATOR.RGB_SENSOR.HEIGHT, self.config.SIMULATOR.RGB_SENSOR.WIDTH
+                                                   , 3),
+                                            dtype=np.uint8)
 
         self._task = task
         self._generator = None
         self.first_reset = True
         self.render_on_screen = render_on_screen
         self._previous_measure = None
+        self._oracle_stop = oracle_stop
         self._reward_measure_name = self.config.TASK.REWARD_MEASURE
         self._success_measure_name = self.config.TASK.SUCCESS_MEASURE
 
@@ -174,9 +194,19 @@ class HM3DRLEnv(habitat.RLEnv):
 
     def _episode_success(self):
         """
-        Default habitat implementation from habitat.core.environments.py
+        Determine wether the episode is a successfull one depending on oracle stop or not.
         """
-        return self._env.get_metrics()[self._success_measure_name]
+        if self._oracle_stop:
+            return self._env.get_metrics()['distance_to_goal'] <= self.config.TASK.SUCCESS.SUCCESS_DISTANCE
+        else:
+            return self._env.get_metrics()[self._success_measure_name]
+
+    def get_success(self):
+        """
+        Method to use as a logger for getting success
+        Returns: _episode_success
+        """
+        return self._episode_success()
 
     def _draw_top_down_map(self, info, output_size):
         return maps.colorize_draw_agent_and_fit_to_height(
