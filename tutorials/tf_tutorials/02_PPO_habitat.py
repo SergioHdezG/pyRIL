@@ -36,7 +36,7 @@ from utils.preprocess import preprocess_habitat
 
 
 tensorboard_path = None #'/home/carlos/resultados/'
-environment = habitat_envs.HM3DRLEnv(config_paths="configs/RL/objectnav_hm3d_RL.yaml",
+environment = habitat_envs.HM3DRLEnvClip(config_paths="configs/RL/objectnav_hm3d_RL.yaml",
                                      result_path=os.path.join("resultados",
                                                               "images"),
                                      render_on_screen=False,
