@@ -32,7 +32,7 @@ from tutorials.transformers_models import *
 from RL_Agent.base.utils.networks.networks_interface import RLNetModel, TrainingHistory
 from RL_Agent.base.utils.networks.agent_networks import PPONet
 from RL_Agent.base.utils import agent_saver, history_utils
-from utils.preprocess import preprocess_habitat
+from utils.preprocess import preprocess_habitat, preprocess_habitat_clip
 
 
 tensorboard_path = None #'/home/carlos/resultados/'
@@ -281,33 +281,33 @@ class CustomNet(PPONet):
 
 
 def actor_model(input_shape):
-    input_rgb = tf.keras.Input(input_shape[0])
+    input_clip = tf.keras.Input(input_shape[0])
     input_goal = tf.keras.Input(input_shape[1])
 
-    conv1 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(input_rgb)
-    conv2 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(conv1)
-    flat = tf.keras.layers.Flatten()(conv2)
-    hidden = tf.keras.layers.Concatenate(axis=-1)([flat, input_goal])
-    hidden = Dense(256, activation='tanh')(hidden)
+    # conv1 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(input_rgb)
+    # conv2 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(conv1)
+    # flat = tf.keras.layers.Flatten()(conv2)
+    hidden = tf.keras.layers.Concatenate(axis=-1)([input_clip, input_goal])
+    hidden = Dense(512, activation='tanh')(hidden)
     hidden = Dense(256, activation='tanh')(hidden)
     out = Dense(6, activation='softmax')(hidden)
 
-    actor_model = tf.keras.models.Model(inputs=[input_rgb, input_goal], outputs=out)
+    actor_model = tf.keras.models.Model(inputs=[input_clip, input_goal], outputs=out)
     return actor_model
 
 def critic_model(input_shape):
-    input_rgb = tf.keras.Input(input_shape[0])
+    input_clip = tf.keras.Input(input_shape[0])
     input_goal = tf.keras.Input(input_shape[1])
 
-    conv1 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(input_rgb)
-    conv2 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(conv1)
-    flat = tf.keras.layers.Flatten()(conv2)
-    hidden = tf.keras.layers.Concatenate(axis=-1)([flat, input_goal])
-    hidden = Dense(256, activation='tanh')(hidden)
+    # conv1 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(input_rgb)
+    # conv2 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(conv1)
+    # flat = tf.keras.layers.Flatten()(conv2)
+    hidden = tf.keras.layers.Concatenate(axis=-1)([input_clip, input_goal])
+    hidden = Dense(512, activation='tanh')(hidden)
     hidden = Dense(256, activation='tanh')(hidden)
     out = Dense(1, activation='linear')(hidden)
 
-    critic_model = tf.keras.models.Model(inputs=[input_rgb, input_goal], outputs=out)
+    critic_model = tf.keras.models.Model(inputs=[input_clip, input_goal], outputs=out)
 
     return critic_model
 
@@ -322,14 +322,14 @@ agent = ppo_agent_discrete.Agent(actor_lr=1e-4,
                                  critic_lr=1e-4,
                                  batch_size=10,
                                  memory_size=100,
-                                 epsilon=0.8,
-                                 epsilon_decay=0.95,
+                                 epsilon=0.3,
+                                 epsilon_decay=1.0,
                                  epsilon_min=0.30,
                                  net_architecture=net_architecture,
                                  n_stack=1,
                                  is_habitat=True,
                                  img_input=True,
-                                 state_size=[(480, 640, 3), (12)],  # TODO: [Sergio] Revisar y automaticar el control del state_size cuando is_habitat=True
+                                 state_size=[(1024), (12)],  # TODO: [Sergio] Revisar y automaticar el control del state_size cuando is_habitat=True
                                  train_action_selection_options=greedy_random_choice,
                                  loss_critic_discount=0,
                                  loss_entropy_beta=0,)
@@ -339,7 +339,7 @@ agent = ppo_agent_discrete.Agent(actor_lr=1e-4,
 problem = rl_problem.Problem(environment, agent)
 
 # Add preprocessing to the observations
-problem.preprocess = preprocess_habitat
+problem.preprocess = preprocess_habitat_clip
 
 # Solve (train the agent) and test it
 problem.solve(episodes=200, render=False)
