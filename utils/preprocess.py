@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from skimage import data, color
 from skimage.transform import rescale, resize, downscale_local_mean
 
+
 def atari_assault_preprocess(obs):
     # Crop and resize the image
 
@@ -28,6 +29,7 @@ def atari_assault_preprocess(obs):
 
     return obs.reshape(88, 80, 1)
 
+
 def atari_pacman_preprocess(obs):
     color = np.array([210, 164, 74]).mean()
 
@@ -45,8 +47,8 @@ def atari_pacman_preprocess(obs):
 
     return img.reshape(88, 80, 1)
 
-def to_grayscale(obs):
 
+def to_grayscale(obs):
     # Convert the image to greyscale
     img = obs.mean(axis=2)
 
@@ -54,6 +56,7 @@ def to_grayscale(obs):
     # img[img == color] = 0
 
     return img.reshape(img.shape[0], img.shape[1], 1)
+
 
 def preproces_car_racing(obs):
     # Crop and resize the image
@@ -71,8 +74,27 @@ def preproces_car_racing(obs):
     # plt.imshow(obs, cmap='gray')
     # plt.draw()
     # plt.pause(10e-50)
-    img = obs/255.
+    img = obs / 255.
     # # Improve image contrast
     # img[img == color] = 0
 
     return img.reshape(img.shape[0], img.shape[1], 1)
+
+def preprocess_habitat(obs: dict):
+    """
+    Normalize rgb input and one hot objectgoal id
+    @param obs: observations returned by habitat
+    @return: dict containing the preprocessed observations
+    """
+
+    # RGB input normalized
+    rgb = obs['rgb']
+    img = rgb / 255.
+
+    # ObjectGoal input to onehot
+    object_goal = obs['objectgoal']
+    one_hot_goal = np.zeros((12))
+    one_hot_goal[object_goal] = 1.
+
+    return {'rgb': img, 'objectgoal': one_hot_goal}
+

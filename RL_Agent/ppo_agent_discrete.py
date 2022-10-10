@@ -9,8 +9,8 @@ from RL_Agent.base.utils.networks import action_selection_options
 class Agent(PPOSuper):
     def __init__(self, actor_lr=1e-4, critic_lr=1e-3, batch_size=32, epsilon=1.0, epsilon_decay=0.9999, epsilon_min=0.1,
                  gamma=0.95, n_step_return=10, memory_size=512, loss_clipping=0.2, loss_critic_discount=0.5,
-                 loss_entropy_beta=0.001, lmbda=0.95, train_steps=10, exploration_noise=1.0, n_stack=1,
-                 img_input=False, state_size=None, net_architecture=None, tensorboard_dir=None,
+                 loss_entropy_beta=0.001, lmbda=0.95, train_epochs=10, exploration_noise=1.0, n_stack=1,
+                 img_input=False, is_habitat=False, state_size=None, net_architecture=None, tensorboard_dir=None,
                  train_action_selection_options=action_selection_options.greedy_action,
                  action_selection_options=action_selection_options.argmax):
         """
@@ -28,7 +28,7 @@ class Agent(PPOSuper):
         :param epsilon_min: (float, [0., 1.])  Minimum exploration-exploitation rate allowed ing training.
         :param gamma: (float) Discount or confidence factor for target value estimation.
         :param n_step_return: (int > 0) Number of steps used for calculating the return.
-        :param memory_size: (int) Size of experiences memory.
+        :param memory_size: (int) Size of steps accumulated before doing a train step.
         :param loss_clipping: (float > 0) Clipping factor of PPO loss function. Controls how much the updated policy
             differs from the previous policy for each training iteration.
         :param loss_critic_discount: (float > 0) Factor of importance of the critic loss for the actor network. The
@@ -38,14 +38,16 @@ class Agent(PPOSuper):
             * entropy_loss. Entropy term is used to improve the exploration, higher values will result in a more
             explorative training process.
         :param lmbda: (float) PPO lambda factor.
-        :param train_steps: (int > 0) Number of epochs for training the agent network in each iteration of the algorithm.
+        :param train_epochs: (int > 0) Number of epochs for training the agent network in each iteration of the algorithm
+        with the memory steps collected.
         :param exploration_noise: (float [0, 1]) Maximum value of noise for action selection in exploration mode. By
             default is used as maximum stddev for selecting actions from a normal distribution during exploration and it
             is multiplied by epsilon to reduce the stddev. This result on exploration factor reduction through the time
             steps.
-        :param n_stack: (int) Number of time steps stacked on the state.
+        :param n_stack: (int) Number of time steps stacked on the state (used for RNNs).
         :param img_input: (bool) Flag for using a images as states. If True, the states are supposed to be images (3D
             array).
+        : param is habitat: (bool) Flag to specify if the observations come from an habitat environment.
         :param state_size: (tuple of ints) State size. Only needed if the original state size is modified by any
             preprocessing. Shape of the state that must match network's inputs. This shape must include the number of
             stacked states.
@@ -67,8 +69,8 @@ class Agent(PPOSuper):
                          epsilon_decay=epsilon_decay, epsilon_min=epsilon_min, gamma=gamma,
                          n_step_return=n_step_return, memory_size=memory_size, loss_clipping=loss_clipping,
                          loss_critic_discount=loss_critic_discount, loss_entropy_beta=loss_entropy_beta, lmbda=lmbda,
-                         train_steps=train_steps, exploration_noise=exploration_noise, n_stack=n_stack,
-                         img_input=img_input, state_size=state_size, net_architecture=net_architecture,
+                         train_epochs=train_epochs, exploration_noise=exploration_noise, n_stack=n_stack,
+                         img_input=img_input, is_habitat=is_habitat, state_size=state_size, net_architecture=net_architecture,
                          tensorboard_dir=tensorboard_dir,
                          train_action_selection_options=train_action_selection_options,
                          action_selection_options=action_selection_options)

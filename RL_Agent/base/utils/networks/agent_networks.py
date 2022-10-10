@@ -165,16 +165,16 @@ class PPONet(RLNetModel):
         returns = []
         advantages = []
 
+        # TODO: [CARLOS] check if this split makes sense at all (specially the +1). Maybe using a ceiling instead of
+        #   int in order to fit the rest of the observations.
+
         batch_obs = np.array_split(obs, int(rewards.shape[0] / batch_size) + 1)
         batch_rewards = np.array_split(rewards, int(rewards.shape[0] / batch_size) + 1)
         batch_mask = np.array_split(mask, int(rewards.shape[0] / batch_size) + 1)
 
         for b_o, b_r, b_m in zip(batch_obs, batch_rewards, batch_mask):
-            # values = self.critic_net(b_o)
             values = self.predict_values(b_o)
-
             ret, adv = self.calculate_advantages(values, b_m, b_r, gamma, lmbda)
-
             returns.extend(ret)
             advantages.extend(adv)
 
@@ -238,12 +238,12 @@ class PPONet(RLNetModel):
                                                                         critic_discount=tf.cast(critic_discount, tf.float32),
                                                                         entropy_beta=tf.cast(entropy_beta, tf.float32))
 
-                if batch % int(batch_size / 5) == 0 and verbose == 1:
-                    print(
-                        'Epoch {}\t Batch {}\t Loss Actor\Critic {:.4f}\{:.4f} Acc {:.4f} Elapsed time {:.2f}s'.format(
-                            e + 1, batch, loss[0].numpy(), loss[1].numpy(), self.metrics.result(),
-                            time.time() - start_time))
-                    start_time = time.time()
+            if verbose:
+                print(
+                    'Epoch {}\t Loss Actor\Critic {:.4f}\{:.4f} Acc {:.4f} Elapsed time {:.2f}s'.format(
+                        e + 1, loss[0].numpy(), loss[1].numpy(), self.metrics.result(),
+                        time.time() - start_time))
+                start_time = time.time()
 
             if self.train_summary_writer is not None:
                 with self.train_summary_writer.as_default():

@@ -4,302 +4,345 @@ Matterport annotated objects: ["wall", "objects", "door", "chair", "window", "ce
 "stairs", "railing", "column", "counter", "stool", "bed", "sofa", "shower", "appliances", "toilet", "tv",
 "seating", "clothes", "fireplace", "bathtub", "beam", "furniture", "gym equip", "blinds", "board"]
 """
-
+import tensorflow as tf
 import os
 import sys
 from os import path
-
-from RL_Agent.base.utils.networks.action_selection_options import greedy_random_choice, random_choice
-
-sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
-
+import time
 from RL_Problem import rl_problem
 from RL_Agent import ppo_agent_discrete_parallel, ppo_agent_discrete
-from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, Flatten
 from environments import habitat_envs
 from RL_Agent.base.utils.networks import networks, losses, returns_calculations, tensor_board_loss_functions
 from tutorials.transformers_models import *
-from RL_Agent.base.utils.networks.networks_interface import RLNetModel
+from RL_Agent.base.utils.networks.networks_interface import RLNetModel, TrainingHistory
 from RL_Agent.base.utils.networks.agent_networks import PPONet
 from RL_Agent.base.utils import agent_saver, history_utils
+from utils.preprocess import preprocess_habitat
+from RL_Agent.base.utils.networks.action_selection_options import greedy_random_choice, random_choice
 
-environment = habitat_envs.HM3DRLEnv(config_paths="/media/archivos/home/PycharmProjects2022/Habitat-RL/pyRIL-habitat/configs/RL/objectnav_hm3d_RL.yaml",
-                                     result_path=os.path.join("/media/archivos/home/PycharmProjects2022/Habitat-RL/pyRIL/resultados",
-                                                              "images"),
-                                     render_on_screen=True)
+sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
-# Los algoritmos Ator-Critic utilizan dos redes neronales, una el Actor y otra el Crítico, la forma rápida de crearlas
-# es la siguiente (Anunque en este experimento solo se van autilizar capas densas se definen también capas
-# convolucionales a modo de ejemplo que luego la librería descartará al crear el modelo ya que el tipo de entrada no se
-# corresponde con el necesario para realizar convoluciones. Para que se realizasen tendriamos que marcar el parámetro
-# img_input=False al construir el problema más adelante).
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+    try:
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+    except RuntimeError as e:
+        print(e)
 
-# class ActorNet(RLNetModel):
-#     def __init__(self, input_shape, tensorboard_dir=None):
-#         super().__init__()
-#
-#         self.actor_net = self._build_actor_net(input_shape)
-#         self.critic_net = self._build_critic_net(input_shape)
-#
-#         if tensorboard_dir is not None:
-#             current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-#             train_log_dir = os.path.join(tensorboard_dir, 'logs/gradient_tape/' + current_time + '/train')
-#             self.train_summary_writer = tf.summary.create_file_writer(train_log_dir)
-#         else:
-#             self.train_summary_writer = None
-#         self.total_epochs = 0
-#         self.loss_func_actor = None
-#         self.loss_func_critic = None
-#         self.optimizer_actor = None
-#         self.optimizer_critic = None
-#         self.metrics = None
-#         self.calculate_advantages = None
-#         self.loss_sumaries = tensor_board_loss_functions.loss_sumaries
-#         self.rl_loss_sumaries = tensor_board_loss_functions.rl_loss_sumaries
-#         self.rl_sumaries = tensor_board_loss_functions.rl_sumaries
-#
-#     def _build_actor_net(self, input_shape):
-#         lstm = LSTM(64, activation='tanh', input_shape=input_shape)
-#         flat = Flatten()
-#         dense_1 = Dense(512, activation='relu')
-#         dense_2 = Dense(256, activation='relu')
-#         output = Dense(4, activation="softmax")
-#
-#         return tf.keras.models.Sequential([lstm, flat, dense_1, dense_2, output])
-#
-#     def _build_critic_net(self, input_shape):
-#         lstm = LSTM(64, activation='tanh', input_shape=input_shape)
-#         flat = Flatten()
-#         dense_1 = Dense(512, activation='relu')
-#         dense_2 = Dense(256, activation='relu')
-#         output = Dense(1, activation="linear")
-#         return tf.keras.models.Sequential([lstm, flat, dense_1, dense_2, output])
-#
-#     def compile(self, loss, optimizer, metrics=tf.keras.metrics.BinaryAccuracy()):
-#         self.loss_func_actor = losses.ppo_loss_continuous
-#         self.loss_func_critic = losses.mse
-#         self.optimizer_actor = optimizer[0]
-#         self.optimizer_critic = optimizer[1]
-#         self.calculate_advantages = returns_calculations.gae
-#         self.metrics = metrics
-#
-#     def summary(self):
-#         pass
-#
-#     def predict(self, x):
-#         y_ = self._predict(x)
-#         return y_.numpy()
-#
-#     @tf.function
-#     def _predict(self, x):
-#         """ Predict the output sentence for a given input sentence
-#             Args:
-#                 test_source_text: input sentence (raw string)
-#
-#             Returns:
-#                 The encoder's attention vectors
-#                 The decoder's bottom attention vectors
-#                 The decoder's middle attention vectors
-#                 The input string array (input sentence split by ' ')
-#                 The output string array
-#             """
-#         y_ = self.actor_net(tf.cast(x, tf.float32), training=False)
-#         return y_
-#
-#     @tf.function(experimental_relax_shapes=True)
-#     def train_step(self, x, old_prediction, y, returns, advantages, stddev=None, loss_clipping=0.3,
-#                    critic_discount=0.5, entropy_beta=0.001):
-#         """ Execute one training step (forward pass + backward pass)
-#         Args:
-#             source_seq: source sequences
-#             target_seq_in: input target sequences (<start> + ...)
-#             target_seq_out: output target sequences (... + <end>)
-#
-#         Returns:
-#             The loss value of the current pass
-#         """
-#         with tf.GradientTape() as tape:
-#             values = self.critic_net(x, training=True)
-#             y_ = self.actor_net(x, training=True)
-#             loss_actor = self.loss_func_actor(y, y_, advantages, old_prediction, returns, values, stddev, loss_clipping,
-#                                               critic_discount, entropy_beta)
-#             loss_critic = self.loss_func_critic(returns, values)
-#         self.metrics.update_state(y, y_)
-#
-#         variables_actor = self.actor_net.trainable_variables
-#         variables_critic = self.critic_net.trainable_variables
-#         gradients_actor, gradients_critic = tape.gradient([loss_actor, loss_critic],
-#                                                           [variables_actor, variables_critic])
-#         self.optimizer_actor.apply_gradients(zip(gradients_actor, variables_actor))
-#         self.optimizer_critic.apply_gradients(zip(gradients_critic, variables_critic))
-#
-#         return [loss_actor, loss_critic], [gradients_actor, gradients_critic], [variables_actor,
-#                                                                                 variables_critic], returns, advantages
-#
-#     def fit(self, obs, next_obs, actions, rewards, done, epochs, batch_size, validation_split=0.,
-#             shuffle=True, verbose=1, callbacks=None, kargs=[]):
-#         act_probs = kargs[0]
-#         mask = kargs[1]
-#         stddev = kargs[2]
-#         loss_clipping = kargs[3]
-#         critic_discount = kargs[4]
-#         entropy_beta = kargs[5]
-#         gamma = kargs[6]
-#         lmbda = kargs[7]
-#
-#         # Calculate returns and advantages
-#         returns = []
-#         advantages = []
-#
-#         batch_obs = np.array_split(obs, int(rewards.shape[0] / batch_size) + 1)
-#         batch_rewards = np.array_split(rewards, int(rewards.shape[0] / batch_size) + 1)
-#         batch_mask = np.array_split(mask, int(rewards.shape[0] / batch_size) + 1)
-#         batch_returns = np.array_split(returns, int(rewards.shape[0] / batch_size) + 1)
-#         batch_advantages = np.array_split(advantages, int(rewards.shape[0] / batch_size) + 1)
-#
-#         for b_o, b_r, b_m, b_ret, b_a in zip(batch_obs, batch_rewards, batch_mask, batch_returns, batch_advantages):
-#             values = self.critic_net.predict(b_o)
-#             ret, adv = self.calculate_advantages(values, b_m, b_r, gamma, lmbda)
-#
-#             returns.extend(ret)
-#             advantages.extend(adv)
-#
-#         dataset = tf.data.Dataset.from_tensor_slices((np.float32(obs),
-#                                                       np.float32(act_probs),
-#                                                       np.float32(rewards),
-#                                                       np.float32(actions),
-#                                                       np.float32(mask),
-#                                                       np.float32(returns),
-#                                                       np.float32(advantages)))
-#
-#         if shuffle:
-#             dataset = dataset.shuffle(len(obs), reshuffle_each_iteration=True).batch(batch_size)
-#         else:
-#             dataset = dataset.batch(batch_size)
-#
-#         history_actor = TariningHistory()
-#         history_critic = TariningHistory()
-#
-#         start_time = time.time()
-#
-#         for e in range(epochs):
-#             loss = 0.
-#             for batch, (batch_obs,
-#                         batch_act_probs,
-#                         batch_rewards,
-#                         batch_actions,
-#                         batch_mask,
-#                         batch_returns,
-#                         batch_advantages) in enumerate(dataset.take(-1)):
-#                 loss, gradients, variables, returns, advantages = self.train_step(batch_obs,
-#                                                                                   batch_act_probs,
-#                                                                                   batch_actions,
-#                                                                                   batch_returns,
-#                                                                                   batch_advantages,
-#                                                                                   stddev=stddev,
-#                                                                                   loss_clipping=loss_clipping,
-#                                                                                   critic_discount=critic_discount,
-#                                                                                   entropy_beta=entropy_beta)
-#
-#                 if batch % int(batch_size / 5) == 0 and verbose == 1:
-#                     print('Epoch {}\t Batch {}\t Actor\Critic {:.4f}\{:.4f} Acc {:.4f} Elapsed time {:.2f}s'.format(
-#                         e + 1, batch, loss[0].numpy(), loss[1].numpy(), self.metrics.result(),
-#                         time.time() - start_time))
-#                     start_time = time.time()
-#
-#             if self.train_summary_writer is not None:
-#                 with self.train_summary_writer.as_default():
-#                     self.loss_sumaries(loss, self.total_epochs)
-#                     self.rl_loss_sumaries(returns.numpy(), advantages.numpy(), actions, act_probs, stddev,
-#                                           self.total_epochs)
-#             self.total_epochs += 1
-#
-#             history_actor.history['loss'].append(loss[0].numpy())
-#             history_critic.history['loss'].append(loss[1].numpy())
-#
-#             if callbacks is not None:
-#                 for cb in callbacks:
-#                     cb.on_epoch_end(e)
-#         return history_actor, history_critic
+tensorboard_path = '/home/carlos/resultados/'
+environment = habitat_envs.HM3DRLEnv(config_paths="configs/RL/objectnav_hm3d_RL.yaml",
+                                     result_path=os.path.join("resultados", "images"),
+                                     render_on_screen=False,
+                                     save_video=False,
+                                     oracle_stop=True)
 
 
-# def actor_custom_model_tf(input_shape):
-#     return PPONet(input_shape=input_shape, tensorboard_dir='/home/carlos/resultados')
+class CustomNet(PPONet):
+    """
+    Define Custom Net for habitat
+    """
 
-def actor_custom_model(input_shape):
-    dense_1 = Dense(128, input_shape=input_shape, activation='relu')
-    dense_2 = Dense(128, activation='relu')
-    output = Dense(6, activation='softmax')
+    def __init__(self, input_shape, actor_net, critic_net, tensorboard_dir=None):
+        super().__init__(actor_net(input_shape), critic_net(input_shape), tensorboard_dir=tensorboard_dir)
 
-    def model():
-        input = tf.keras.Input(shape=input_shape)
-        hidden = tf.keras.layers.Flatten()(input)
-        hidden = dense_1(hidden)
-        hidden = dense_2(hidden)
-        out = output(hidden)
-        actor_model = tf.keras.models.Model(inputs=input, outputs=out)
-        return Sequential(actor_model)
+    # TODO: [Sergio]: Standardize the inputs to _train_step(). We have two inputs (x[0]=rgb y x[1]=objectgoal) but in
+    #   a generic problem we may have a different number of inputs.
+    def predict(self, x):
+        y_ = self._predict(np.array(x[0]), np.array(x[1]))
+        return y_.numpy()
 
-    return model()
+    @tf.function(experimental_relax_shapes=False)
+    def _predict(self, x1, x2):
+        """ Predict the output sentence for a given input sentence
+            Args:
+                test_source_text: input sentence (raw string)
+
+            Returns:
+                The encoder's attention vectors
+                The decoder's bottom attention vectors
+                The decoder's middle attention vectors
+                The input string array (input sentence split by ' ')
+                The output string array
+            """
+        # out = self.actor_net(tf.cast(np.array(x[0]), tf.float32), tf.cast(np.array(x[1]), tf.float32), training=False)
+        out = self.actor_net([x1, x2], training=False)
+
+        return out
+
+    # TODO: [Sergio]: Standardize the inputs to _train_step(). We have two inputs (x[0]=rgb y x[1]=objectgoal) but in
+    #   a generic problem we may have a different number of inputs.
+    def predict_values(self, x):
+        y_ = self._predict_values(np.array(x[0]), np.array(x[1]))
+        return y_.numpy()
+
+    @tf.function(experimental_relax_shapes=False)
+    def _predict_values(self, x1, x2):
+        out = self.critic_net([x1, x2], training=False)
+        return out
+
+    def fit(self, obs, next_obs, actions, rewards, done, epochs, batch_size, validation_split=0.,
+            shuffle=True, verbose=1, callbacks=None, kargs=[]):
+        act_probs = kargs[0]
+        mask = kargs[1]
+        stddev = kargs[2]
+        loss_clipping = kargs[3]
+        critic_discount = kargs[4]
+        entropy_beta = kargs[5]
+        gamma = kargs[6]
+        lmbda = kargs[7]
+
+        # Calculate returns and advantages
+        returns = []
+        advantages = []
+
+        # TODO: [CARLOS] check if this split makes sense at all (specially the +1). Maybe using a ceiling instead of
+        #   int in order to fit the rest of the observations.
+        batch_obs = np.array_split(obs[0], int(rewards.shape[0] / batch_size) + 1)
+        batch_target = np.array_split(obs[1], int(rewards.shape[0] / batch_size) + 1)
+        batch_rewards = np.array_split(rewards, int(rewards.shape[0] / batch_size) + 1)
+        batch_mask = np.array_split(mask, int(rewards.shape[0] / batch_size) + 1)
+
+        for b_o, b_t, b_r, b_m in zip(batch_obs, batch_target, batch_rewards, batch_mask):
+            values = self.predict_values([b_o, b_t])
+            ret, adv = self.calculate_advantages(values, b_m, b_r, gamma, lmbda)
+            returns.extend(ret)
+            advantages.extend(adv)
+
+        dataset = tf.data.Dataset.from_tensor_slices((tf.cast(obs[0], tf.float32),
+                                                      tf.cast(obs[1], tf.float32),
+                                                      tf.cast(act_probs, tf.float32),
+                                                      tf.cast(rewards, tf.float32),
+                                                      tf.cast(actions, tf.float32),
+                                                      tf.cast(mask, tf.float32),
+                                                      tf.cast(returns, tf.float32),
+                                                      tf.cast(advantages, tf.float32)))
+
+        if shuffle:
+            dataset = dataset.shuffle(len(obs[0]), reshuffle_each_iteration=True).batch(batch_size)
+        else:
+            dataset = dataset.batch(batch_size)
+
+        if self.train_summary_writer is not None:
+            with self.train_summary_writer.as_default():
+                self.rl_loss_sumaries([np.array(returns),
+                                       np.array(advantages),
+                                       actions,
+                                       act_probs,
+                                       stddev],
+                                      ['returns',
+                                       'advantages',
+                                       'actions',
+                                       'act_probabilities'
+                                       'stddev']
+                                      , self.total_epochs)
+
+        history_actor = TrainingHistory()
+        history_critic = TrainingHistory()
+
+        start_time = time.time()
+
+        for e in range(epochs):
+            loss = [0., 0.]
+            act_comp_loss = 0.
+            critic_comp_loss = 0.
+            entropy_comp_loss = 0.
+            for batch, (batch_obs,
+                        batch_target,
+                        batch_act_probs,
+                        batch_rewards,
+                        batch_actions,
+                        batch_mask,
+                        batch_returns,
+                        batch_advantages) in enumerate(dataset.take(-1)):
+                loss, \
+                gradients, \
+                variables, \
+                returns, \
+                advantages, \
+                [act_comp_loss, critic_comp_loss, entropy_comp_loss] = self.train_step([batch_obs, batch_target],
+                                                                                       batch_act_probs,
+                                                                                       batch_actions,
+                                                                                       batch_returns,
+                                                                                       batch_advantages,
+                                                                                       stddev=tf.cast(stddev,
+                                                                                                      tf.float32),
+                                                                                       loss_clipping=tf.cast(
+                                                                                           loss_clipping,
+                                                                                           tf.float32),
+                                                                                       critic_discount=tf.cast(
+                                                                                           critic_discount,
+                                                                                           tf.float32),
+                                                                                       entropy_beta=tf.cast(
+                                                                                           entropy_beta,
+                                                                                           tf.float32))
+
+            if verbose:
+                print(
+                    'Epoch {}\t Loss Actor\Critic {:.4f}\{:.4f} Acc {:.4f} Elapsed time {:.2f}s'.format(
+                        e + 1, loss[0].numpy(), loss[1].numpy(), self.metrics.result(),
+                        time.time() - start_time))
+                start_time = time.time()
+
+            if self.train_summary_writer is not None:
+                with self.train_summary_writer.as_default():
+                    self.loss_sumaries([loss[0],
+                                        loss[1],
+                                        act_comp_loss,
+                                        critic_comp_loss,
+                                        entropy_comp_loss,
+                                        critic_discount * critic_comp_loss,
+                                        entropy_beta * entropy_comp_loss],
+                                       ['actor_model_loss (-a_l + c*c_l - b*e_l)',
+                                        'critic_model_loss',
+                                        'actor_component (a_l)',
+                                        'critic_component (c_l)',
+                                        'entropy_component (e_l)',
+                                        '(c*c_l)',
+                                        '(b*e_l)'],
+                                       self.total_epochs)
+
+            self.total_epochs += 1
+
+            history_actor.history['loss'].append(loss[0].numpy())
+            history_critic.history['loss'].append(loss[1].numpy())
+
+            if callbacks is not None:
+                for cb in callbacks:
+                    cb.on_epoch_end(e)
+
+        return history_actor, history_critic
+
+    def train_step(self, x, old_prediction, y, returns, advantages, stddev=None, loss_clipping=0.3,
+                   critic_discount=0.5, entropy_beta=0.001):
+        """
+        Execute one training step (forward pass + backward pass)
+        Args:
+            source_seq: source sequences
+            target_seq_in: input target sequences (<start> + ...)
+            target_seq_out: output target sequences (... + <end>)
+
+        Returns:
+            The loss value of the current pass
+        """
+        # TODO: [Sergio]: Standardize the inputs to _train_step(). We have two inputs (x[0]=rgb y x[1]=objectgoal) but in
+        #   a generic problem we may have a different number of inputs.
+        return self._train_step(x[0], x[1], old_prediction, y, returns, advantages, stddev, loss_clipping,
+                                critic_discount, entropy_beta)
+
+    # TODO: [Sergio]: Standardize the inputs to _train_step(). We have two inputs (x[0]=rgb y x[1]=objectgoal) but in
+    #   a generic problem we may have a different number of inputs.
+    @tf.function(experimental_relax_shapes=True)
+    def _train_step(self, x_rgb, x_objgoal, old_prediction, y, returns, advantages, stddev=None, loss_clipping=0.3,
+                    critic_discount=0.5, entropy_beta=0.001):
+        """
+        Execute one training step (forward pass + backward pass)
+        Args:
+            source_seq: source sequences
+            target_seq_in: input target sequences (<start> + ...)
+            target_seq_out: output target sequences (... + <end>)
+
+        Returns:
+            The loss value of the current pass
+        """
+        with tf.GradientTape() as tape:
+            values = self.critic_net([x_rgb, x_objgoal], training=True)
+            y_ = self.actor_net([x_rgb, x_objgoal], training=True)
+            loss_actor, [act_comp_loss, critic_comp_loss, entropy_comp_loss] = self.loss_func_actor(y, y_,
+                                                                                                    advantages,
+                                                                                                    old_prediction,
+                                                                                                    returns, values,
+                                                                                                    stddev,
+                                                                                                    loss_clipping,
+                                                                                                    critic_discount,
+                                                                                                    entropy_beta)
+            loss_critic = self.loss_func_critic(returns, values)
+
+        self.metrics.update_state(y, y_)
+
+        variables_actor = self.actor_net.trainable_variables
+        variables_critic = self.critic_net.trainable_variables
+        gradients_actor, gradients_critic = tape.gradient([loss_actor, loss_critic],
+                                                          [variables_actor, variables_critic])
+        self.optimizer_actor.apply_gradients(zip(gradients_actor, variables_actor))
+        self.optimizer_critic.apply_gradients(zip(gradients_critic, variables_critic))
+
+        return [loss_actor, loss_critic], \
+               [gradients_actor, gradients_critic], \
+               [variables_actor, variables_critic], \
+               returns, \
+               advantages, \
+               [act_comp_loss, critic_comp_loss, entropy_comp_loss]
 
 
-def critic_custom_model(input_shape):
-    dense_1 = Dense(128, input_shape=input_shape, activation='relu')
-    dense_2 = Dense(128, activation='relu')
-    output = Dense(1, activation='linear')
+def actor_model(input_shape):
+    input_rgb = tf.keras.Input(input_shape[0])
+    input_goal = tf.keras.Input(input_shape[1])
 
-    def model():
-        input = tf.keras.Input(shape=input_shape)
-        hidden = tf.keras.layers.Flatten()(input)
-        hidden = dense_1(hidden)
-        hidden = dense_2(hidden)
-        out = output(hidden)
-        actor_model = tf.keras.models.Model(inputs=input, outputs=out)
-        return Sequential(actor_model)
+    conv1 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(input_rgb)
+    conv2 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(conv1)
+    flat = tf.keras.layers.Flatten()(conv2)
+    hidden = tf.keras.layers.Concatenate(axis=-1)([flat, input_goal])
+    hidden = Dense(256, activation='relu')(hidden)
+    hidden = Dense(256, activation='relu')(hidden)
+    out = Dense(5, activation='softmax')(hidden)
 
-    return model()
+    actor_model = tf.keras.models.Model(inputs=[input_rgb, input_goal], outputs=out)
+    return actor_model
 
 
-net_architecture = networks.actor_critic_net_architecture(
-    use_custom_network=True,
-    actor_custom_network=actor_custom_model, critic_custom_network=critic_custom_model,
-    define_custom_output_layer=True
-)
+def critic_model(input_shape):
+    input_rgb = tf.keras.Input(input_shape[0])
+    input_goal = tf.keras.Input(input_shape[1])
+
+    conv1 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(input_rgb)
+    conv2 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(conv1)
+    flat = tf.keras.layers.Flatten()(conv2)
+    hidden = tf.keras.layers.Concatenate(axis=-1)([flat, input_goal])
+    hidden = Dense(256, activation='relu')(hidden)
+    hidden = Dense(256, activation='relu')(hidden)
+    out = Dense(1, activation='linear')(hidden)
+
+    critic_model = tf.keras.models.Model(inputs=[input_rgb, input_goal], outputs=out)
+
+    return critic_model
+
+
+def custom_model(input_shape):
+    return CustomNet(input_shape, actor_model, critic_model, tensorboard_dir=tensorboard_path)
+
+
+net_architecture = networks.ppo_net(use_tf_custom_model=True,
+                                    tf_custom_model=custom_model)
 
 agent = ppo_agent_discrete.Agent(actor_lr=1e-4,
-                                         critic_lr=1e-4,
-                                         batch_size=128,
-                                         memory_size=10,
-                                         epsilon=1.0,
-                                         epsilon_decay=0.95,
-                                         epsilon_min=0.15,
-                                         net_architecture=net_architecture,
-                                         n_stack=1,
-                                         img_input=True,
-                                         state_size=None,
-                                         train_action_selection_options=greedy_random_choice,
-                                         loss_critic_discount=0.001,
-                                         loss_entropy_beta=0.001,
-                                         exploration_noise=1.0)
+                                 critic_lr=1e-4,
+                                 batch_size=250,
+                                 memory_size=5000,
+                                 epsilon=0.8,
+                                 epsilon_decay=0.95,
+                                 epsilon_min=0.30,
+                                 net_architecture=net_architecture,
+                                 n_stack=1,
+                                 is_habitat=True,
+                                 img_input=True,
+                                 # TODO: [Sergio] Revisar y automaticar el control del state_size cuando is_habitat=True
+                                 state_size=[(480, 640, 3), (12,)],
+                                 train_action_selection_options=greedy_random_choice,
+                                 loss_critic_discount=0,
+                                 loss_entropy_beta=0)
 
-#
-# tensorboard_dir='/home/carlos/resultados/')
-
-# Descomentar para ejecutar el ejemplo continuo
-# agent_cont = agent_saver.load('agent_discrete_ppo', agent=ppo_agent_discrete_parallel.Agent(), overwrite_attrib=False)
-# agent_cont = agent_saver.load('agent_discrete_ppo', agent=agent_cont, overwrite_attrib=True)
-
+# Define the problem
 problem = rl_problem.Problem(environment, agent)
 
-# agent_cont = agent_saver.load('agent_discrete_ppo', agent=problem_cont.agent, overwrite_attrib=True)
+# Add preprocessing to the observations
+problem.preprocess = preprocess_habitat
 
-# agent_cont.actor.extract_variable_summaries = extract_variable_summaries
+# Solve (train the agent) and test it
+problem.solve(episodes=200, render=False)
+problem.test(render=True, n_iter=5, max_step_epi=250)
 
-problem.solve(episodes=20, render=False)
-problem.test(render=True, n_iter=10, max_step_epi=250)
-#
+# Plot some data
 hist = problem.get_histogram_metrics()
 history_utils.plot_reward_hist(hist, 10)
-#
-# agent_saver.save(agent, 'agent_discrete_ppo')
