@@ -5,10 +5,10 @@ from os import path
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
 import tensorflow as tf
-# Estas tres lineas resuelven algunos problemas con cuDNN en TF2 por los que no me permitía ejecutar en GPU
-physical_devices = tf.config.experimental.list_physical_devices('GPU')
-assert len(physical_devices) > 0, "Not enough GPU hardware devices available"
-config = tf.config.experimental.set_memory_growth(physical_devices[0], True)
+# # Estas tres lineas resuelven algunos problemas con cuDNN en TF2 por los que no me permitía ejecutar en GPU
+# physical_devices = tf.config.experimental.list_physical_devices('GPU')
+# assert len(physical_devices) > 0, "Not enough GPU hardware devices available"
+# config = tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 import os
 from RL_Problem import rl_problem
@@ -234,7 +234,7 @@ agent = dqn_agent.Agent(learning_rate=1e-4,
                             n_stack=10,
                             memory_size=1000,
                             net_architecture=net_architecture,
-                           tensorboard_dir='/home/shernandez/PycharmProjects/CAPOIRL-TF2/tutorials/tf_tutorials/tensorboard_logs/')
+                           tensorboard_dir='/home/carlos/resultados/')
 
 # agent = agent_saver.load('agent_dqn', agent=dqn_agent.Agent(), overwrite_attrib=False)
 # agent = agent_saver.load('agent_dqn', agent=agent, overwrite_attrib=True)

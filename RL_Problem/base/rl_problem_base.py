@@ -301,7 +301,7 @@ class RLProblemSuper(object, metaclass=ABCMeta):
             next_obs = self.preprocess(next_obs)
         return done, next_obs, reward, epochs
 
-    def test(self, n_iter=10, render=True, verbose=1, callback=None, smooth_rewards=10, discriminator=None):
+    def test(self, n_iter=10, render=True, verbose=1, callback=None, smooth_rewards=10, discriminator=None, max_step_epi=None):
         """ Test a trained agent using only exploitation mode on the environment.
 
         :param n_iter: (int) number of test iterations.
@@ -362,6 +362,9 @@ class RLProblemSuper(object, metaclass=ABCMeta):
 
                 if self.n_stack is not None and self.n_stack > 1:
                     obs_queue.append(obs)
+
+                if max_step_epi is not None and epochs > max_step_epi:
+                    break
 
             rew_mean_list.append(episodic_reward)
 
