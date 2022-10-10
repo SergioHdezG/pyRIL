@@ -18,7 +18,7 @@ import sys
 from os import path
 import time
 
-from RL_Agent.base.utils.networks.action_selection_options import greedy_random_choice, random_choice
+from RL_Agent.base.utils.networks.action_selection_options import greedy_random_choice, greedy_action, random_choice
 
 sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
 
@@ -35,7 +35,7 @@ from RL_Agent.base.utils import agent_saver, history_utils
 from utils.preprocess import preprocess_habitat, preprocess_habitat_clip
 
 
-tensorboard_path = None #'/home/carlos/resultados/'
+tensorboard_path = '/media/archivos/home/PycharmProjects2022/Habitat-RL/pyRIL/tensorboard_logs'
 environment = habitat_envs.HM3DRLEnvClip(config_paths="configs/RL/objectnav_hm3d_RL.yaml",
                                      result_path=os.path.join("resultados",
                                                               "images"),
@@ -288,7 +288,7 @@ def actor_model(input_shape):
     # conv2 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(conv1)
     # flat = tf.keras.layers.Flatten()(conv2)
     hidden = tf.keras.layers.Concatenate(axis=-1)([input_clip, input_goal])
-    hidden = Dense(512, activation='tanh')(hidden)
+    hidden = Dense(256, activation='tanh')(hidden)
     hidden = Dense(256, activation='tanh')(hidden)
     out = Dense(6, activation='softmax')(hidden)
 
@@ -320,17 +320,17 @@ net_architecture = networks.ppo_net(use_tf_custom_model=True,
 
 agent = ppo_agent_discrete.Agent(actor_lr=1e-4,
                                  critic_lr=1e-4,
-                                 batch_size=10,
-                                 memory_size=100,
-                                 epsilon=0.3,
-                                 epsilon_decay=1.0,
+                                 batch_size=64,
+                                 memory_size=1000,
+                                 epsilon=1.0,
+                                 epsilon_decay=0.98,
                                  epsilon_min=0.30,
                                  net_architecture=net_architecture,
                                  n_stack=1,
                                  is_habitat=True,
                                  img_input=True,
                                  state_size=[(1024), (12)],  # TODO: [Sergio] Revisar y automaticar el control del state_size cuando is_habitat=True
-                                 train_action_selection_options=greedy_random_choice,
+                                 train_action_selection_options=greedy_action,
                                  loss_critic_discount=0,
                                  loss_entropy_beta=0,)
                                  # tensorboard_dir=tensorboard_path # Se le pasa la ruta directamente a la clase CustomNet)
@@ -342,8 +342,8 @@ problem = rl_problem.Problem(environment, agent)
 problem.preprocess = preprocess_habitat_clip
 
 # Solve (train the agent) and test it
-problem.solve(episodes=200, render=False)
-problem.test(render=True, n_iter=5, max_step_epi=250)
+problem.solve(episodes=100000, render=False)
+problem.test(render=True, n_iter=20, max_step_epi=250)
 
 # Plot some data
 hist = problem.get_histogram_metrics()
