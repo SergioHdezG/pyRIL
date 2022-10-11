@@ -82,12 +82,14 @@ class ResNetCLIPEncoder(nn.Module):
         cnn_input = []
         if self.rgb:
             rgb_observations = np.array(observations["rgb"])
-            rgb_observations = rgb_observations.transpose((2, 0, 1))  # BATCH x CHANNEL x HEIGHT X WIDTH
+            # rgb_observations = rgb_observations.transpose((2, 0, 1))  # BATCH x CHANNEL x HEIGHT X WIDTH
             rgb_observations = [self.toPil(rgb_observations)]
             rgb_observations = torch.stack(
                 [self.preprocess(rgb_image) for rgb_image in rgb_observations]
             )  # [BATCH x CHANNEL x HEIGHT X WIDTH] in torch.float32
             # rgb_observations = torch.stack(rgb_observations)
+            if torch.cuda.is_available():
+                rgb_observations = rgb_observations.cuda()
             rgb_x = self.backbone(rgb_observations).float()
             cnn_input.append(rgb_x)
 
@@ -108,5 +110,6 @@ class ResNetCLIPEncoder(nn.Module):
         else:
             x = torch.cat(cnn_input, dim=1)
 
-        return x.numpy()
+        # TODO [CARLOS]: Check that sending tensor to CPU does not decrease performance
+        return x.cpu().numpy()
 

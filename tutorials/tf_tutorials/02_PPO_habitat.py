@@ -35,7 +35,7 @@ from RL_Agent.base.utils import agent_saver, history_utils
 from utils.preprocess import preprocess_habitat, preprocess_habitat_clip
 
 
-tensorboard_path = '/media/archivos/home/PycharmProjects2022/Habitat-RL/pyRIL/tensorboard_logs'
+tensorboard_path = '/home/carlos/resultados'
 environment = habitat_envs.HM3DRLEnvClip(config_paths="configs/RL/objectnav_hm3d_RL.yaml",
                                      result_path=os.path.join("resultados",
                                                               "images"),
