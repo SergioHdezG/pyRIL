@@ -51,12 +51,12 @@ class HM3DRLEnv(habitat.RLEnv):
         self.result_path = result_path
         self.config_path = config_paths
 
-        self.env_config = habitat.get_config(config_paths=config_paths)
-        self.env_config.defrost()
-        self.env_config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
-        self.env_config.freeze()
+        config = habitat.get_config(config_paths=config_paths)
+        config.defrost()
+        config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
+        config.freeze()
 
-        super().__init__(config=self.env_config)
+        super().__init__(config=config)
         self.episode_counter = 0
         self.episode_results_path = self.result_path
         self.episode_images = []

@@ -5,6 +5,7 @@ Matterport annotated objects: ["wall", "objects", "door", "chair", "window", "ce
 "seating", "clothes", "fireplace", "bathtub", "beam", "furniture", "gym equip", "blinds", "board"]
 """
 import tensorflow as tf
+
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
     try:
@@ -17,33 +18,64 @@ import os
 import sys
 from os import path
 import time
-
-from RL_Agent.base.utils.networks.action_selection_options import greedy_random_choice, greedy_action, random_choice
-
-sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
-
+import yaml
+import datetime
+import numpy as np
 from RL_Problem import rl_problem
 from RL_Agent import ppo_agent_discrete_parallel, ppo_agent_discrete
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, Flatten
 from environments import habitat_envs
 from RL_Agent.base.utils.networks import networks, losses, returns_calculations, tensor_board_loss_functions
-from tutorials.transformers_models import *
 from RL_Agent.base.utils.networks.networks_interface import RLNetModel, TrainingHistory
 from RL_Agent.base.utils.networks.agent_networks import PPONet
 from RL_Agent.base.utils import agent_saver, history_utils
-from utils.preprocess import preprocess_habitat, preprocess_habitat_clip
-
+from utils.preprocess import *
+from RL_Agent.base.utils.networks.action_selection_options import *
+from habitat_experiments.utils.neuralnets import *
 
 tensorboard_path = '/home/carlos/resultados'
 environment = habitat_envs.HM3DRLEnv(config_paths="configs/RL/objectnav_hm3d_RL.yaml",
                                      result_path=os.path.join("resultados",
                                                               "images"),
-                                     render_on_screen=False,
-                                     save_video=False,
-                                     oracle_stop=True,
-                                     use_clip=True)
+# Loading yaml configuration files
+if len(sys.argv) > 1:
+    config_file = sys.argv[1]
+    if isinstance(config_file, str) and config_file.endswith('.yaml'):
+        with open(config_file) as file:
+            config = yaml.load(file, Loader=yaml.FullLoader)
+else:
+   raise Exception('No config.yaml file is provided')
 
+# Send output to file
+class Unbuffered:
+   def __init__(self, stream):
+       self.stream = stream
+
+   def write(self, data):
+       self.stream.write(data)
+       self.stream.flush()
+       te.write(data)    # Write the data of stdout here to a text file as well
+
+   def flush(self):
+       # this flush method is needed for python 3 compatibility.
+       # this handles the flush command by doing nothing.
+       # you might want to specify some extra behavior here.
+       pass
+
+te = open(config["base_path"] + 'log.txt', 'w')  # File where you need to keep the logs
+sys.stdout = Unbuffered(sys.stdout)
+
+print(datetime.datetime.now())
+
+tensorboard_path = config["base_path"] + config["tensorboard_dir"]
+
+exec('environment = ' + config["environment"])
+environment = environment(config_paths=config["habitat_config_path"],
+                                     result_path=os.path.join(config["base_path"], config["habitat_result_path"]),
+                                     render_on_screen=False,
+                                     save_video=config["habitat_save_video"],
+                                     oracle_stop=config["habitat_oracle_stop"])
 
 class CustomNet(PPONet):
     """
@@ -167,11 +199,11 @@ class CustomNet(PPONet):
                 variables, \
                 returns, \
                 advantages, \
-                [act_comp_loss, critic_comp_loss, entropy_comp_loss] = self.train_step([batch_obs, batch_target],
-                                                                                       batch_act_probs,
-                                                                                       batch_actions,
-                                                                                       batch_returns,
-                                                                                       batch_advantages,
+                [act_comp_loss, critic_comp_loss, entropy_comp_loss] = self.train_step([tf.cast(batch_obs, tf.float32), tf.cast(batch_target, tf.float32)],
+                                                                                       tf.cast(batch_act_probs, tf.float32),
+                                                                                       tf.cast(batch_actions, tf.float32),
+                                                                                       tf.cast(batch_returns, tf.float32),
+                                                                                       tf.cast(batch_advantages, tf.float32),
                                                                                        stddev=tf.cast(stddev,
                                                                                                       tf.float32),
                                                                                        loss_clipping=tf.cast(
@@ -282,39 +314,20 @@ class CustomNet(PPONet):
                [act_comp_loss, critic_comp_loss, entropy_comp_loss]
 
 
+# define agent's neural networks to use
+exec('actor_model = ' + config["actor_model"])
+exec('critic_model = ' + config["critic_model"])
 
-def actor_model(input_shape):
-    input_clip = tf.keras.Input(input_shape[0])
-    input_goal = tf.keras.Input(input_shape[1])
-
-    # conv1 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(input_rgb)
-    # conv2 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(conv1)
-    # flat = tf.keras.layers.Flatten()(conv2)
-    hidden = tf.keras.layers.Concatenate(axis=-1)([input_clip, input_goal])
-    hidden = Dense(256, activation='tanh')(hidden)
-    hidden = Dense(256, activation='tanh')(hidden)
-    out = Dense(5, activation='softmax')(hidden)
-
-    actor_model = tf.keras.models.Model(inputs=[input_clip, input_goal], outputs=out)
-    return actor_model
-
-
-def critic_model(input_shape):
-    input_clip = tf.keras.Input(input_shape[0])
-    input_goal = tf.keras.Input(input_shape[1])
-
-    # conv1 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(input_rgb)
-    # conv2 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(conv1)
-    # flat = tf.keras.layers.Flatten()(conv2)
-    hidden = tf.keras.layers.Concatenate(axis=-1)([input_clip, input_goal])
-    hidden = Dense(512, activation='tanh')(hidden)
-    hidden = Dense(256, activation='tanh')(hidden)
-    out = Dense(1, activation='linear')(hidden)
-
-    critic_model = tf.keras.models.Model(inputs=[input_clip, input_goal], outputs=out)
-
-    return critic_model
-
+if config["state_size"] == 'None':
+    state_size = None
+else:
+    exec('state_size = ' + config["state_size"])
+exec('train_action_selection_options = ' + config["train_action_selection_options"])
+exec('action_selection_options = ' + config["action_selection_options"])
+if config["preprocess"] == 'None':
+    preprocess = None
+else:
+    exec('preprocess = ' + config["preprocess"])
 
 def custom_model(input_shape):
     return CustomNet(input_shape, actor_model, critic_model, tensorboard_dir=tensorboard_path)
@@ -323,31 +336,37 @@ def custom_model(input_shape):
 net_architecture = networks.ppo_net(use_tf_custom_model=True,
                                     tf_custom_model=custom_model)
 
-agent = ppo_agent_discrete.Agent(actor_lr=1e-4,
-                                 critic_lr=1e-4,
-                                 batch_size=64,
-                                 memory_size=5000,
-                                 epsilon=1.0,
-                                 epsilon_decay=0.98,
-                                 epsilon_min=0.30,
+agent = ppo_agent_discrete.Agent(actor_lr=float(config["actor_lr"]),
+                                 critic_lr=float(config["critic_lr"]),
+                                 batch_size=config["batch_size"],
+                                 memory_size=config["memory_size"],
+                                 epsilon=config["epsilon"],
+                                 epsilon_decay=config["epsilon_decay"],
+                                 epsilon_min=config["epsilon_min"],
+                                 gamma=config["gamma"],
+                                 loss_clipping=config["loss_clipping"],
+                                 loss_critic_discount=config["loss_critic_discount"],
+                                 loss_entropy_beta=config["loss_entropy_beta"],
+                                 lmbda=config["lmbda"],
+                                 train_epochs=config["train_epochs"],
                                  net_architecture=net_architecture,
-                                 n_stack=1,
-                                 is_habitat=True,
-                                 img_input=True,
-                                 state_size=[(1024), (12)],  # TODO: [Sergio] Revisar y automaticar el control del state_size cuando is_habitat=True
-                                 train_action_selection_options=greedy_action,
-                                 loss_critic_discount=0,
-                                 loss_entropy_beta=0)
+                                 n_stack=config["n_stack"],
+                                 is_habitat=config["is_habitat"],
+                                 img_input=config["img_input"],
+                                 # TODO: [Sergio] Revisar y automaticar el control del state_size cuando is_habitat=True
+                                 state_size=state_size,
+                                 train_action_selection_options=train_action_selection_options,
+                                 action_selection_options=action_selection_options)
 
 # Define the problem
 problem = rl_problem.Problem(environment, agent)
 
 # Add preprocessing to the observations
-problem.preprocess = preprocess_habitat_clip
+problem.preprocess = preprocess
 
 # Solve (train the agent) and test it
-problem.solve(episodes=100000, render=False)
-problem.test(render=True, n_iter=20, max_step_epi=250)
+problem.solve(episodes=config["training_epochs"], render=False)
+problem.test(render=config["render_test"], n_iter=config["test_epochs"])
 
 # Plot some data
 hist = problem.get_histogram_metrics()

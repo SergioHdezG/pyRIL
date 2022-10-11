@@ -116,3 +116,37 @@ def preprocess_habitat(obs: dict):
 
     return {'rgb': img, 'objectgoal': one_hot_goal}
 
+def preprocess_habitat6(obs: dict):
+    """
+    Normalize rgb input and one hot objectgoal id
+    @param obs: observations returned by habitat
+    @return: dict containing the preprocessed observations
+    """
+
+    # RGB input normalized
+    rgb = obs['rgb']
+    img = rgb / 255.
+
+    # ObjectGoal input to onehot
+    object_goal = obs['objectgoal']
+    one_hot_goal = np.zeros((6))
+    one_hot_goal[object_goal] = 1.
+
+    return {'rgb': img, 'objectgoal': one_hot_goal}
+
+def preprocess_clip_habitat6(obs: dict):
+    """
+    Normalize rgb input and one hot objectgoal id
+    @param obs: observations returned by habitat
+    @return: dict containing the preprocessed observations
+    """
+
+    # RGB input normalized
+    rgb = obs['rgb'][0]
+
+    # ObjectGoal input to onehot
+    object_goal = obs['objectgoal']
+    one_hot_goal = np.zeros((6))
+    one_hot_goal[object_goal] = 1.
+
+    return {'rgb': rgb, 'objectgoal': one_hot_goal}
