@@ -42,7 +42,8 @@ class HM3DRLEnv(habitat.RLEnv):
                  task=None,
                  render_on_screen=False,
                  save_video=False,
-                 oracle_stop=False):
+                 oracle_stop=False,
+                 use_clip=False):
         print(f"{bcolors.OKBLUE}Creando un nuevo entorno.{bcolors.ENDC}")
 
         if not os.path.exists(result_path):
@@ -64,34 +65,13 @@ class HM3DRLEnv(habitat.RLEnv):
         self.metadata = {
             'render.modes': ['rgb']
         }
-        self.action_space = spaces.Discrete(len(self.config.TASK.POSSIBLE_ACTIONS))  # FORWARD, LEFT, RIGHT, LOOK_UP, LOOK_DOWN, STOP
+        self.action_space = spaces.Discrete(len(self.config.TASK.POSSIBLE_ACTIONS))
         self.action_list = range(len(self.config.TASK.POSSIBLE_ACTIONS))
-
-        # TODO [CARLOS]: I tried using habitat actions to fill action_list, but if the actions are not the
-        #  default ones it fails
-        # # Get actions from self.config:
-        # self.action_list = list()
-        #
-        # for action in self.config.TASK.POSSIBLE_ACTIONS:
-        #     if action == 'MOVE_FORWARD':
-        #         self.action_list.append(HabitatSimActions.MOVE_FORWARD)
-        #     elif action == 'TURN_LEFT':
-        #         self.action_list.append(HabitatSimActions.TURN_LEFT)
-        #     elif action == 'TURN_RIGHT':
-        #         self.action_list.append(HabitatSimActions.TURN_RIGHT)
-        #     elif action == 'LOOK_UP':
-        #         self.action_list.append(HabitatSimActions.LOOK_UP)
-        #     elif action == 'LOOK_DOWN':
-        #         self.action_list.append(HabitatSimActions.LOOK_DOWN)
-        #     elif action == 'STOP':
-        #         self.action_list.append(HabitatSimActions.STOP)
-
-        # self.observation_space = spaces.Tuple((spaces.Box(low=0, high=255, shape=(480, 640, 3), dtype=np.uint8),
-        #                                        spaces.Box(low=-20.0, high=20.0, shape=(2,), dtype=np.float32)))
         self.observation_space = spaces.Box(low=0,
                                             high=255,
-                                            shape=(self.config.SIMULATOR.RGB_SENSOR.HEIGHT, self.config.SIMULATOR.RGB_SENSOR.WIDTH
-                                                   , 3),
+                                            shape=(self.config.SIMULATOR.RGB_SENSOR.HEIGHT,
+                                                   self.config.SIMULATOR.RGB_SENSOR.WIDTH,
+                                                   3),
                                             dtype=np.uint8)
 
         self._task = task
@@ -100,6 +80,9 @@ class HM3DRLEnv(habitat.RLEnv):
         self.render_on_screen = render_on_screen
         self._previous_measure = None
         self._oracle_stop = oracle_stop
+        if use_clip:
+            obs_dict = {"rgb": self.observation_space}
+            self.clipResNet = clip.ResNetCLIPEncoder(SpaceDict(obs_dict))
         self._reward_measure_name = self.config.TASK.REWARD_MEASURE
         self._success_measure_name = self.config.TASK.SUCCESS_MEASURE
 
@@ -128,10 +111,8 @@ class HM3DRLEnv(habitat.RLEnv):
             if os.path.exists(self.episode_results_path):
                 shutil.rmtree(self.episode_results_path)
             os.makedirs(self.episode_results_path)
-
+        observation['rgb'] = self.clipResNet.forward(observation)
         return observation
-
-
 
     def step(self, *args, **kwargs):
         action = self.action_list[args[0]]
@@ -143,6 +124,7 @@ class HM3DRLEnv(habitat.RLEnv):
         output_im = np.concatenate((im, top_down_map), axis=1)
         self.episode_images.append(output_im)
 
+        observation['rgb'] = self.clipResNet.forward(observation)
         return observation, reward, done, info
 
     def render(self, mode: str = "rgb"):
@@ -209,161 +191,6 @@ class HM3DRLEnv(habitat.RLEnv):
         Returns: _episode_success
         """
         return self._episode_success()
-
-    def _draw_top_down_map(self, info, output_size):
-        return maps.colorize_draw_agent_and_fit_to_height(
-            info["top_down_map"], output_size
-        )
-
-    def close(self):
-        cv2.destroyAllWindows()
-
-    # def __getstate__(self):
-    #     """See `Object.__getstate__.
-    #
-    #     Returns:
-    #         dict: The instance’s dictionary to be pickled.
-    #
-    #     """
-    #     config_paths = copy.copy(self.config_path)
-    #     result_path = copy.copy(self.result_path)
-    #     return dict(config_paths=config_paths, result_path=result_path, task=self._task)
-    #
-    # def __setstate__(self, state):
-    #     """See `Object.__setstate__.
-    #
-    #     Args:
-    #         state (dict): Unpickled state of this object.
-    #
-    #     """
-    #     self.__init__(config_paths=state['config_paths'], result_path=state['result_path'], task=state['task'])
-
-class HM3DRLEnvClip(HM3DRLEnv):
-    """
-    Matterport annotated objects: ["wall", "objects", "door", "chair", "window", "ceiling", "picture", "floor", "misc",
-    "lighting", "cushion", "table", "cabinet", "curtain", "plant", "shelving", "sink", "mirror", "chest", "towel",
-    "stairs", "railing", "column", "counter", "stool", "bed", "sofa", "shower", "appliances", "toilet", "tv",
-    "seating", "clothes", "fireplace", "bathtub", "beam", "furniture", "gym equip", "blinds", "board"]
-
-    default configuration for reference: habitat/config/default.py
-
-    Using CLIP as features extractor: https://github.com/allenai/embodied-clip
-    """
-
-    def __init__(self, config_paths="configs/RL/objectnav_hm3d_RL.yaml",
-                 result_path=os.path.join("development", "images"),
-                 task=None,
-                 render_on_screen=False,
-                 save_video=False):
-        super().__init__(config_paths="configs/RL/objectnav_hm3d_RL.yaml",
-                 result_path=os.path.join("development", "images"),
-                 task=None,
-                 render_on_screen=False,
-                 save_video=False)
-        spaces = {}
-        spaces["rgb"] = Box(low=0, high=255, shape=(480, 640, 3), dtype=np.uint8)
-        # spaces["depth"] = Box(low=0, high=255, shape=(480, 640, 3), dtype=np.uint8) # Add depth data
-        observation_spaces = SpaceDict(spaces)
-        self.clipResNet = clip.ResNetCLIPEncoder(observation_spaces)
-
-
-    def reset(self):
-        self.close()
-        if len(self.episode_images) > 0 and self.save_video:
-            images_to_video(self.episode_images, self.episode_results_path, "trajectory", verbose=False)
-
-        self.episode_images = []
-
-        observation = super().reset()
-
-        self._previous_measure = self._env.get_metrics()[self._reward_measure_name]
-
-        self.first_reset = False
-
-        self.episode_counter += 1
-
-        if self.save_video:
-
-            # Define path to save the videos
-            self.episode_results_path = os.path.join(
-                self.result_path, "shortest_path_example", "%02d" % self.episode_counter
-            )
-
-            if os.path.exists(self.episode_results_path):
-                shutil.rmtree(self.episode_results_path)
-            os.makedirs(self.episode_results_path)
-        observation['rgb'] = self.clipResNet.forward(observation)
-        return observation
-
-
-
-    def step(self, *args, **kwargs):
-        action = self.action_list[args[0]]
-        observation, reward, done, info = super().step(action, **kwargs)
-
-        # We save images to create a video later
-        im = observation["rgb"]
-        top_down_map = self._draw_top_down_map(info, im.shape[0])
-        output_im = np.concatenate((im, top_down_map), axis=1)
-        self.episode_images.append(output_im)
-
-        observation['rgb'] = self.clipResNet.forward(observation)
-        return observation, reward, done, info
-
-    def render(self, mode: str = "rgb"):
-        image = super().render(mode=mode)
-
-        if self.render_on_screen:
-            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-            cv2.imshow(self.episode_results_path, image)
-            cv2.waitKey(1)
-        return image
-
-    def get_reward_range(self):
-        """
-        Default habitat implementation from habitat.core.environments.py
-        """
-        return (
-            self.config.TASK.SLACK_REWARD - 1.0,
-            self.config.TASK.SUCCESS_REWARD + 1.0,
-        )
-
-    def get_reward(self, observations):
-        """
-        Default habitat implementation from habitat.core.environments.py
-        """
-        reward = self.config.TASK.SLACK_REWARD
-
-        current_measure = self._env.get_metrics()[self._reward_measure_name]
-
-        reward += self._previous_measure - current_measure
-        self._previous_measure = current_measure
-
-        if self._episode_success():
-            reward += self.config.TASK.SUCCESS_REWARD
-
-        return reward
-
-    def get_done(self, observations):
-        """
-        Default habitat implementation from habitat.core.environments.py
-        """
-        done = False
-        if self._env.episode_over or self._episode_success():
-            done = True
-        return done
-
-    def get_info(self, observations):
-        """
-        Default habitat implementation from habitat.core.environments.py
-        """
-        return self.habitat_env.get_metrics()
-
-    def _episode_success(self):
-        """
-        Default habitat implementation from habitat.core.environments.py
-        """
-        return self._env.get_metrics()[self._success_measure_name]
 
     def _draw_top_down_map(self, info, output_size):
         return maps.colorize_draw_agent_and_fit_to_height(
