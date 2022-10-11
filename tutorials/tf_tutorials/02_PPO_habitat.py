@@ -5,24 +5,6 @@ Matterport annotated objects: ["wall", "objects", "door", "chair", "window", "ce
 "seating", "clothes", "fireplace", "bathtub", "beam", "furniture", "gym equip", "blinds", "board"]
 """
 import tensorflow as tf
-import os
-import sys
-from os import path
-import time
-from RL_Problem import rl_problem
-from RL_Agent import ppo_agent_discrete_parallel, ppo_agent_discrete
-from tensorflow.keras.layers import Dense, LSTM, Flatten
-from environments import habitat_envs
-from RL_Agent.base.utils.networks import networks, losses, returns_calculations, tensor_board_loss_functions
-from tutorials.transformers_models import *
-from RL_Agent.base.utils.networks.networks_interface import RLNetModel, TrainingHistory
-from RL_Agent.base.utils.networks.agent_networks import PPONet
-from RL_Agent.base.utils import agent_saver, history_utils
-from utils.preprocess import preprocess_habitat
-from RL_Agent.base.utils.networks.action_selection_options import greedy_random_choice, random_choice
-
-sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
-
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
     try:
@@ -31,9 +13,32 @@ if gpus:
     except RuntimeError as e:
         print(e)
 
-tensorboard_path = '/home/carlos/resultados/'
-environment = habitat_envs.HM3DRLEnv(config_paths="configs/RL/objectnav_hm3d_RL.yaml",
-                                     result_path=os.path.join("resultados", "images"),
+import os
+import sys
+from os import path
+import time
+
+from RL_Agent.base.utils.networks.action_selection_options import greedy_random_choice, greedy_action, random_choice
+
+sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
+
+from RL_Problem import rl_problem
+from RL_Agent import ppo_agent_discrete_parallel, ppo_agent_discrete
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, LSTM, Flatten
+from environments import habitat_envs
+from RL_Agent.base.utils.networks import networks, losses, returns_calculations, tensor_board_loss_functions
+from tutorials.transformers_models import *
+from RL_Agent.base.utils.networks.networks_interface import RLNetModel, TrainingHistory
+from RL_Agent.base.utils.networks.agent_networks import PPONet
+from RL_Agent.base.utils import agent_saver, history_utils
+from utils.preprocess import preprocess_habitat, preprocess_habitat_clip
+
+
+tensorboard_path = '/home/carlos/resultados'
+environment = habitat_envs.HM3DRLEnvClip(config_paths="configs/RL/objectnav_hm3d_RL.yaml",
+                                     result_path=os.path.join("resultados",
+                                                              "images"),
                                      render_on_screen=False,
                                      save_video=False,
                                      oracle_stop=True)
@@ -276,35 +281,36 @@ class CustomNet(PPONet):
                [act_comp_loss, critic_comp_loss, entropy_comp_loss]
 
 
+
 def actor_model(input_shape):
-    input_rgb = tf.keras.Input(input_shape[0])
+    input_clip = tf.keras.Input(input_shape[0])
     input_goal = tf.keras.Input(input_shape[1])
 
-    conv1 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(input_rgb)
-    conv2 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(conv1)
-    flat = tf.keras.layers.Flatten()(conv2)
-    hidden = tf.keras.layers.Concatenate(axis=-1)([flat, input_goal])
-    hidden = Dense(256, activation='relu')(hidden)
-    hidden = Dense(256, activation='relu')(hidden)
-    out = Dense(5, activation='softmax')(hidden)
+    # conv1 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(input_rgb)
+    # conv2 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(conv1)
+    # flat = tf.keras.layers.Flatten()(conv2)
+    hidden = tf.keras.layers.Concatenate(axis=-1)([input_clip, input_goal])
+    hidden = Dense(256, activation='tanh')(hidden)
+    hidden = Dense(256, activation='tanh')(hidden)
+    out = Dense(6, activation='softmax')(hidden)
 
-    actor_model = tf.keras.models.Model(inputs=[input_rgb, input_goal], outputs=out)
+    actor_model = tf.keras.models.Model(inputs=[input_clip, input_goal], outputs=out)
     return actor_model
 
 
 def critic_model(input_shape):
-    input_rgb = tf.keras.Input(input_shape[0])
+    input_clip = tf.keras.Input(input_shape[0])
     input_goal = tf.keras.Input(input_shape[1])
 
-    conv1 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(input_rgb)
-    conv2 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(conv1)
-    flat = tf.keras.layers.Flatten()(conv2)
-    hidden = tf.keras.layers.Concatenate(axis=-1)([flat, input_goal])
-    hidden = Dense(256, activation='relu')(hidden)
-    hidden = Dense(256, activation='relu')(hidden)
+    # conv1 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(input_rgb)
+    # conv2 = tf.keras.layers.Conv2D(filters=8, kernel_size=3, strides=2)(conv1)
+    # flat = tf.keras.layers.Flatten()(conv2)
+    hidden = tf.keras.layers.Concatenate(axis=-1)([input_clip, input_goal])
+    hidden = Dense(512, activation='tanh')(hidden)
+    hidden = Dense(256, activation='tanh')(hidden)
     out = Dense(1, activation='linear')(hidden)
 
-    critic_model = tf.keras.models.Model(inputs=[input_rgb, input_goal], outputs=out)
+    critic_model = tf.keras.models.Model(inputs=[input_clip, input_goal], outputs=out)
 
     return critic_model
 
@@ -318,18 +324,17 @@ net_architecture = networks.ppo_net(use_tf_custom_model=True,
 
 agent = ppo_agent_discrete.Agent(actor_lr=1e-4,
                                  critic_lr=1e-4,
-                                 batch_size=250,
-                                 memory_size=5000,
-                                 epsilon=0.8,
-                                 epsilon_decay=0.95,
+                                 batch_size=64,
+                                 memory_size=1000,
+                                 epsilon=1.0,
+                                 epsilon_decay=0.98,
                                  epsilon_min=0.30,
                                  net_architecture=net_architecture,
                                  n_stack=1,
                                  is_habitat=True,
                                  img_input=True,
-                                 # TODO: [Sergio] Revisar y automaticar el control del state_size cuando is_habitat=True
-                                 state_size=[(480, 640, 3), (12,)],
-                                 train_action_selection_options=greedy_random_choice,
+                                 state_size=[(1024), (12)],  # TODO: [Sergio] Revisar y automaticar el control del state_size cuando is_habitat=True
+                                 train_action_selection_options=greedy_action,
                                  loss_critic_discount=0,
                                  loss_entropy_beta=0)
 
@@ -337,11 +342,11 @@ agent = ppo_agent_discrete.Agent(actor_lr=1e-4,
 problem = rl_problem.Problem(environment, agent)
 
 # Add preprocessing to the observations
-problem.preprocess = preprocess_habitat
+problem.preprocess = preprocess_habitat_clip
 
 # Solve (train the agent) and test it
-problem.solve(episodes=200, render=False)
-problem.test(render=True, n_iter=5, max_step_epi=250)
+problem.solve(episodes=100000, render=False)
+problem.test(render=True, n_iter=20, max_step_epi=250)
 
 # Plot some data
 hist = problem.get_histogram_metrics()
