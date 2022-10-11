@@ -4,6 +4,7 @@ channels:
   - defaults
 dependencies:
   - tensorflow-gpu
+  - python=3.7
   - pip
   - pip:
     - cloudpickle==2.2.0

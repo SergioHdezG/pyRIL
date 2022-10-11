@@ -4,7 +4,7 @@ export CONDA_ALWAYS_YES="true"
 
 # Create conda env
 source ~/miniconda3/etc/profile.d/conda.sh
-conda create -n pyril-headless python=3.7.0
+conda env create -f environment.yml
 conda activate pyril-headless
 
 # Install habitat sim
@@ -14,11 +14,6 @@ conda install habitat-sim headless -c conda-forge -c aihabitat
 cd ..
 cd habitat-lab
 pip install -e .
-
-# Install tensorflow requirements
-cd ..
-cd pyRIL
-conda env update -f environment.yml
 
 # Install pytorch and clip dependencies
 pip3 install torch torchvision --extra-index-url https://download.pytorch.org/whl/cu116
