@@ -80,7 +80,8 @@ class HM3DRLEnv(habitat.RLEnv):
         self.render_on_screen = render_on_screen
         self._previous_measure = None
         self._oracle_stop = oracle_stop
-        if use_clip:
+        self.use_clip = use_clip
+        if self.use_clip:
             obs_dict = {"rgb": self.observation_space}
             self.clipResNet = clip.ResNetCLIPEncoder(SpaceDict(obs_dict))
         self._reward_measure_name = self.config.TASK.REWARD_MEASURE
@@ -111,7 +112,8 @@ class HM3DRLEnv(habitat.RLEnv):
             if os.path.exists(self.episode_results_path):
                 shutil.rmtree(self.episode_results_path)
             os.makedirs(self.episode_results_path)
-        observation['rgb'] = self.clipResNet.forward(observation)
+        if self.use_clip:
+            observation['rgb'] = self.clipResNet.forward(observation)
         return observation
 
     def step(self, *args, **kwargs):
@@ -123,8 +125,8 @@ class HM3DRLEnv(habitat.RLEnv):
         top_down_map = self._draw_top_down_map(info, im.shape[0])
         output_im = np.concatenate((im, top_down_map), axis=1)
         self.episode_images.append(output_im)
-
-        observation['rgb'] = self.clipResNet.forward(observation)
+        if self.use_clip:
+            observation['rgb'] = self.clipResNet.forward(observation)
         return observation, reward, done, info
 
     def render(self, mode: str = "rgb"):
