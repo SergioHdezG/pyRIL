@@ -1,4 +1,4 @@
-name: prueba
+name: pyril-headless
 channels:
   - conda-forge
   - defaults
