@@ -9,6 +9,9 @@ from habitat.core.utils import try_cv2_import
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.utils.visualizations import maps
 from habitat.utils.visualizations.utils import images_to_video
+from gym.spaces import Box
+from gym.spaces import Dict as SpaceDict
+from utils.custom_networks import clip
 
 cv2 = try_cv2_import()
 
@@ -235,3 +238,46 @@ class HM3DRLEnv(habitat.RLEnv):
     #
     #     """
     #     self.__init__(config_paths=state['config_paths'], result_path=state['result_path'], task=state['task'])
+
+class HM3DRLEnvClip(HM3DRLEnv):
+    """
+    Matterport annotated objects: ["wall", "objects", "door", "chair", "window", "ceiling", "picture", "floor", "misc",
+    "lighting", "cushion", "table", "cabinet", "curtain", "plant", "shelving", "sink", "mirror", "chest", "towel",
+    "stairs", "railing", "column", "counter", "stool", "bed", "sofa", "shower", "appliances", "toilet", "tv",
+    "seating", "clothes", "fireplace", "bathtub", "beam", "furniture", "gym equip", "blinds", "board"]
+
+    default configuration for reference: habitat/config/default.py
+
+    Using CLIP as features extractor: https://github.com/allenai/embodied-clip
+    """
+
+    def __init__(self, config_paths="configs/RL/objectnav_hm3d_RL.yaml",
+                 result_path=os.path.join("development", "images"),
+                 task=None,
+                 render_on_screen=False,
+                 save_video=False,
+                 oracle_stop=False):
+        super().__init__(config_paths=config_paths,
+                         result_path=result_path,
+                         task=task,
+                         render_on_screen=render_on_screen,
+                         save_video=save_video,
+                         oracle_stop=oracle_stop)
+        spaces = {}
+        spaces["rgb"] = Box(low=0, high=255, shape=(480, 640, 3), dtype=np.uint8)
+        # spaces["depth"] = Box(low=0, high=255, shape=(480, 640, 3), dtype=np.uint8) # Add depth data
+        observation_spaces = SpaceDict(spaces)
+        self.clipResNet = clip.ResNetCLIPEncoder(observation_spaces)
+
+
+    def reset(self):
+        observation = super().reset()
+        observation['rgb'] = self.clipResNet.forward(observation)
+        return observation
+
+
+
+    def step(self, *args, **kwargs):
+        observation, reward, done, info = super().step(*args, **kwargs)
+        observation['rgb'] = self.clipResNet.forward(observation)
+        return observation, reward, done, info
