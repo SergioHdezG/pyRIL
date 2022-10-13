@@ -44,7 +44,7 @@ class HM3DRLEnv(habitat.RLEnv):
                  save_video=False,
                  oracle_stop=False,
                  use_clip=False):
-        print(f"{bcolors.OKBLUE}Creando un nuevo entorno.{bcolors.ENDC}")
+        print(f"{bcolors.OKBLUE}Creating new env.{bcolors.ENDC}")
 
         if not os.path.exists(result_path) and save_video:
             os.makedirs(result_path)

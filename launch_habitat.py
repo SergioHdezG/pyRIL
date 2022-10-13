@@ -31,13 +31,11 @@ from RL_Agent.base.utils.networks.networks_interface import RLNetModel, Training
 from RL_Agent.base.utils.networks.agent_networks import PPONet
 from RL_Agent.base.utils import agent_saver, history_utils
 from utils.preprocess import *
+from environments.habitat_envs import HM3DRLEnv
 from RL_Agent.base.utils.networks.action_selection_options import *
 from habitat_experiments.utils.neuralnets import *
 
-tensorboard_path = '/home/carlos/resultados'
-environment = habitat_envs.HM3DRLEnv(config_paths="configs/RL/objectnav_hm3d_RL.yaml",
-                                     result_path=os.path.join("resultados",
-                                                              "images"),
+
 # Loading yaml configuration files
 if len(sys.argv) > 1:
     config_file = sys.argv[1]
@@ -45,37 +43,43 @@ if len(sys.argv) > 1:
         with open(config_file) as file:
             config = yaml.load(file, Loader=yaml.FullLoader)
 else:
-   raise Exception('No config.yaml file is provided')
+    raise Exception('No config.yaml file is provided')
+
+# Define loggers
+tensorboard_path = os.path.join(config["base_path"], config["tensorboard_dir"])
+logger_dir = os.path.join(config['base_path'], config['tensorboard_dir'],
+                          str(datetime.datetime.now().strftime('%d-%m-%Y_%H-%M-%S')) + '_log.txt')
+if not os.path.exists(tensorboard_path):
+    os.makedirs(tensorboard_path)
+logger = open(logger_dir, 'w+')  # File where you need to keep the logs
+
 
 # Send output to file
 class Unbuffered:
-   def __init__(self, stream):
-       self.stream = stream
+    def __init__(self, stream):
+        self.stream = stream
 
-   def write(self, data):
-       self.stream.write(data)
-       self.stream.flush()
-       te.write(data)    # Write the data of stdout here to a text file as well
+    def write(self, data):
+        self.stream.write(data)
+        self.stream.flush()
+        logger.write(data)  # Write the data of stdout here to a text file as well
 
-   def flush(self):
-       # this flush method is needed for python 3 compatibility.
-       # this handles the flush command by doing nothing.
-       # you might want to specify some extra behavior here.
-       pass
+    def flush(self):
+        # this flush method is needed for python 3 compatibility.
+        # this handles the flush command by doing nothing.
+        # you might want to specify some extra behavior here.
+        pass
 
-te = open(config["base_path"] + 'log.txt', 'w')  # File where you need to keep the logs
+
 sys.stdout = Unbuffered(sys.stdout)
-
-print(datetime.datetime.now())
-
-tensorboard_path = config["base_path"] + config["tensorboard_dir"]
-
 exec('environment = ' + config["environment"])
 environment = environment(config_paths=config["habitat_config_path"],
-                                     result_path=os.path.join(config["base_path"], config["habitat_result_path"]),
-                                     render_on_screen=False,
-                                     save_video=config["habitat_save_video"],
-                                     oracle_stop=config["habitat_oracle_stop"])
+                          result_path=os.path.join(config["base_path"], config["habitat_result_path"]),
+                          render_on_screen=False,
+                          save_video=config["habitat_save_video"],
+                          oracle_stop=config["habitat_oracle_stop"],
+                          use_clip=config['use_clip'])
+
 
 class CustomNet(PPONet):
     """
@@ -199,22 +203,23 @@ class CustomNet(PPONet):
                 variables, \
                 returns, \
                 advantages, \
-                [act_comp_loss, critic_comp_loss, entropy_comp_loss] = self.train_step([tf.cast(batch_obs, tf.float32), tf.cast(batch_target, tf.float32)],
-                                                                                       tf.cast(batch_act_probs, tf.float32),
-                                                                                       tf.cast(batch_actions, tf.float32),
-                                                                                       tf.cast(batch_returns, tf.float32),
-                                                                                       tf.cast(batch_advantages, tf.float32),
-                                                                                       stddev=tf.cast(stddev,
-                                                                                                      tf.float32),
-                                                                                       loss_clipping=tf.cast(
-                                                                                           loss_clipping,
-                                                                                           tf.float32),
-                                                                                       critic_discount=tf.cast(
-                                                                                           critic_discount,
-                                                                                           tf.float32),
-                                                                                       entropy_beta=tf.cast(
-                                                                                           entropy_beta,
-                                                                                           tf.float32))
+                [act_comp_loss, critic_comp_loss, entropy_comp_loss] = self.train_step(
+                    [tf.cast(batch_obs, tf.float32), tf.cast(batch_target, tf.float32)],
+                    tf.cast(batch_act_probs, tf.float32),
+                    tf.cast(batch_actions, tf.float32),
+                    tf.cast(batch_returns, tf.float32),
+                    tf.cast(batch_advantages, tf.float32),
+                    stddev=tf.cast(stddev,
+                                   tf.float32),
+                    loss_clipping=tf.cast(
+                        loss_clipping,
+                        tf.float32),
+                    critic_discount=tf.cast(
+                        critic_discount,
+                        tf.float32),
+                    entropy_beta=tf.cast(
+                        entropy_beta,
+                        tf.float32))
 
             if verbose:
                 print(
@@ -328,6 +333,7 @@ if config["preprocess"] == 'None':
     preprocess = None
 else:
     exec('preprocess = ' + config["preprocess"])
+
 
 def custom_model(input_shape):
     return CustomNet(input_shape, actor_model, critic_model, tensorboard_dir=tensorboard_path)

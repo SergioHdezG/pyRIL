@@ -166,8 +166,8 @@ class RLNetModel(RLNetInterfaz):
 
     def _tensorboard_util(self, tensorboard_dir):
         if tensorboard_dir is not None:
-            current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-            self.train_log_dir = os.path.join(tensorboard_dir, 'gradient_tape/' + current_time + '/train')
+            current_time = datetime.datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+            self.train_log_dir = os.path.join(tensorboard_dir, current_time)
             self.train_summary_writer = tf.summary.create_file_writer(self.train_log_dir)
         else:
             self.train_log_dir = None

@@ -145,7 +145,8 @@ class PPOSuper(AgentSuper):
         self.obj_sumary = tf.summary.merge([rat_summary, ratadv_summary, clip_summary, var_summary])
         self.summary_writer = tf.summary.FileWriter(self.logdir, self.sess.graph)
         self.loss_sumary = tf.summary.merge([a_l_summary, c_l_summary, t_l_summary])
-        self.rl_sumary = tf.summary.merge([e_a_l_summary, e_c_l_summary, e_e_l_summary, e_t_l_summary, e_p_l_summary, rew_summary, ret_summary, ad_summary, val_summary, act_summary])
+        self.rl_sumary = tf.summary.merge([e_a_l_summary, e_c_l_summary, e_e_l_summary, e_t_l_summary, e_p_l_summary,
+                                           rew_summary, ret_summary, ad_summary, val_summary, act_summary])
         self.summary_writer = tf.summary.FileWriter(self.logdir, self.sess.graph)
 
     def variable_summaries(self, var):
