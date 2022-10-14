@@ -22,7 +22,7 @@ import yaml
 import datetime
 import numpy as np
 from RL_Problem import rl_problem
-from RL_Agent import ppo_agent_discrete_parallel, ppo_agent_discrete
+from RL_Agent import ppo_agent_discrete_parallel, ppo_agent_discrete_habitat
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, Flatten
 from environments import habitat_envs
@@ -342,27 +342,27 @@ def custom_model(input_shape):
 net_architecture = networks.ppo_net(use_tf_custom_model=True,
                                     tf_custom_model=custom_model)
 
-agent = ppo_agent_discrete.Agent(actor_lr=float(config["actor_lr"]),
-                                 critic_lr=float(config["critic_lr"]),
-                                 batch_size=config["batch_size"],
-                                 memory_size=config["memory_size"],
-                                 epsilon=config["epsilon"],
-                                 epsilon_decay=config["epsilon_decay"],
-                                 epsilon_min=config["epsilon_min"],
-                                 gamma=config["gamma"],
-                                 loss_clipping=config["loss_clipping"],
-                                 loss_critic_discount=config["loss_critic_discount"],
-                                 loss_entropy_beta=config["loss_entropy_beta"],
-                                 lmbda=config["lmbda"],
-                                 train_epochs=config["train_epochs"],
-                                 net_architecture=net_architecture,
-                                 n_stack=config["n_stack"],
-                                 is_habitat=config["is_habitat"],
-                                 img_input=config["img_input"],
-                                 # TODO: [Sergio] Revisar y automaticar el control del state_size cuando is_habitat=True
-                                 state_size=state_size,
-                                 train_action_selection_options=train_action_selection_options,
-                                 action_selection_options=action_selection_options)
+agent = ppo_agent_discrete_habitat.Agent(actor_lr=float(config["actor_lr"]),
+                                         critic_lr=float(config["critic_lr"]),
+                                         batch_size=config["batch_size"],
+                                         memory_size=config["memory_size"],
+                                         epsilon=config["epsilon"],
+                                         epsilon_decay=config["epsilon_decay"],
+                                         epsilon_min=config["epsilon_min"],
+                                         gamma=config["gamma"],
+                                         loss_clipping=config["loss_clipping"],
+                                         loss_critic_discount=config["loss_critic_discount"],
+                                         loss_entropy_beta=config["loss_entropy_beta"],
+                                         lmbda=config["lmbda"],
+                                         train_epochs=config["train_epochs"],
+                                         net_architecture=net_architecture,
+                                         n_stack=config["n_stack"],
+                                         is_habitat=config["is_habitat"],
+                                         img_input=config["img_input"],
+                                         # TODO: [Sergio] Revisar y automaticar el control del state_size cuando is_habitat=True
+                                         state_size=state_size,
+                                         train_action_selection_options=train_action_selection_options,
+                                         action_selection_options=action_selection_options)
 
 # Define the problem
 problem = rl_problem.Problem(environment, agent)

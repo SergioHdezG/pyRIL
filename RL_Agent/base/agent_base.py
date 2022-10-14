@@ -317,7 +317,9 @@ class AgentSuper(AgentInterface):
         if self.model.train_summary_writer is not None:
             with self.model.train_summary_writer.as_default():
                 for [total_episodes, episodic_reward, epochs, epsilon, global_steps] in histograms:
-                    self.model.rl_sumaries([episodic_reward, epsilon], ['Reward', 'Epsilon'], total_episodes)
+                    self.model.rl_sumaries([episodic_reward, epsilon, epochs],
+                                           ['Reward', 'Epsilon', 'Steps per episode'],
+                                           global_steps)
 
     def _reduce_epsilon(self):
         """

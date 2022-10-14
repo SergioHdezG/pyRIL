@@ -387,7 +387,7 @@ class PPONet(RLNetModel):
         tf.saved_model.save(self.optimizer_critic, os.path.join(path, 'optimizer_critic'))
         tf.saved_model.save(self.metrics, os.path.join(path, 'metrics'))
 
-        # TODO: Qeda guardar las funciones de pérdida. De momento confio en las que hay definidad como estandar.
+        # TODO [SERGIO] Queda guardar las funciones de pérdida. De momento confio en las que hay definidad como estandar
         data = {
             "train_log_dir": self.train_log_dir,
             "total_epochs": self.total_epochs,

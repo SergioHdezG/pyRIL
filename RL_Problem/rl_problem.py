@@ -51,6 +51,10 @@ def Problem(environment, agent):
         from RL_Problem.base.PPO import ppo_problem_discrete
         problem = ppo_problem_discrete.PPOProblem(environment, agent)
 
+    elif agent.agent_name == agent_globals.names["ppo_discrete_habitat"]:
+        from RL_Problem.base.PPO import ppo_problem_discrete_habitat
+        problem = ppo_problem_discrete_habitat.PPOProblem(environment, agent)
+
     elif agent.agent_name == agent_globals.names["ppo_continuous"]:
         from RL_Problem.base.PPO import ppo_problem_continuous
         problem = ppo_problem_continuous.PPOProblem(environment, agent)

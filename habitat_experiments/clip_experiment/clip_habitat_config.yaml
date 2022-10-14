@@ -1,7 +1,7 @@
 base_path: "habitat_experiments/clip_experiment"
 habitat_config_path: "configs/RL/objectnav_hm3d_RL.yaml"
 habitat_result_path: "images"  # Concatenated with base_path.
-habitat_save_video: True
+habitat_save_video: False
 habitat_oracle_stop: True
 use_clip: True
 environment: "HM3DRLEnv" # "HM3DRLEnv"

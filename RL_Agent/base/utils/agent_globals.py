@@ -12,6 +12,7 @@ names = {"dqn": "DQN",
          "a2c_continuous_queue": "A2C_continuous_queue",
          "ppo_continuous": "PPOppo_continuous",
          "ppo_discrete": "PPO_discrete",
+         "ppo_discrete_habitat": "PPO_discrete_habitat",
          "ppo_discrete_multithread": "PPO_discrete_multithread",
          "ppo_continuous_multithread": "PPO_continuous_multithread",
          "ppo_continuous_multithread_transformer": "PPO_continuous_multithread_transformer"}
