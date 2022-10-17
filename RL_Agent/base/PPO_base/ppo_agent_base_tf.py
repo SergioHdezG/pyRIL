@@ -126,8 +126,15 @@ class PPOSuper(AgentSuper):
         :return:
         """
         if self.is_habitat:
-            rgb = [ob['rgb'] for ob in obs]
-            target_encoding = [ob['objectgoal'] for ob in obs]
+            if self.n_stack > 1:
+                rgb = []
+                target_encoding = []
+                for stack_obs in obs:
+                    rgb.append([o['rgb'].astype(np.float32) for o in stack_obs])
+                    target_encoding.append(stack_obs[0]['objectgoal'].astype(np.float32))
+            else:
+                rgb = [ob['rgb'] for ob in obs]
+                target_encoding = [ob['objectgoal'] for ob in obs]
             # TODO: CARLOS -> add rgb and target encoding as an observation
             obs = [rgb, target_encoding]
         else:

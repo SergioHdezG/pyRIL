@@ -23,6 +23,7 @@ class RLProblemSuper(object, metaclass=ABCMeta):
         self.env = environment
         self.agent = agent
 
+        self.is_habitat = agent.is_habitat
         self.n_stack = agent.n_stack
         self.img_input = agent.img_input
 
@@ -331,7 +332,7 @@ class RLProblemSuper(object, metaclass=ABCMeta):
             # stacking inputs
             if self.n_stack is not None and self.n_stack > 1:
                 for i in range(self.n_stack):
-                    obs_queue.append(np.zeros(obs.shape))
+                    obs_queue.append(obs)
                 obs_queue.append(obs)
 
             while not done:

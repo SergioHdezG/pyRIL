@@ -1,7 +1,7 @@
 # Experiment name: exp_1
 # Lanzar con imitacion_observations_serpiente_main_beta_explore.py
 
-base_path: "habitat_experiments/cnn_experiments/"
+base_path: "habitat_experiments/cnn_experiments/exp1/"
 #base_path: "/media/archivos/home/PycharmProjects2022/pyRIL-private-KUBUS/espermatozoides_2022_06/experiments/BetaDistribution/learning_from_obs/GAIL/ActionToAngles/2022_07_11/n4/exp_1/"
 # Select snake environment. Environment name (SnakeActionToAngles, SnakeActionToAnglesOrientation, SerpienteEnvActionsToModel3Parameters, SerpienteEnvActionsToModel4Parameters).
 
@@ -15,6 +15,7 @@ environment: "HM3DRLEnv" # "HM3DRLEnvClip"
 #############################################################
 
 # select network from habitat_experiments.utils.neuralnets.py
+use_clip: False
 actor_model: actor_model_cf8k3_cf8k3_concat_d256relu_d256_relu_d5_softmax
 critic_model: critic_model_cf8k3_cf8k3_concat_d256relu_d256_relu_d5_softmax
 

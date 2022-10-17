@@ -231,9 +231,15 @@ class AgentSuper(AgentInterface):
         :param obs: Observation (state) array of state shape.
         :return: (nd array)
         """
-        if self.is_habitat and isinstance(obs, dict):
-            # TODO: CARLOS -> format habitat inputs to the neural networks
-            obs = [[obs['rgb'].astype(np.float32)], [obs['objectgoal'].astype(np.float32)]]
+        if self.is_habitat:  # and isinstance(obs, dict):
+            # TODO: [Sergio] Formatear y estandarizar correctamente los tipos de estradas para habitat
+            if self.n_stack > 1:
+                rgb = [[o['rgb'].astype(np.float32) for o in obs]]
+                goal = [obs[0]['objectgoal'].astype(np.float32)]
+                obs = [rgb, goal]
+            else:
+                # TODO: CARLOS -> format habitat inputs to the neural networks
+                obs = [[obs['rgb'].astype(np.float32)], [obs['objectgoal'].astype(np.float32)]]
             return obs
 
         elif self.img_input:

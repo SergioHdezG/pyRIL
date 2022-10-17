@@ -95,7 +95,7 @@ class CustomNet(PPONet):
         y_ = self._predict(np.array(x[0]), np.array(x[1]))
         return y_.numpy()
 
-    @tf.function(experimental_relax_shapes=False)
+    # @tf.function(experimental_relax_shapes=False)
     def _predict(self, x1, x2):
         """ Predict the output sentence for a given input sentence
             Args:
@@ -323,6 +323,7 @@ class CustomNet(PPONet):
 exec('actor_model = ' + config["actor_model"])
 exec('critic_model = ' + config["critic_model"])
 
+n_stack = config["n_stack"]
 if config["state_size"] == 'None':
     state_size = None
 else:
@@ -356,7 +357,7 @@ agent = ppo_agent_discrete_habitat.Agent(actor_lr=float(config["actor_lr"]),
                                          lmbda=config["lmbda"],
                                          train_epochs=config["train_epochs"],
                                          net_architecture=net_architecture,
-                                         n_stack=config["n_stack"],
+                                         n_stack=n_stack,
                                          is_habitat=config["is_habitat"],
                                          img_input=config["img_input"],
                                          # TODO: [Sergio] Revisar y automaticar el control del state_size cuando is_habitat=True
