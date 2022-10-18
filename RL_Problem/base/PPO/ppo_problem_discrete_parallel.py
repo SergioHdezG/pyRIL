@@ -17,7 +17,7 @@ class PPOProblem(PPOProblemMultithreadBase):
                 model_params:   Dictionary of params like learning rate, batch size, epsilon values, n step returns...
         """
 
-        super().__init__(environment, agent)
+        super().__init__(environment, agent, continuous=False)
 
     def _define_agent(self, n_actions, state_size, stack, action_bound=None):
         self.agent.build_agent(state_size, n_actions, stack=stack)

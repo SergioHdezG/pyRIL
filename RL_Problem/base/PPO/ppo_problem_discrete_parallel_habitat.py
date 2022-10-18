@@ -1,13 +1,14 @@
-from RL_Problem.base.PPO.ppo_problem_base import PPOProblemBase
-from RL_Problem.base.rl_problem_base import *
-import numpy as np
+from collections import deque
 
-class PPOProblem(PPOProblemBase):
+from RL_Agent.base.utils.history_utils import write_history
+from RL_Problem.base.PPO.ppo_problem_parallel_base import PPOProblemMultithreadBase
+
+
+class PPOProblem(PPOProblemMultithreadBase):
     """
     Proximal Policy Optimization.
     """
-    def __init__(self, environment, agent, n_stack=1, img_input=False, state_size=None, model_params=None,
-                 saving_model_params=None, net_architecture=None):
+    def __init__(self, environment, agent):
         """
         Attributes:
                 environment:    Environment selected for this problem
@@ -18,10 +19,11 @@ class PPOProblem(PPOProblemBase):
                                 or Tuple format will be useful when preprocessing change the input dimensions.
                 model_params:   Dictionary of params like learning rate, batch size, epsilon values, n step returns...
         """
+
         super().__init__(environment, agent, continuous=False)
 
     def _define_agent(self, n_actions, state_size, stack, action_bound=None):
-        self.agent.build_agent(state_size=state_size, n_actions=n_actions, stack=stack)
+        self.agent.build_agent(state_size, n_actions, stack=stack)
 
     def solve(self, episodes, render=True, render_after=None, max_step_epi=None, skip_states=1, verbose=1,
               discriminator=None, expert_traj=None, save_live_histogram=False, smooth_rewards=2):
@@ -189,8 +191,6 @@ class PPOProblem(PPOProblemBase):
                                         str(type(save_live_histories)) + ' has been received')
             else:
                 self.disc_loss += 0.0025
-
-
 
         self.agent.remember(self.obs_batch, self.actions_batch, self.actions_probs_batch, self.rewards_batch,
                             self.masks_batch)

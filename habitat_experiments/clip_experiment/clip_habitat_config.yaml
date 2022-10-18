@@ -1,25 +1,26 @@
-base_path: "habitat_experiments/clip_experiment"
+base_path: "habitat_experiments/clip_experiment/LSTM/"
+
 habitat_config_path: "configs/RL/objectnav_hm3d_RL.yaml"
 habitat_result_path: "images"  # Concatenated with base_path.
 habitat_save_video: False
 habitat_oracle_stop: True
-use_clip: True
 environment: "HM3DRLEnv" # "HM3DRLEnv"
 #############################################################
 #		PPO agent hyperparameters
 #############################################################
 
 # select network from habitat_experiments.utils.neuralnets.py
-actor_model: actor_model_clip_d256tanh_d256tanh_d5softmax
-critic_model: critic_model_clip_d256tanh_d256tanh_d1linear
+use_clip: True
+actor_model: actor_model_clip_LSTM128_d1218tanh_d128tanh_d5softmax
+critic_model: critic_model_clip_LSTM128_d128tanh_d128tanh_d1linear
 
 # select agent params
 actor_lr: 1e-4 # float or tf.keras.optimizers.schedules
 critic_lr: 1e-4 # float or tf.keras.optimizers.schedules
 batch_size: 64 # int. Agent's training batch size
-memory_size: 2000 # int. PPO agent's experiences memory size for each thread.
-epsilon: 0.8 # float in [0, 1]. Initial exploration rate
-epsilon_decay: 0.95 # float. Exploration rate decay factor or scheduler from espermatozoides.training.utils.schedules.py.
+memory_size: 5000 # int. PPO agent's experiences memory size for each thread.
+epsilon: 1.0 # float in [0, 1]. Initial exploration rate
+epsilon_decay: 0.97 # float. Exploration rate decay factor or scheduler from espermatozoides.training.utils.schedules.py.
 epsilon_min: 0.2 # float in [0, 1]. Minimum value the exploration rate can get.
 gamma: 0.97 # float in [0, 1]. Attenuate the importance of future returns in GAE estimation.
 lmbda: 0.9 # float in [0, 1]. Attenuate the importance of future returns in all returns estimations.
@@ -27,7 +28,7 @@ train_epochs: 10 # int. Trainstep of the agent for each iteration of PPO.
 is_habitat: True # bool. True when using a habitat env.
 img_input: False # bool. Tru if network's inputs are images.
 state_size: "[(1024,), (6,)]"
-n_stack: 1 # int. Number of stacked states. Allows the aget to have temporal information.
+n_stack: 3 # int. Number of stacked states. Allows the aget to have temporal information.
 n_threads: 10 # Int or None. Number of agent threads. If is None, CPU default number of thread are selected.
 tensorboard_dir: "logs" # String or False. Path to store tensorboard logs.
 loss_clipping: 0.15 # float. Loss clipping factor for PPO loss function. Larger values allows larger optimization steps.
@@ -36,15 +37,13 @@ loss_entropy_beta: 0.0 # float. Coeficient of inportance of entropy loss factor 
 train_action_selection_options: greedy_action # Function from RL_Agent.base.utils.networks.action_selection_options.py. How the agent are selected in exploration (training) mode.
 action_selection_options: argmax # Function from RL_Agent.base.utils.networks.action_selection_options.py. How the agent are selected in exploitation (testing) mode.
 
-preprocess: preprocess_clip_habitat6  # Fucntion from utils.preprocess.py
+preprocess: preprocess_clip_habitat6_stack  # Fucntion from utils.preprocess.py
 
 ##############################################################
 #		Experiment hyperparameters
 ##############################################################
 
 # IL training parameters
-training_epochs: 100  # int. Number of complete iterations of the imitation learning algorithm.
-test_epochs: 5 # Number of test iteration for checking the learned policy after training.
+training_epochs: 1 # int. Number of complete iterations of the imitation learning algorithm.
+test_epochs: 20 # Number of test iteration for checking the learned policy after training.
 render_test: False
-
-

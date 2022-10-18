@@ -12,6 +12,7 @@ from habitat.utils.visualizations.utils import images_to_video
 from utils.custom_networks import clip
 from gym.spaces import Box
 from gym.spaces import Dict as SpaceDict
+
 cv2 = try_cv2_import()
 
 
@@ -221,3 +222,26 @@ class HM3DRLEnv(habitat.RLEnv):
     #
     #     """
     #     self.__init__(config_paths=state['config_paths'], result_path=state['result_path'], task=state['task'])
+
+
+class HM3DRLVecEnv(habitat.VectorEnv):
+    """
+    Matterport annotated objects: ["wall", "objects", "door", "chair", "window", "ceiling", "picture", "floor", "misc",
+    "lighting", "cushion", "table", "cabinet", "curtain", "plant", "shelving", "sink", "mirror", "chest", "towel",
+    "stairs", "railing", "column", "counter", "stool", "bed", "sofa", "shower", "appliances", "toilet", "tv",
+    "seating", "clothes", "fireplace", "bathtub", "beam", "furniture", "gym equip", "blinds", "board"]
+
+    default configuration for reference: habitat/config/default.py
+    """
+
+    def __init__(self, make_env_fn,
+                 env_fn_args=None,
+                 auto_reset_done: bool = True,
+                 multiprocessing_start_method: str = "forkserver",
+                 workers_ignore_signals: bool = False, ):
+
+        super().__init__(make_env_fn=make_env_fn,
+                         env_fn_args=env_fn_args,
+                         auto_reset_done=auto_reset_done,
+                         multiprocessing_start_method=multiprocessing_start_method,
+                         workers_ignore_signals=workers_ignore_signals)
