@@ -199,12 +199,14 @@ class PPONet(RLNetModel):
                                        np.array(advantages),
                                        actions,
                                        act_probs,
-                                       stddev],
+                                       stddev,
+                                       np.array(mask)],
                                       ['returns',
                                        'advantages',
                                        'actions',
                                        'act_probabilities'
-                                       'stddev']
+                                       'stddev',
+                                       'dones']
                                       , self.total_epochs)
 
         history_actor = TrainingHistory()
