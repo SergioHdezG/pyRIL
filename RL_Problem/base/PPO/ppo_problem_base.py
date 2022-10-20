@@ -165,7 +165,7 @@ class PPOProblemBase(RLProblemSuper):
 
             while not done:  # and len(batch[0])+len(tmp_batch[0]) < self.buffer_size:
                 if render or ((render_after is not None) and self.episode > render_after):
-                    self.env.render()
+                    self.env.render(view='top')
 
                 # Select an action
                 action, action_matrix, predicted_action = self.act_train(obs, obs_queue)

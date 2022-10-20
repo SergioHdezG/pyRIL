@@ -47,7 +47,8 @@ environment = environment(forward_step=config['forward_step'],
                           num_cols=config['num_cols'],
                           domain_rand=config['domain_rand'],
                           max_steps=config['max_steps'],
-                          use_clip=config['use_clip'])
+                          use_clip=config['use_clip'],
+                          sparse_reward=config['sparse_reward'])
 
 # define agent's neural networks to use
 exec('actor_model = ' + config["actor_model"])
@@ -89,8 +90,6 @@ agent = ppo_agent_discrete.Agent(actor_lr=float(config["actor_lr"]),
                                  n_stack=n_stack,
                                  is_habitat=config["is_habitat"],
                                  img_input=config["img_input"],
-                                 # TODO: [Sergio] Revisar y automaticar el control del state_size cuando
-                                 #  is_habitat=True
                                  state_size=state_size,
                                  train_action_selection_options=train_action_selection_options,
                                  action_selection_options=action_selection_options)
