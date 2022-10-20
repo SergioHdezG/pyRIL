@@ -1,15 +1,26 @@
+import tensorflow as tf
+
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+    try:
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+    except RuntimeError as e:
+        print(e)
+
 import datetime
 import os
 import sys
 import yaml
-from RL_Agent.base.utils.networks.action_selection_options import greedy_random_choice, random_choice
+from RL_Agent.base.utils.networks.action_selection_options import *
 from utils.log_utils import Unbuffered
 from RL_Problem import rl_problem
 from RL_Agent import ppo_agent_discrete_parallel, ppo_agent_discrete
 from environments.maze import PyMaze
 from RL_Agent.base.utils.networks import networks
-from RL_Agent.base.utils.networks.agent_networks import PPONet
+from RL_Agent.base.utils.networks.agent_networks import PPONet, MazePPONet
 from RL_Agent.base.utils import agent_saver, history_utils
+from maze_experiments.utils.neuralnets import *
 
 # Loading yaml configuration files
 if len(sys.argv) > 1:
@@ -56,38 +67,45 @@ else:
 
 
 def custom_model(input_shape):
-    return PPONet(input_shape, actor_model, critic_model, tensorboard_dir=tensorboard_path)
-
+    return MazePPONet(input_shape, actor_model, critic_model, tensorboard_dir=tensorboard_path)
 
 net_architecture = networks.ppo_net(use_tf_custom_model=True,
                                     tf_custom_model=custom_model)
 
-agent_cont = ppo_agent_discrete.Agent(actor_lr=1e-4,
-                                      critic_lr=1e-4,
-                                      batch_size=128,
-                                      memory_size=5000,
-                                      epsilon=1.0,
-                                      epsilon_decay=0.95,
-                                      epsilon_min=0.15,
-                                      net_architecture=net_architecture,
-                                      n_stack=3,
-                                      img_input=False,
-                                      state_size=None,
-                                      train_action_selection_options=greedy_random_choice,
-                                      loss_critic_discount=0.001,
-                                      loss_entropy_beta=0.001,
-                                      exploration_noise=1.0)
+agent = ppo_agent_discrete.Agent(actor_lr=float(config["actor_lr"]),
+                                 critic_lr=float(config["critic_lr"]),
+                                 batch_size=config["batch_size"],
+                                 memory_size=config["memory_size"],
+                                 epsilon=config["epsilon"],
+                                 epsilon_decay=config["epsilon_decay"],
+                                 epsilon_min=config["epsilon_min"],
+                                 gamma=config["gamma"],
+                                 loss_clipping=config["loss_clipping"],
+                                 loss_critic_discount=config["loss_critic_discount"],
+                                 loss_entropy_beta=config["loss_entropy_beta"],
+                                 lmbda=config["lmbda"],
+                                 train_epochs=config["train_epochs"],
+                                 net_architecture=net_architecture,
+                                 n_stack=n_stack,
+                                 is_habitat=config["is_habitat"],
+                                 img_input=config["img_input"],
+                                 # TODO: [Sergio] Revisar y automaticar el control del state_size cuando
+                                 #  is_habitat=True
+                                 state_size=state_size,
+                                 train_action_selection_options=train_action_selection_options,
+                                 action_selection_options=action_selection_options)
 
-problem_cont = rl_problem.Problem(environment, agent_cont)
+problem = rl_problem.Problem(environment, agent)
 
 # agent_cont = agent_saver.load('agent_discrete_ppo', agent=problem_cont.agent, overwrite_attrib=True)
 
 # agent_cont.actor.extract_variable_summaries = extract_variable_summaries
 
-problem_cont.solve(episodes=200, render=False)
-problem_cont.test(render=False, n_iter=10)
+# Solve (train the agent) and test it
+problem.solve(episodes=config["training_epochs"], render=False)
+problem.test(render=config["render_test"], n_iter=config["test_epochs"])
 #
-hist = problem_cont.get_histogram_metrics()
+hist = problem.get_histogram_metrics()
 history_utils.plot_reward_hist(hist, 10)
 #
 agent_saver.save(agent_cont, 'agent_discrete_ppo')

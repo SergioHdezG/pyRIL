@@ -17,8 +17,6 @@ import datetime
 import numpy as np
 from RL_Problem import rl_problem
 from RL_Agent import ppo_agent_discrete_parallel, ppo_agent_discrete_parallel_habitat, ppo_agent_discrete_habitat
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, LSTM, Flatten
 from environments import habitat_envs
 from RL_Agent.base.utils.networks import networks, losses, returns_calculations, tensor_board_loss_functions
 from RL_Agent.base.utils.networks.networks_interface import RLNetModel, TrainingHistory

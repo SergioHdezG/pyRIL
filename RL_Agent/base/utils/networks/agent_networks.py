@@ -2581,3 +2581,12 @@ class HabitatPPONet(PPONet):
                returns, \
                advantages, \
                [act_comp_loss, critic_comp_loss, entropy_comp_loss]
+
+
+class MazePPONet(PPONet):
+    """
+    Define Custom Net for habitat
+    """
+
+    def __init__(self, input_shape, actor_net, critic_net, tensorboard_dir=None):
+        super().__init__(actor_net(input_shape), critic_net(input_shape), tensorboard_dir=tensorboard_dir)

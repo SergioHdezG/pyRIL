@@ -14,10 +14,13 @@ class ResNetCLIPEncoder(nn.Module):
     def __init__(
         self,
         observation_space: spaces.Dict,
+        is_habitat: bool = True,
         pooling='attnpool',
         device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     ):
         super().__init__()
+
+        self.is_habitat = is_habitat
 
         class castTensor():
             def __init__(self, type):
@@ -81,7 +84,10 @@ class ResNetCLIPEncoder(nn.Module):
 
         cnn_input = []
         if self.rgb:
-            rgb_observations = np.array(observations["rgb"])
+            if self.is_habitat:
+                rgb_observations = np.array(observations['rgb'])
+            else:
+                rgb_observations = np.array(observations)
             # rgb_observations = rgb_observations.transpose((2, 0, 1))  # BATCH x CHANNEL x HEIGHT X WIDTH
             rgb_observations = [self.toPil(rgb_observations)]
             rgb_observations = torch.stack(

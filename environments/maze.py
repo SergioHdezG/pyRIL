@@ -1,8 +1,9 @@
 from gym_miniworld.envs.maze import Maze
 from gym_miniworld.params import DEFAULT_PARAMS
 from utils.custom_networks import clip
-from gym.spaces import Dict as SpaceDict
+from gym.spaces import Dict, Box
 from gym_miniworld.entity import Agent
+import numpy as np
 
 
 class PyMaze(Maze):
@@ -24,9 +25,13 @@ class PyMaze(Maze):
         params.set('forward_step', forward_step)
         params.set('turn_step', turn_step)
 
+        self.observation_space = Box(
+            low=0, high=255, shape=(60, 80, 3), dtype=np.uint8
+        )
+
         if self.use_clip:
             obs_dict = {"rgb": self.observation_space}
-            self.clipResNet = clip.ResNetCLIPEncoder(SpaceDict(obs_dict))
+            self.clipResNet = clip.ResNetCLIPEncoder(Dict(obs_dict), is_habitat=False)
 
         super().__init__(
             num_rows=num_rows,
@@ -37,12 +42,13 @@ class PyMaze(Maze):
         )
 
     def step(self, action, resnet=False):
-        obs, reward, done, info = super().step(action, resnet=resnet)
+        obs, reward, done, info = super().step(action)
 
         # reward = self.reward()
 
         if self.use_clip:
             obs = self.clipResNet.forward(obs)
+            obs = obs.squeeze()
 
         if self.near(self.box):
             # High reward if the agent reaches the goal
@@ -111,6 +117,6 @@ class PyMaze(Maze):
         obs = self.render_obs()
         if self.use_clip:
             obs = self.clipResNet.forward(obs)
-
+            obs = obs.squeeze()
         # Return first observation
         return obs

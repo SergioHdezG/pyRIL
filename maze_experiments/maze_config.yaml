@@ -28,9 +28,9 @@ epsilon_min: 0.2 # float in [0, 1]. Minimum value the exploration rate can get.
 gamma: 0.97 # float in [0, 1]. Attenuate the importance of future returns in GAE estimation.
 lmbda: 0.9 # float in [0, 1]. Attenuate the importance of future returns in all returns estimations.
 train_epochs: 10 # int. Trainstep of the agent for each iteration of PPO.
-is_habitat: True # bool. True when using a habitat env.
+is_habitat: False # bool. True when using a habitat env.
 img_input: False # bool. Tru if network's inputs are images.
-state_size: "[(1024,), (6,)]"
+state_size: "1024"
 n_stack: 3 # int. Number of stacked states. Allows the aget to have temporal information.
 n_threads: 10 # Int or None. Number of agent threads. If is None, CPU default number of thread are selected.
 tensorboard_dir: "logs" # String or False. Path to store tensorboard logs.
@@ -40,7 +40,7 @@ loss_entropy_beta: 0.0 # float. Coeficient of inportance of entropy loss factor 
 train_action_selection_options: greedy_action # Function from RL_Agent.base.utils.networks.action_selection_options.py. How the agent are selected in exploration (training) mode.
 action_selection_options: argmax # Function from RL_Agent.base.utils.networks.action_selection_options.py. How the agent are selected in exploitation (testing) mode.
 
-preprocess: preprocess_clip_habitat6_stack  # Fucntion from utils.preprocess.py
+preprocess: None  # Fucntion from utils.preprocess.py
 
 ##############################################################
 #		Experiment hyperparameters

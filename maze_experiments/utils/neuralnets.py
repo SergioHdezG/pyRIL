@@ -121,7 +121,7 @@ def actor_model_clip_LSTM128_d1218tanh_d128tanh_d5softmax_maze(input_shape):
     rnn = tf.keras.layers.LSTM(128)(input_clip)
     hidden = tf.keras.layers.Dense(128, activation='tanh')(rnn)
     hidden = tf.keras.layers.Dense(128, activation='tanh')(hidden)
-    out = tf.keras.layers.Dense(4, activation='softmax')(hidden)
+    out = tf.keras.layers.Dense(3, activation='softmax')(hidden)
 
     actor_model = tf.keras.models.Model(inputs=input_clip, outputs=out)
     return actor_model
