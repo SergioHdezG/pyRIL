@@ -1,4 +1,4 @@
-base_path: "maze_experiments"
+base_path: "maze_experiments/6"
 
 forward_step: 0.4
 turn_step: 22.5
@@ -8,7 +8,7 @@ max_steps: 600
 domain_rand: True
 
 sparse_reward: False
-train_action_selection_options: greedy_action # argmax
+train_action_selection_options: argmax # argmax
 n_stack: 20 # int. Number of stacked states. Allows the aget to have temporal information.
 
 
@@ -26,7 +26,7 @@ environment: "PyMaze" # "HM3DRLEnv"
 #############################################################
 
 # select network from habitat_experiments.utils.neuralnets.py
-use_clip: False
+use_clip: True
 actor_model: actor_model_clip_LSTM128_d1218tanh_d128tanh_d5softmax_maze
 critic_model: critic_model_clip_LSTM128_d128tanh_d128tanh_d1linear_maze
 

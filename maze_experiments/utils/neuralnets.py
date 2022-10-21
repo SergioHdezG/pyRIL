@@ -116,6 +116,7 @@ def critic_model_clip_LSTM128_d128tanh_d128tanh_d1linear(input_shape):
 
     return critic_model
 
+
 def actor_model_clip_LSTM128_d1218tanh_d128tanh_d5softmax_maze(input_shape):
     input_clip = tf.keras.Input(input_shape)
     rnn = tf.keras.layers.LSTM(128)(input_clip)
