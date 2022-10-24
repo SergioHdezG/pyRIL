@@ -101,7 +101,7 @@ problem = rl_problem.Problem(environment, agent)
 # agent_cont.actor.extract_variable_summaries = extract_variable_summaries
 
 # Solve (train the agent) and test it
-problem.solve(episodes=config["training_epochs"], render=False)
+problem.solve(episodes=config["training_epochs"], render=False, max_step_epi=config['max_steps'])
 problem.test(render=config["render_test"], n_iter=config["test_epochs"])
 #
 hist = problem.get_histogram_metrics()

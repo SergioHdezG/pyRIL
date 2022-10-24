@@ -322,9 +322,9 @@ class AgentSuper(AgentInterface):
     def save_tensorboar_rl_histogram(self, histograms):
         if self.model.train_summary_writer is not None:
             with self.model.train_summary_writer.as_default():
-                for [total_episodes, episodic_reward, epochs, epsilon, global_steps] in histograms:
-                    self.model.rl_sumaries([episodic_reward, epsilon, epochs],
-                                           ['Reward', 'Epsilon', 'Steps per episode'],
+                for [total_episodes, episodic_reward, steps, success, epsilon, global_steps] in histograms:
+                    self.model.rl_sumaries([episodic_reward, success, epsilon, steps],
+                                           ['Reward', 'Success', 'Epsilon', 'Steps per episode'],
                                            global_steps)
 
     def _reduce_epsilon(self):

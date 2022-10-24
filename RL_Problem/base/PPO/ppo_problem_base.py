@@ -146,8 +146,9 @@ class PPOProblemBase(RLProblemSuper):
 
             obs = self.env.reset()
             episodic_reward = 0
-            epochs = 0
+            steps = 0
             done = False
+            success = 0
             self.reward = []
 
             obs = self.preprocess(obs)
@@ -182,7 +183,7 @@ class PPOProblemBase(RLProblemSuper):
 
                 # Store the experience in episode memory
                 # Here we apply the preprocess/formatting function
-                next_obs, obs_next_queue, reward, done, epochs, mask = self.store_episode_experience(action,
+                next_obs, obs_next_queue, reward, done, steps, mask = self.store_episode_experience(action,
                                                                                                     done,
                                                                                                     next_obs,
                                                                                                     obs,
@@ -190,23 +191,27 @@ class PPOProblemBase(RLProblemSuper):
                                                                                                     obs_queue,
                                                                                                     reward,
                                                                                                     skip_states,
-                                                                                                    epochs,
+                                                                                                    steps,
                                                                                                     predicted_action,
                                                                                                     action_matrix)
 
                 # copy next_obs to obs
                 obs, obs_queue = self.copy_next_obs(next_obs, obs, obs_next_queue, obs_queue)
 
+
+
                 episodic_reward += reward
-                epochs += 1
+                steps += 1
                 self.global_steps += 1
+
+            done, success = self._max_steps(done, steps, max_step_epi)
 
             self.reduce_exploration_noise()
             self.episode += 1
             self.total_episodes += 1
             # Add reward to the list
             self.rew_mean_list.append(episodic_reward)
-            self.histogram_metrics.append([self.total_episodes, episodic_reward, epochs, self.agent.epsilon, self.global_steps])
+            self.histogram_metrics.append([self.total_episodes, episodic_reward, steps, success, self.agent.epsilon, self.global_steps])
 
             if save_live_histories:
                 if isinstance(save_live_histories, str):
@@ -216,7 +221,7 @@ class PPOProblemBase(RLProblemSuper):
                                     str(type(save_live_histories)) + ' has been received')
 
             # Print log on scream
-            self._feedback_print(self.total_episodes, episodic_reward, epochs, verbose, self.rew_mean_list)
+            self._feedback_print(self.total_episodes, episodic_reward, steps, success, verbose, self.rew_mean_list)
 
         if discriminator is not None and expert_traj is not None:
 

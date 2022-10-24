@@ -108,8 +108,9 @@ class RLProblemSuper(object, metaclass=ABCMeta):
             # Init episode parameters
             obs = self.env.reset()
             episodic_reward = 0
-            epochs = 0
+            steps = 0
             done = False
+            success = 0
 
             # Reading initial state
             obs = self.preprocess(obs)
@@ -142,8 +143,8 @@ class RLProblemSuper(object, metaclass=ABCMeta):
                 # next_obs = self.preprocess(next_obs)  # Is made in store_experience now
 
                 # Store the experience in memory
-                next_obs, obs_next_queue, reward, done, epochs = self.store_experience(action, done, next_obs, obs, obs_next_queue,
-                                                                         obs_queue, reward, skip_states, epochs)
+                next_obs, obs_next_queue, reward, done, steps = self.store_experience(action, done, next_obs, obs, obs_next_queue,
+                                                                         obs_queue, reward, skip_states, steps)
 
                 # Replay some memories and training the agent
                 self.agent.replay()
@@ -152,15 +153,15 @@ class RLProblemSuper(object, metaclass=ABCMeta):
                 obs, obs_queue = self.copy_next_obs(next_obs, obs, obs_next_queue, obs_queue)
 
                 # If max steps value is reached the episode is finished
-                done = self._max_steps(done, epochs, max_step_epi)
+                done, success = self._max_steps(done, steps, max_step_epi)
 
                 episodic_reward += reward
-                epochs += 1
+                steps += 1
                 self.global_steps += 1
 
             # Add reward to the list
             rew_mean_list.append(episodic_reward)
-            self.histogram_metrics.append([self.total_episodes, episodic_reward, epochs, self.agent.epsilon, self.global_steps])
+            self.histogram_metrics.append([self.total_episodes, episodic_reward, steps, success, self.agent.epsilon, self.global_steps])
 
             if save_live_histogram:
                 if isinstance(save_live_histogram, str):
@@ -173,7 +174,7 @@ class RLProblemSuper(object, metaclass=ABCMeta):
             self.agent.copy_model_to_target()
 
             # Print log on scream
-            self._feedback_print(self.total_episodes, episodic_reward, epochs, verbose, rew_mean_list)
+            self._feedback_print(self.total_episodes, episodic_reward, steps, success, verbose, rew_mean_list)
             self.total_episodes += 1
 
             self.agent.save_tensorboar_rl_histogram(self.histogram_metrics)
@@ -388,19 +389,20 @@ class RLProblemSuper(object, metaclass=ABCMeta):
         """
         return rew
 
-    def _max_steps(self, done, epochs, max_steps):
+    def _max_steps(self, done, steps, max_steps):
         """
         Return True if number of epochs pass a selected number of steps. This allow to set a maximum number of
         iterations for each RL epoch.
         :param done: (bool) Episode is finished flag. True if the episode has finished.
-        :param epochs: (int) Episode epochs counter.
+        :param steps: (int) Episode epochs counter.
         :param max_steps: (int) Maximum number of episode epochs. When it is reached param done is set to True.
         """
         if max_steps is not None:
-            return epochs >= max_steps or done
-        return done
+            if done and steps < max_steps:
+                return done, 1
+        return done, 0
 
-    def _feedback_print(self, episode, episodic_reward, steps, verbose, epi_rew_list, test=False):
+    def _feedback_print(self, episode, episodic_reward, steps, success, verbose, epi_rew_list, test=False):
         """
         Print on terminal information about the training process.
         :param episode: (int) Current episode.
@@ -437,6 +439,7 @@ class RLProblemSuper(object, metaclass=ABCMeta):
                 else:
                     print(episode_str, episode,
                           '| Steps: ', steps,
+                          '| Success: ', success,
                           '| Reward: {:.1f}'.format(episodic_reward),
                           '| Smooth Reward: {:.1f}'.format(rew_mean),
                           '| Epsilon: {:.4f}'.format(self.agent.epsilon))
