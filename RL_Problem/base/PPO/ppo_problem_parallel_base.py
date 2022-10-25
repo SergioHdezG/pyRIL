@@ -5,6 +5,8 @@ import multiprocessing
 import numpy as np
 import copy
 
+from environments.habitat_envs import HM3DRLVecEnv, HM3DRLEnv
+
 
 class PPOProblemMultithreadBase(PPOProblemBase):
     """
@@ -28,9 +30,31 @@ class PPOProblemMultithreadBase(PPOProblemBase):
         self.env_test = self.env
         self.n_threads = self.agent.n_threads
         # Creamos n copias del entorno
-        env = [self.make_env() for i in range(self.n_threads)]
-        self.env = SubprocVecEnv(env)
+
+        if self.is_habitat:
+            args = self._make_env_args_habitat()
+            self.env = HM3DRLVecEnv(HM3DRLEnv, args)
+        else:
+            env = [self.make_env() for i in range(self.n_threads)]
+            self.env = SubprocVecEnv(env)
         self.run_test = True
+
+    def _make_env_args_habitat(self):
+        """
+        Create a tuple of tuples containing the args for each of the arguments to be fed in the HabitatVecEnv
+        """
+        args = ((
+            self.env.config_path,
+            self.env.result_path,
+            False,
+            self.env.save_video,
+            self.env._oracle_stop,
+            self.env.use_clip
+        ),)
+        tuple_of_args = ()
+        for _ in range(self.n_threads):
+            tuple_of_args = tuple_of_args + args
+        return tuple_of_args
 
     def make_env(self):
         # returns a function which creates a single environment

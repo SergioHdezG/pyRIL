@@ -234,11 +234,12 @@ class HM3DRLVecEnv(habitat.VectorEnv):
     default configuration for reference: habitat/config/default.py
     """
 
-    def __init__(self, make_env_fn,
+    def __init__(self,
+                 make_env_fn,
                  env_fn_args=None,
                  auto_reset_done: bool = True,
                  multiprocessing_start_method: str = "forkserver",
-                 workers_ignore_signals: bool = False, ):
+                 workers_ignore_signals: bool = False):
 
         super().__init__(make_env_fn=make_env_fn,
                          env_fn_args=env_fn_args,

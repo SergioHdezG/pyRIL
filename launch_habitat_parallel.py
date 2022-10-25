@@ -49,7 +49,7 @@ if __name__ == '__main__':
     logger = open(logger_dir, 'w+')  # File where you need to keep the logs
     sys.stdout = Unbuffered(sys.stdout, logger)
 
-    exec('make_env = ' + config["make_env"])
+    # exec('make_env = ' + config["make_env"])
     # make_env = make_env(config_paths=config["habitat_config_path"],
     #                     result_path=os.path.join(config["base_path"], config["habitat_result_path"]),
     #                     render_on_screen=False,
@@ -57,21 +57,13 @@ if __name__ == '__main__':
     #                     oracle_stop=config["habitat_oracle_stop"],
     #                     use_clip=config['use_clip'])
 
-    environment = HM3DRLVecEnv(
-        make_env_fn=make_env,
-        env_fn_args=((config["habitat_config_path"],
-                     os.path.join(config["base_path"], config["habitat_result_path"]),
-                     False,
-                     config["habitat_save_video"],
-                     config["habitat_oracle_stop"],
-                     config['use_clip']),
-                     (config["habitat_config_path"],
-                     os.path.join(config["base_path"], config["habitat_result_path"]),
-                     False,
-                     config["habitat_save_video"],
-                     config["habitat_oracle_stop"],
-                     config['use_clip']))
-    )
+    exec('environment = ' + config["environment"])
+    environment = environment(config_paths=config["habitat_config_path"],
+                              result_path=os.path.join(config["base_path"], config["habitat_result_path"]),
+                              render_on_screen=False,
+                              save_video=config["habitat_save_video"],
+                              oracle_stop=config["habitat_oracle_stop"],
+                              use_clip=config['use_clip'])
 
     # define agent's neural networks to use
     exec('actor_model = ' + config["actor_model"])
@@ -111,6 +103,7 @@ if __name__ == '__main__':
                                                       lmbda=config["lmbda"],
                                                       train_epochs=config["train_epochs"],
                                                       net_architecture=net_architecture,
+                                                      n_threads=config['n_threads'],
                                                       n_stack=n_stack,
                                                       is_habitat=config["is_habitat"],
                                                       img_input=config["img_input"],

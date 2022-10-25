@@ -151,19 +151,22 @@ def preprocess_clip_habitat6(obs: dict):
 
     return {'rgb': rgb, 'objectgoal': one_hot_goal}
 
-def preprocess_clip_habitat6_stack(obs: dict):
+def preprocess_clip_habitat6_parallel(obs: dict):
     """
     Normalize rgb input and one hot objectgoal id
     @param obs: observations returned by habitat
     @return: dict containing the preprocessed observations
     """
+    out = []
 
-    # RGB input normalized
-    rgb = obs['rgb'][0]
+    for obsv in obs:
+        # RGB input normalized
+        rgb = obsv['rgb'][0]
 
-    # ObjectGoal input to onehot
-    object_goal = obs['objectgoal']
-    one_hot_goal = np.zeros((6))
-    one_hot_goal[object_goal] = 1.
+        # ObjectGoal input to onehot
+        object_goal = obsv['objectgoal']
+        one_hot_goal = np.zeros((6))
+        one_hot_goal[object_goal] = 1.
+        out.append({'rgb': rgb, 'objectgoal': one_hot_goal})
 
-    return {'rgb': rgb, 'objectgoal': one_hot_goal}
+    return out
