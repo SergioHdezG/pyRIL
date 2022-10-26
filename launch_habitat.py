@@ -35,15 +35,16 @@ from environments.habitat_envs import HM3DRLEnv
 from RL_Agent.base.utils.networks.action_selection_options import *
 from habitat_experiments.utils.neuralnets import *
 
-
 # Loading yaml configuration files
 if len(sys.argv) > 1:
     config_file = sys.argv[1]
     if isinstance(config_file, str) and config_file.endswith('.yaml'):
         with open(config_file) as file:
             config = yaml.load(file, Loader=yaml.FullLoader)
+    else:
+        raise Exception('No config.yaml file is provided')
 else:
-    raise Exception('No config.yaml file is provided')
+    raise Exception('No arguments are provided')
 
 # Define loggers
 tensorboard_path = os.path.join(config["base_path"], config["tensorboard_dir"])
@@ -88,6 +89,7 @@ class CustomNet(PPONet):
 
     def __init__(self, input_shape, actor_net, critic_net, tensorboard_dir=None):
         super().__init__(actor_net(input_shape), critic_net(input_shape), tensorboard_dir=tensorboard_dir)
+        self.rl_loss_sumaries_single_value = tensor_board_loss_functions.rl_loss_sumaries_single_value
 
     # TODO: [Sergio]: Standardize the inputs to _train_step(). We have two inputs (x[0]=rgb y x[1]=objectgoal) but in
     #   a generic problem we may have a different number of inputs.
@@ -167,18 +169,32 @@ class CustomNet(PPONet):
             dataset = dataset.batch(batch_size)
 
         if self.train_summary_writer is not None:
+            # TODO: [Sergio] Asegurarse de que esto solo funciona para agentes con acciones discretas e incorporar a los agentes por defecto.
+            actions_numeric = np.argmax(actions, axis=-1).astype(np.float32)
+            action_count = np.sum(actions, axis=0).astype(np.float32)
+            act_probs_max = np.argmax(act_probs, axis=-1).astype(np.float32)
+            act_probs_count = np.mean(act_probs, axis=0).astype(np.float32)
+
             with self.train_summary_writer.as_default():
                 self.rl_loss_sumaries([np.array(returns),
                                        np.array(advantages),
-                                       actions,
-                                       act_probs,
+                                       actions_numeric,
+                                       act_probs_max,
                                        stddev],
                                       ['returns',
                                        'advantages',
                                        'actions',
-                                       'act_probabilities'
+                                       'act_max_prob'
                                        'stddev']
                                       , self.total_epochs)
+
+                for i in range(action_count.shape[0]):
+                    self.rl_loss_sumaries_single_value([action_count[i],
+                                           act_probs_count[i]],
+                                          ['action_'+str(i),
+                                           'act_mean_prob'+str(i)]
+                                          , self.total_epochs)
+
 
         history_actor = TrainingHistory()
         history_critic = TrainingHistory()

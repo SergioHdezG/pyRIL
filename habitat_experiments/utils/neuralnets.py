@@ -81,3 +81,41 @@ def critic_model_clip_gru_128_d128tanh_d128tanh_d1linear(input_shape):
     critic_model = tf.keras.models.Model(inputs=[input_clip, input_goal], outputs=out)
 
     return critic_model
+
+def actor_model_clip_lstm128_d1218tanh_d128tanh_d5softmax(input_shape):
+    input_clip = tf.keras.Input((input_shape[0], *input_shape[1][0]))
+    input_goal = tf.keras.Input(input_shape[1][1])
+    lstm = tf.keras.layers.LSTM(128)(input_clip)
+    hidden = tf.keras.layers.Concatenate(axis=-1)([lstm, input_goal])
+    hidden = tf.keras.layers.Dense(128, activation='tanh')(hidden)
+    hidden = tf.keras.layers.Dense(128, activation='tanh')(hidden)
+    out = tf.keras.layers.Dense(5, activation='softmax')(hidden)
+
+    actor_model = tf.keras.models.Model(inputs=[input_clip, input_goal], outputs=out)
+    return actor_model
+
+def actor_model_clip_lstm128_d1218tanh_d128tanh_d6softmax(input_shape):
+    input_clip = tf.keras.Input((input_shape[0], *input_shape[1][0]))
+    input_goal = tf.keras.Input(input_shape[1][1])
+    lstm = tf.keras.layers.LSTM(128)(input_clip)
+    hidden = tf.keras.layers.Concatenate(axis=-1)([lstm, input_goal])
+    hidden = tf.keras.layers.Dense(128, activation='tanh')(hidden)
+    hidden = tf.keras.layers.Dense(128, activation='tanh')(hidden)
+    out = tf.keras.layers.Dense(6, activation='softmax')(hidden)
+
+    actor_model = tf.keras.models.Model(inputs=[input_clip, input_goal], outputs=out)
+    return actor_model
+
+def critic_model_clip_lstm128_d128tanh_d128tanh_d1linear(input_shape):
+    input_clip = tf.keras.Input((input_shape[0], *input_shape[1][0]))
+    input_goal = tf.keras.Input(input_shape[1][1])
+
+    lstm = tf.keras.layers.LSTM(128)(input_clip)
+    hidden = tf.keras.layers.Concatenate(axis=-1)([lstm, input_goal])
+    hidden = tf.keras.layers.Dense(128, activation='tanh')(hidden)
+    hidden = tf.keras.layers.Dense(128, activation='tanh')(hidden)
+    out = tf.keras.layers.Dense(1, activation='linear')(hidden)
+
+    critic_model = tf.keras.models.Model(inputs=[input_clip, input_goal], outputs=out)
+
+    return critic_model

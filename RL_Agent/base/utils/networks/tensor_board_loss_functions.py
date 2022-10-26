@@ -16,6 +16,12 @@ def rl_loss_sumaries(data, names, step):
                 tf.summary.scalar('max', tf.reduce_max(d), step=step)
                 tf.summary.scalar('min', tf.reduce_min(d), step=step)
 
+def rl_loss_sumaries_single_value(data, names, step):
+    with tf.name_scope('RL_Values'):
+        for d, n in zip(data, names):
+            with tf.name_scope(n):
+                tf.summary.scalar('scalar', d, step=step)
+
 def rl_sumaries(data, names, step):
     with tf.name_scope('RL'):
         for d, n in zip(data, names):
