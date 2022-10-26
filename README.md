@@ -5,7 +5,7 @@
 ## Installation
 
 This library has been tested on Python 3.7 and TensorFlow 2.2.  
-We provide the complete list of packages in requirements.txt. Install it inside your virtual environment by:
+We provide the complete list of packages in requirements.txt. Install it within your virtual environment by:
 
 ```bash
 pip install -r requirements.txt
