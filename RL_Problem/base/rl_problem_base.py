@@ -399,7 +399,7 @@ class RLProblemSuper(object, metaclass=ABCMeta):
         :param max_steps: (int) Maximum number of episode epochs. When it is reached param done is set to True.
         """
         if max_steps is not None:
-            if done and steps <= max_steps:
+            if done and steps < max_steps:
                 return done, 1
         return done, 0
 

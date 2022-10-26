@@ -202,7 +202,7 @@ class PPOProblemBase(RLProblemSuper):
                 steps += 1
                 self.global_steps += 1
 
-            done, success = self._max_steps(done, steps, max_step_epi)
+                done, success = self._max_steps(done, steps, max_step_epi)
 
             self.reduce_exploration_noise()
             self.episode += 1

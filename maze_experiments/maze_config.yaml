@@ -34,7 +34,7 @@ critic_model: critic_model_clip_LSTM128_d128tanh_d128tanh_d1linear_maze
 actor_lr: 1e-4 # float or tf.keras.optimizers.schedules
 critic_lr: 1e-4 # float or tf.keras.optimizers.schedules
 batch_size: 128 # int. Agent's training batch size
-memory_size: 10 # int. PPO agent's experiences memory size for each thread.
+memory_size: 5000 # int. PPO agent's experiences memory size for each thread.
 
 
 
