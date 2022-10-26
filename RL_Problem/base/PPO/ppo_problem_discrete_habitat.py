@@ -67,6 +67,10 @@ class PPOProblem(PPOProblemBase):
 
             self.agent.save_tensorboar_rl_histogram(self.histogram_metrics)
 
+            if self.gradient_steps % self.agent.model.keep_chck_every_n_iter == 0:
+                self.agent.model.save_checkpoint()
+
+
     def collect_batch(self, render, render_after, max_step_epi, skip_states, verbose, discriminator=None,
                       expert_traj=None, save_live_histories=False):
         self.obs_batch = []

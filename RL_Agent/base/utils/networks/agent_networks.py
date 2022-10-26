@@ -17,7 +17,7 @@ from tensorflow.keras.layers import Dense, LSTM, Flatten
 
 
 class PPONet(RLNetModel):
-    def __init__(self, actor_net, critic_net, chckpoint_path=None, chckpoints_to_keep=10, tensorboard_dir=None):
+    def __init__(self, actor_net, critic_net, checkpoint_path=None, keep_chck_every_n_iter=1, tensorboard_dir=None):
         super().__init__(tensorboard_dir)
 
         self.actor_net = actor_net
@@ -39,23 +39,24 @@ class PPONet(RLNetModel):
         self.optimizer_critic = None
         self.metrics = None
         self.calculate_advantages = None
+        self.keep_chck_every_n_iter = keep_chck_every_n_iter
         # self.loss_sumaries = tensor_board_loss_functions.loss_sumaries
         # self.rl_loss_sumaries = tensor_board_loss_functions.rl_loss_sumaries
         # self.rl_sumaries = tensor_board_loss_functions.rl_sumaries
 
 
-        if chckpoint_path is not None:
-            self.actor_chkpoint = tf.train.Checkpoint(model=self.actor_net)
-            self.actor_manager = tf.train.CheckpointManager(self.actor_chkpoint,
-                                                       os.path.join(chckpoint_path, 'actor', 'checkpoint'),
-                                                       checkpoint_name='actor',
-                                                       max_to_keep=chckpoints_to_keep)
+        if checkpoint_path is not None:
+            self.actor_chekpoint = tf.train.Checkpoint(model=self.actor_net)
+            self.actor_manager = tf.train.CheckpointManager(self.actor_chekpoint,
+                                                            os.path.join(checkpoint_path, 'actor', 'checkpoint'),
+                                                            checkpoint_name='actor',
+                                                            max_to_keep=None)
 
-            self.critic_chkpoint = tf.train.Checkpoint(model=self.critic_net)
-            self.critic_manager = tf.train.CheckpointManager(self.critic_chkpoint,
-                                                        os.path.join(chckpoint_path, 'critic', 'checkpoint'),
-                                                        checkpoint_name='critic',
-                                                        max_to_keep=chckpoints_to_keep)
+            self.critic_chekpoint = tf.train.Checkpoint(model=self.critic_net)
+            self.critic_manager = tf.train.CheckpointManager(self.critic_chekpoint,
+                                                             os.path.join(checkpoint_path, 'critic', 'checkpoint'),
+                                                             checkpoint_name='critic',
+                                                             max_to_keep=None)
 
     def compile(self, loss, optimizer, metrics=tf.keras.metrics.MeanSquaredError()):
         self.loss_func_actor = loss[0]
@@ -492,11 +493,11 @@ class PPONet(RLNetModel):
                                                         max_to_keep=1)
             critic_manager.save()
 
-    def load_checkpoint(self, path=None, chckpoint_to_restore='latest'):
+    def load_checkpoint(self, path=None, checkpoint_to_restore='latest'):
         if path is None:
-            if chckpoint_to_restore == 'latest':
-                self.actor_chkpoint.restore(self.actor_manager.latest_checkpoint)
-                self.critic_chkpoint.restore(self.critic_manager.latest_checkpoint)
+            if checkpoint_to_restore == 'latest':
+                self.actor_chekpoint.restore(self.actor_manager.latest_checkpoint)
+                self.critic_chekpoint.restore(self.critic_manager.latest_checkpoint)
             else:
                 chck = self.actor_manager.checkpoints
         else:
@@ -1957,12 +1958,13 @@ class A2CNetDiscrete(RLNetModel):
                                                         max_to_keep=1)
             critic_manager.save()
 
-    def load_checkpoint(self, path=None, chckpoint_to_restore='latest'):
+    def load_checkpoint(self, path=None, checkpoint_to_restore='latest'):
         if path is None:
-            if chckpoint_to_restore == 'latest':
+            if checkpoint_to_restore == 'latest':
                 self.actor_chkpoint.restore(self.actor_manager.latest_checkpoint)
                 self.critic_chkpoint.restore(self.critic_manager.latest_checkpoint)
             else:
+                # TODO [Sergio]: How do we load other checkpoint?
                 chck = self.actor_manager.checkpoints
         else:
             actor_chkpoint = tf.train.Checkpoint(model=self.actor_net,

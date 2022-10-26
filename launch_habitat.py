@@ -87,8 +87,8 @@ class CustomNet(PPONet):
     Define Custom Net for habitat
     """
 
-    def __init__(self, input_shape, actor_net, critic_net, tensorboard_dir=None):
-        super().__init__(actor_net(input_shape), critic_net(input_shape), tensorboard_dir=tensorboard_dir)
+    def __init__(self, input_shape, actor_net, critic_net, tensorboard_dir=None, checkpoint_path=None, keep_chck_every_n_iter=1):
+        super().__init__(actor_net(input_shape), critic_net(input_shape), tensorboard_dir=tensorboard_dir, checkpoint_path=checkpoint_path, keep_chck_every_n_iter=keep_chck_every_n_iter)
         self.rl_loss_sumaries_single_value = tensor_board_loss_functions.rl_loss_sumaries_single_value
 
     # TODO: [Sergio]: Standardize the inputs to _train_step(). We have two inputs (x[0]=rgb y x[1]=objectgoal) but in
@@ -353,7 +353,7 @@ else:
 
 
 def custom_model(input_shape):
-    return CustomNet(input_shape, actor_model, critic_model, tensorboard_dir=tensorboard_path)
+    return CustomNet(input_shape, actor_model, critic_model, tensorboard_dir=tensorboard_path, checkpoint_path=config["save_path"], keep_chck_every_n_iter=config["keep_chck_every_n_iter"])
 
 
 net_architecture = networks.ppo_net(use_tf_custom_model=True,
@@ -387,10 +387,14 @@ problem = rl_problem.Problem(environment, agent)
 # Add preprocessing to the observations
 problem.preprocess = preprocess
 
+#problem.agent.model.load_checkpoint(checkpoint_to_restore='latest')
+
 # Solve (train the agent) and test it
 problem.solve(episodes=config["training_epochs"], render=False)
 problem.test(render=config["render_test"], n_iter=config["test_epochs"])
 
+agent_saver.save(problem.agent, config["save_path"] + "training_ends.tf")
+
 # Plot some data
-hist = problem.get_histogram_metrics()
-history_utils.plot_reward_hist(hist, 10)
+#hist = problem.get_histogram_metrics()
+#history_utils.plot_reward_hist(hist, 10)
