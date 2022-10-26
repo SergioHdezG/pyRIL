@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 from gym import spaces
 from gym.spaces import Dict
@@ -30,6 +32,9 @@ class PyMaze(MiniWorldEnv):
         self.sparse_reward = sparse_reward
         self.use_clip = use_clip
         self.num_rows = num_rows
+        self.forward_step = forward_step
+        self.turn_step = turn_step
+        self.max_steps = max_steps
         self.num_cols = num_cols
         self.previous_measure = None
         self.room_size = room_size
@@ -170,7 +175,6 @@ class PyMaze(MiniWorldEnv):
 
         return reward
 
-
     def reset(self):
         """
         Reset the simulation at the start of a new episode
@@ -238,3 +242,54 @@ class PyMaze(MiniWorldEnv):
             obs = obs.squeeze()
         # Return first observation
         return obs
+
+    # def __deepcopy__(self, memo):
+    #     cls = self.__class__
+    #     deepcopy = cls.__new__(cls)
+    #     memo[id(self)] = deepcopy
+    #
+    #     # This attributes don't support deepcopy directly
+    #     text_label_copy = self.__dict__["text_label"]
+    #     shadow_window_copy = self.__dict__["shadow_window"]
+    #     rooms_copy = self.__dict__["rooms"]
+    #     setattr(deepcopy, "text_label", text_label_copy)
+    #     setattr(deepcopy, "shadow_window", shadow_window_copy)
+    #     setattr(deepcopy, "rooms", rooms_copy)
+    #
+    #     # For the rest apply standard deepcopy
+    #     for k, v in self.__dict__.items():
+    #         if k not in ["text_label", "shadow_window", "rooms"]:
+    #             setattr(deepcopy, k, copy.deepcopy(v, memo))
+    #     return deepcopy
+
+    # def __getstate__(self):
+    #     """
+    #     See `Object.__getstate__.
+    #     Returns:
+    #         dict: The instance’s dictionary to be pickled.
+    #     """
+    #     return dict(num_rows=self.num_rows,
+    #                 num_cols=self.num_cols,
+    #                 room_size=self.room_size,
+    #                 max_steps=self.max_steps,
+    #                 forward_step=self.forward_step,
+    #                 turn_step=self.turn_step,
+    #                 use_clip=self.use_clip,
+    #                 domain_rand=self.domain_rand,
+    #                 sparse_reward=self.domain_rand)
+    #
+    # def __setstate__(self, state):
+    #     """
+    #     See `Object.__setstate__.
+    #     Args:
+    #         state (dict): Unpickled state of this object.
+    #     """
+    #     self.__init__(num_rows=state['num_rows'],
+    #                   num_cols=state['num_cols'],
+    #                   room_size=state['room_size'],
+    #                   max_steps=state['max_steps'],
+    #                   forward_step=state['forward_step'],
+    #                   turn_step=state['turn_step'],
+    #                   use_clip=state['use_clip'],
+    #                   domain_rand=state['domain_rand'],
+    #                   sparse_reward=state['domain_rand'])

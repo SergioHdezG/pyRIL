@@ -73,7 +73,7 @@ class Agent(PPOSuper):
                          epsilon_decay=epsilon_decay, epsilon_min=epsilon_min, gamma=gamma,
                          n_step_return=n_step_return, memory_size=memory_size, loss_clipping=loss_clipping,
                          loss_critic_discount=loss_critic_discount, loss_entropy_beta=loss_entropy_beta, lmbda=lmbda,
-                         train_steps=train_steps, exploration_noise=exploration_noise, n_stack=n_stack,
+                         exploration_noise=exploration_noise, n_stack=n_stack,
                          img_input=img_input, state_size=state_size, n_threads=n_threads,
                          tensorboard_dir=tensorboard_dir, net_architecture=net_architecture,
                          train_action_selection_options=train_action_selection_options,

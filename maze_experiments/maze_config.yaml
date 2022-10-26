@@ -44,7 +44,7 @@ train_epochs: 10 # int. Trainstep of the agent for each iteration of PPO.
 is_habitat: False # bool. True when using a habitat env.
 img_input: False # bool. Tru if network's inputs are images.
 state_size: "1024"
-n_threads: 10 # Int or None. Number of agent threads. If is None, CPU default number of thread are selected.
+n_threads: 3 # Int or None. Number of agent threads. If is None, CPU default number of thread are selected.
 tensorboard_dir: "logs" # String or False. Path to store tensorboard logs.
 loss_clipping: 0.15 # float. Loss clipping factor for PPO loss function. Larger values allows larger optimization steps.
 loss_critic_discount: 0.000 # float. Coeficient of inportance of critic loss in actor loss calculation.

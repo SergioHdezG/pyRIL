@@ -1,7 +1,7 @@
 base_path: "maze_experiments/2"
 
-forward_step: 0.4
-turn_step: 22.5
+forward_step: 0.7
+turn_step: 45
 num_rows: 5
 num_cols: 5
 max_steps: 600
@@ -61,3 +61,4 @@ preprocess: None  # Fucntion from utils.preprocess.py
 training_epochs: 100000 # int. Number of complete iterations of the imitation learning algorithm.
 test_epochs: 20 # Number of test iteration for checking the learned policy after training.
 render_test: False
+save_every: 10

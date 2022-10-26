@@ -76,6 +76,7 @@ def custom_model(input_shape):
                       checkpoints_to_keep=None,
                       checkpoint_path=config['base_path'])
 
+
 net_architecture = networks.ppo_net(use_tf_custom_model=True,
                                     tf_custom_model=custom_model)
 

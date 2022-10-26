@@ -36,9 +36,9 @@ class PPOProblemMultithreadBase(PPOProblemBase):
         # returns a function which creates a single environment
         def _thunk():
             # Inicializar el entorno
-            try:
+            if hasattr(self.env, 'deepcopy'):
                 env = self.env.deepcopy()
-            except:
+            else:
                 env = copy.deepcopy(self.env)
             return env
         return _thunk
