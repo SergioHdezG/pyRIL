@@ -17,21 +17,13 @@ from tensorflow.keras.layers import Dense, LSTM, Flatten
 
 
 class PPONet(RLNetModel):
-    def __init__(self, actor_net, critic_net, chckpoint_path=None, chckpoints_to_keep=10, tensorboard_dir=None):
+    def __init__(self, actor_net, critic_net, checkpoint_path=None, checkpoints_to_keep=10,
+                 save_every_iterations=100, tensorboard_dir=None):
         super().__init__(tensorboard_dir)
 
+        self.save_every_iterations = save_every_iterations
         self.actor_net = actor_net
         self.critic_net = critic_net
-
-        # self._tensorboard_util(tensorboard_dir)
-
-        # if tensorboard_dir is not None:
-        #     current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-        #     self.train_log_dir = os.path.join(tensorboard_dir, 'gradient_tape/' + current_time + '/train')
-        #     self.train_summary_writer = tf.summary.create_file_writer(self.train_log_dir)
-        # else:
-        #     self.train_summary_writer = None
-
         self.total_epochs = 0
         self.loss_func_actor = None
         self.loss_func_critic = None
@@ -39,22 +31,25 @@ class PPONet(RLNetModel):
         self.optimizer_critic = None
         self.metrics = None
         self.calculate_advantages = None
-        # self.loss_sumaries = tensor_board_loss_functions.loss_sumaries
-        # self.rl_loss_sumaries = tensor_board_loss_functions.rl_loss_sumaries
-        # self.rl_sumaries = tensor_board_loss_functions.rl_sumaries
 
-        if chckpoint_path is not None:
-            self.actor_chkpoint = tf.train.Checkpoint(model=self.actor_net)
-            self.actor_manager = tf.train.CheckpointManager(self.actor_chkpoint,
-                                                            os.path.join(chckpoint_path, 'actor', 'checkpoint'),
+        current_time = datetime.datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+
+        if checkpoint_path is not None:
+            self.actor_checkpoint = tf.train.Checkpoint(model=self.actor_net)
+            self.actor_manager = tf.train.CheckpointManager(self.actor_checkpoint,
+                                                            os.path.join(checkpoint_path,
+                                                                         current_time + '_checkpoints', 'actor',
+                                                                         ),
                                                             checkpoint_name='actor',
-                                                            max_to_keep=chckpoints_to_keep)
+                                                            max_to_keep=checkpoints_to_keep)
 
-            self.critic_chkpoint = tf.train.Checkpoint(model=self.critic_net)
-            self.critic_manager = tf.train.CheckpointManager(self.critic_chkpoint,
-                                                             os.path.join(chckpoint_path, 'critic', 'checkpoint'),
+            self.critic_checkpoint = tf.train.Checkpoint(model=self.critic_net)
+            self.critic_manager = tf.train.CheckpointManager(self.critic_checkpoint,
+                                                             os.path.join(checkpoint_path,
+                                                                          current_time + '_checkpoints', 'critic',
+                                                                          ),
                                                              checkpoint_name='critic',
-                                                             max_to_keep=chckpoints_to_keep)
+                                                             max_to_keep=checkpoints_to_keep)
 
     def compile(self, loss, optimizer, metrics=tf.keras.metrics.MeanSquaredError()):
         self.loss_func_actor = loss[0]
@@ -499,33 +494,31 @@ class PPONet(RLNetModel):
                                                         max_to_keep=1)
             critic_manager.save()
 
-    def load_checkpoint(self, path=None, chckpoint_to_restore='latest'):
+    def load_checkpoint(self, path=None, checkpoint_to_restore='latest'):
         if path is None:
-            if chckpoint_to_restore == 'latest':
-                self.actor_chkpoint.restore(self.actor_manager.latest_checkpoint)
-                self.critic_chkpoint.restore(self.critic_manager.latest_checkpoint)
+            if checkpoint_to_restore == 'latest':
+                self.actor_checkpoint.restore(self.actor_manager.latest_checkpoint)
+                self.critic_checkpoint.restore(self.critic_manager.latest_checkpoint)
             else:
-                chck = self.actor_manager.checkpoints
+                raise NotImplementedError
         else:
-            actor_chkpoint = tf.train.Checkpoint(model=self.actor_net,
-                                                 optimizer=self.optimizer_actor,
-                                                 # loss_func_actor=self.loss_func_actor,
-                                                 metrics=self.metrics)
-            actor_manager = tf.train.CheckpointManager(actor_chkpoint,
+            actor_checkpoint = tf.train.Checkpoint(model=self.actor_net,
+                                                   optimizer=self.optimizer_actor,
+                                                   metrics=self.metrics)
+            actor_manager = tf.train.CheckpointManager(actor_checkpoint,
                                                        os.path.join(path, 'actor'),
                                                        checkpoint_name='actor',
                                                        max_to_keep=1)
-            actor_chkpoint.restore(actor_manager.latest_checkpoint)
+            actor_checkpoint.restore(actor_manager.latest_checkpoint)
 
-            critic_chkpoint = tf.train.Checkpoint(model=self.critic_net,
-                                                  optimizer=self.optimizer_critic,
-                                                  # loss_func_critic=self.loss_func_critic
-                                                  )
-            critic_manager = tf.train.CheckpointManager(critic_chkpoint,
+            critic_checkpoint = tf.train.Checkpoint(model=self.critic_net,
+                                                    optimizer=self.optimizer_critic,
+                                                    )
+            critic_manager = tf.train.CheckpointManager(critic_checkpoint,
                                                         os.path.join(path, 'critic'),
                                                         checkpoint_name='critic',
                                                         max_to_keep=1)
-            critic_chkpoint.restore(critic_manager.latest_checkpoint)
+            critic_checkpoint.restore(critic_manager.latest_checkpoint)
 
     def _save_network(self, path):
         """
@@ -2585,8 +2578,20 @@ class HabitatPPONet(PPONet):
 
 class MazePPONet(PPONet):
     """
-    Define Custom Net for habitat
+    Define Custom Net for Maze
     """
 
-    def __init__(self, input_shape, actor_net, critic_net, tensorboard_dir=None):
-        super().__init__(actor_net(input_shape), critic_net(input_shape), tensorboard_dir=tensorboard_dir)
+    def __init__(self,
+                 input_shape,
+                 actor_net,
+                 critic_net,
+                 tensorboard_dir=None,
+                 checkpoint_path=None,
+                 checkpoints_to_keep=None,
+                 save_every_iterations=100):
+        super().__init__(actor_net(input_shape),
+                         critic_net(input_shape),
+                         tensorboard_dir=tensorboard_dir,
+                         checkpoints_to_keep=checkpoints_to_keep,
+                         save_every_iterations=save_every_iterations,
+                         checkpoint_path=checkpoint_path)

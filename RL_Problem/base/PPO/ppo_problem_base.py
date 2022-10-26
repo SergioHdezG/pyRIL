@@ -17,10 +17,6 @@ class PPOProblemBase(RLProblemSuper):
                 model_params:   Dictionary of params like learning rate, batch size, epsilon values, n step returns...
         """
         super().__init__(environment, agent)
-        # self.environment = environment
-        # if model_params is not None:
-        #     batch_size, epsilon, epsilon_min, epsilon_decay, learning_rate, n_step_rew = \
-        #         parse_model_params(model_params)
 
         self.episode = 0
         self.val = False
@@ -53,7 +49,6 @@ class PPOProblemBase(RLProblemSuper):
 
         if not agent.agent_builded:
             self._build_agent()
-        # self._build_agent(agent, [self.batch_size, self.epsilon, self.epsilon_min, self.epsilon_decay, self.actor_lr, self.n_step_return], self.net_architecture)
 
         # for IRL
         self.agent_traj = deque(maxlen=10000)
@@ -121,6 +116,9 @@ class PPOProblemBase(RLProblemSuper):
             self.gradient_steps += 1
 
             self.agent.save_tensorboar_rl_histogram(self.histogram_metrics)
+            if self.agent.model.actor_checkpoint and self.gradient_steps % self.agent.model.save_every_iterations == 0:
+                print('Saving checkpoint...')
+                self.agent.model.save_checkpoint()
 
     def collect_batch(self, render, render_after, max_step_epi, skip_states, verbose, discriminator=None,
                       expert_traj=None, save_live_histories=False):

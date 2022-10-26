@@ -68,7 +68,13 @@ else:
 
 
 def custom_model(input_shape):
-    return MazePPONet(input_shape, actor_model, critic_model, tensorboard_dir=tensorboard_path)
+    return MazePPONet(input_shape,
+                      actor_model,
+                      critic_model,
+                      tensorboard_dir=tensorboard_path,
+                      save_every_iterations=config['save_every'],
+                      checkpoints_to_keep=None,
+                      checkpoint_path=config['base_path'])
 
 net_architecture = networks.ppo_net(use_tf_custom_model=True,
                                     tf_custom_model=custom_model)
@@ -96,15 +102,11 @@ agent = ppo_agent_discrete.Agent(actor_lr=float(config["actor_lr"]),
 
 problem = rl_problem.Problem(environment, agent)
 
-# agent_cont = agent_saver.load('agent_discrete_ppo', agent=problem_cont.agent, overwrite_attrib=True)
-
-# agent_cont.actor.extract_variable_summaries = extract_variable_summaries
+# agent.model.load_checkpoint(path='maze_experiments/26-10-2022_16-04-17_checkpoints')
 
 # Solve (train the agent) and test it
 problem.solve(episodes=config["training_epochs"], render=False, max_step_epi=config['max_steps'])
-problem.test(render=config["render_test"], n_iter=config["test_epochs"])
+problem.test(render=config["render_test"], n_iter=config["test_epochs"], max_step_epi=config['max_steps'])
 #
 hist = problem.get_histogram_metrics()
 history_utils.plot_reward_hist(hist, 10)
-#
-agent_saver.save(agent_cont, 'agent_discrete_ppo')

@@ -153,10 +153,11 @@ class RLProblemSuper(object, metaclass=ABCMeta):
                 obs, obs_queue = self.copy_next_obs(next_obs, obs, obs_next_queue, obs_queue)
 
                 # If max steps value is reached the episode is finished
-                done, success = self._max_steps(done, steps, max_step_epi)
 
                 episodic_reward += reward
                 steps += 1
+                done, success = self._max_steps(done, steps, max_step_epi)
+
                 self.global_steps += 1
 
             # Add reward to the list
@@ -326,7 +327,8 @@ class RLProblemSuper(object, metaclass=ABCMeta):
         for e in range(n_iter):
             done = False
             episodic_reward = 0
-            epochs = 0
+            success = 0
+            steps = 0
             obs = self.env.reset()
             obs = self.preprocess(obs)
 
@@ -360,17 +362,16 @@ class RLProblemSuper(object, metaclass=ABCMeta):
                     callback(prev_obs, obs, action, reward, done, info)
 
                 episodic_reward += reward
-                epochs += 1
+                steps += 1
 
                 if self.n_stack is not None and self.n_stack > 1:
                     obs_queue.append(obs)
 
-                if max_step_epi is not None and epochs > max_step_epi:
-                    break
+                done, success = self._max_steps(done, steps, max_step_epi)
 
             rew_mean_list.append(episodic_reward)
 
-            self._feedback_print(e, episodic_reward, epochs, verbose, rew_mean_list, test=True)
+            self._feedback_print(e, episodic_reward, steps, success, verbose, rew_mean_list, test=True)
 
         # print('Mean Reward ', epi_rew_mean / n_iter)
         self.env.close()
@@ -398,7 +399,7 @@ class RLProblemSuper(object, metaclass=ABCMeta):
         :param max_steps: (int) Maximum number of episode epochs. When it is reached param done is set to True.
         """
         if max_steps is not None:
-            if done and steps < max_steps:
+            if done and steps <= max_steps:
                 return done, 1
         return done, 0
 

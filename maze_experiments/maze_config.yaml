@@ -34,7 +34,7 @@ critic_model: critic_model_clip_LSTM128_d128tanh_d128tanh_d1linear_maze
 actor_lr: 1e-4 # float or tf.keras.optimizers.schedules
 critic_lr: 1e-4 # float or tf.keras.optimizers.schedules
 batch_size: 128 # int. Agent's training batch size
-memory_size: 5000 # int. PPO agent's experiences memory size for each thread.
+memory_size: 10 # int. PPO agent's experiences memory size for each thread.
 
 
 
@@ -58,6 +58,7 @@ preprocess: None  # Fucntion from utils.preprocess.py
 ##############################################################
 
 # IL training parameters
+save_every: 3
 training_epochs: 100000 # int. Number of complete iterations of the imitation learning algorithm.
 test_epochs: 20 # Number of test iteration for checking the learned policy after training.
-render_test: False
+render_test: True
