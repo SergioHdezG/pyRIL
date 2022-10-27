@@ -1,5 +1,7 @@
 from collections import deque
 
+import numpy as np
+
 from RL_Agent.base.utils.history_utils import write_history
 from RL_Problem.base.PPO.ppo_problem_parallel_base import PPOProblemMultithreadBase
 
@@ -8,6 +10,7 @@ class PPOProblem(PPOProblemMultithreadBase):
     """
     Proximal Policy Optimization.
     """
+
     def __init__(self, environment, agent):
         """
         Attributes:
@@ -71,58 +74,66 @@ class PPOProblem(PPOProblemMultithreadBase):
         self.masks_batch = []
         # Stacking inputs
         if self.n_stack is not None and self.n_stack > 1:
-            obs_queue = deque(maxlen=self.n_stack)
-            obs_next_queue = deque(maxlen=self.n_stack)
+            obs_queue = [deque(maxlen=self.n_stack) for i in range(self.n_threads)]
+            obs_next_queue = [deque(maxlen=self.n_stack) for i in range(self.n_threads)]
         else:
             obs_queue = None
             obs_next_queue = None
 
         while len(self.obs_batch) < self.memory_size:
-            tmp_batch = [[], [], [], [], [], [], []]
-
-            # TODO: normalizar como se ejecutan estos test, si se harán en todos los algoritmos y como puede controlar el usuario si se hacen o no.
-            # if self.episode % 99 == 0:
-            #     self.test(n_iter=4, render=True)
 
             obs = self.env.reset()
-            episodic_reward = 0
-            epochs = 0
+            episodic_reward = [0 for _ in range(self.n_threads)]
+            steps = 0
             done = False
             self.reward = []
 
-            obs = self.preprocess(obs)
+            obs = np.array([self.preprocess(o) for o in obs])
 
             # Stacking inputs
             if self.n_stack is not None and self.n_stack > 1:
                 for i in range(self.n_stack):
-                    # obs_queue.append(np.zeros(obs.shape))
-                    # obs_next_queue.append(np.zeros(obs.shape))
-                    obs_queue.append(obs)
-                    obs_next_queue.append(obs)
+                    # zero_obs = np.zeros(obs[0].shape)
+                    # for o, queue, next_queue in zip(obs, obs_queue, obs_next_queue):
+                    #     [queue.append(zero_obs) for i in range(self.n_stack)]
+                    #     [next_queue.append(zero_obs) for i in range(self.n_stack)]
 
-                obs_queue.append(obs)
-                obs_next_queue.append(obs)
+                    for o, queue, next_queue in zip(obs, obs_queue, obs_next_queue):
+                        queue.append(o)
+                        next_queue.append(o)
 
-            while not done:  # and len(batch[0])+len(tmp_batch[0]) < self.buffer_size:
+            finished = False
+
+            while not finished:
                 if render or ((render_after is not None) and self.episode > render_after):
                     self.env.render()
 
                 # Select an action
                 action, action_matrix, predicted_action = self.act_train(obs, obs_queue)
 
-                # Agent act in the environment
-                next_obs, reward, done, info = self.env.step(action)
+                # Agent act in the environments
+                step_result = self.env.step(action)
 
+                next_obs = list()
+                reward = list()
+                done = list()
+                info = list()
+
+                for result in step_result:
+                    next_obs.append(result[0])
+                    reward.append(result[1])
+                    done.append(result[2])
+                    info.append(result[3])
 
                 if discriminator is not None:
                     if discriminator.stack:
-                        reward = discriminator.get_reward(obs_queue, action)[0]
+                        reward = discriminator.get_reward(obs_queue, action, multithread=True)
                     else:
-                        reward = discriminator.get_reward(obs, action)[0]
+                        reward = discriminator.get_reward(obs, action, multithread=True)
 
                 # Store the experience in episode memory
                 # Here we apply the preprocess/formatting function
-                next_obs, obs_next_queue, reward, done, epochs, mask = self.store_episode_experience(action,
+                next_obs, obs_next_queue, reward, done, steps, mask = self.store_episode_experience(action,
                                                                                                     done,
                                                                                                     next_obs,
                                                                                                     obs,
@@ -130,29 +141,33 @@ class PPOProblem(PPOProblemMultithreadBase):
                                                                                                     obs_queue,
                                                                                                     reward,
                                                                                                     skip_states,
-                                                                                                    epochs,
+                                                                                                    steps,
                                                                                                     predicted_action,
                                                                                                     action_matrix)
 
                 # copy next_obs to obs
                 obs, obs_queue = self.copy_next_obs(next_obs, obs, obs_next_queue, obs_queue)
 
-                episodic_reward += reward
-                epochs += 1
-                self.global_steps += 1
+                episodic_reward = [x + y for x, y in zip(episodic_reward, reward)]
+                steps += 3
+                self.global_steps += 3
+                finished = all(done)
 
             self.reduce_exploration_noise()
-            self.episode += 1
-            self.total_episodes += 1
+
             # Add reward to the list
-            self.rew_mean_list.append(episodic_reward)
-            # Save habitat metrics:
-            success = self.env.get_success()
-            spl = self.env.get_info(None)['spl']
-            self.histogram_metrics.append([self.total_episodes, episodic_reward, epochs, success,
-                                           spl, self.agent.epsilon, self.global_steps])
+            self.rew_mean_list.extend(episodic_reward)
+            rew_mean = [np.mean(self.rew_mean_list[i]) for i in range(len(self.rew_mean_list))]
 
-
+            for i_print in range(self.n_threads):
+                self.episode += 1
+                self.total_episodes += 1
+                # Save habitat metrics:
+                success = info[i_print]['success']
+                spl = info[i_print]['spl']
+                self.histogram_metrics.append([self.total_episodes, episodic_reward[i_print], steps, success,
+                                               spl, self.agent.epsilon, self.global_steps])
+                self._feedback_print(self.total_episodes, episodic_reward[i_print], steps, verbose, rew_mean)
 
             if save_live_histories:
                 if isinstance(save_live_histories, str):
@@ -160,9 +175,6 @@ class PPOProblem(PPOProblemMultithreadBase):
                 else:
                     raise Exception('Type of parameter save_live_histories must be string but ' +
                                     str(type(save_live_histories)) + ' has been received')
-
-            # Print log on scream
-            self._feedback_print(self.total_episodes, episodic_reward, epochs, verbose, self.rew_mean_list)
 
         if discriminator is not None and expert_traj is not None:
 
@@ -185,7 +197,8 @@ class PPOProblem(PPOProblemMultithreadBase):
                                       zip(self.obs_batch, self.actions_batch)]
                 if save_live_histories:
                     if isinstance(save_live_histories, str):
-                        write_history(il_hist=[train_loss, self.disc_loss, discriminator.global_epochs], monitor_path=save_live_histories)
+                        write_history(il_hist=[train_loss, self.disc_loss, discriminator.global_epochs],
+                                      monitor_path=save_live_histories)
                     else:
                         raise Exception('Type of parameter save_live_histories must be string but ' +
                                         str(type(save_live_histories)) + ' has been received')

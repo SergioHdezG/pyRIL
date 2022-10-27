@@ -37,7 +37,7 @@ loss_entropy_beta: 0.0 # float. Coeficient of inportance of entropy loss factor 
 train_action_selection_options: greedy_action # Function from RL_Agent.base.utils.networks.action_selection_options.py. How the agent are selected in exploration (training) mode.
 action_selection_options: argmax # Function from RL_Agent.base.utils.networks.action_selection_options.py. How the agent are selected in exploitation (testing) mode.
 
-preprocess: preprocess_clip_habitat6_parallel  # Fucntion from utils.preprocess.py
+preprocess: preprocess_clip_habitat6  # Fucntion from utils.preprocess.py
 
 ##############################################################
 #		Experiment hyperparameters

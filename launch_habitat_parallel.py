@@ -49,14 +49,6 @@ if __name__ == '__main__':
     logger = open(logger_dir, 'w+')  # File where you need to keep the logs
     sys.stdout = Unbuffered(sys.stdout, logger)
 
-    # exec('make_env = ' + config["make_env"])
-    # make_env = make_env(config_paths=config["habitat_config_path"],
-    #                     result_path=os.path.join(config["base_path"], config["habitat_result_path"]),
-    #                     render_on_screen=False,
-    #                     save_video=config["habitat_save_video"],
-    #                     oracle_stop=config["habitat_oracle_stop"],
-    #                     use_clip=config['use_clip'])
-
     exec('environment = ' + config["environment"])
     environment = environment(config_paths=config["habitat_config_path"],
                               result_path=os.path.join(config["base_path"], config["habitat_result_path"]),

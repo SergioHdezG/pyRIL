@@ -12,6 +12,7 @@ class PPOProblemMultithreadBase(PPOProblemBase):
     """
     Proximal Policy Optimization.
     """
+
     def __init__(self, environment, agent, continuous=False):
         """
         Attributes:
@@ -44,13 +45,13 @@ class PPOProblemMultithreadBase(PPOProblemBase):
         Create a tuple of tuples containing the args for each of the arguments to be fed in the HabitatVecEnv
         """
         args = ((
-            self.env.config_path,
-            self.env.result_path,
-            False,
-            self.env.save_video,
-            self.env._oracle_stop,
-            self.env.use_clip
-        ),)
+                self.env_test.config_path,
+                self.env_test.result_path,
+                False,
+                self.env_test.save_video,
+                self.env_test._oracle_stop,
+                self.env_test.use_clip
+                ),)
         tuple_of_args = ()
         for _ in range(self.n_threads):
             tuple_of_args = tuple_of_args + args
@@ -65,6 +66,7 @@ class PPOProblemMultithreadBase(PPOProblemBase):
             except:
                 env = copy.deepcopy(self.env)
             return env
+
         return _thunk
 
     def _define_agent(self, n_actions, state_size, stack, action_bound=None):
@@ -84,11 +86,6 @@ class PPOProblemMultithreadBase(PPOProblemBase):
         else:
             obs_queue = None
             obs_next_queue = None
-
-        # TODO: normalizar como se ejecutan estos test, si se harán en todos los algoritmos y como puede controlar el usuario si se hacen o no.
-        # if self.run_test:
-        #     self.test(n_iter=5, render=True)
-        #     self.run_test = False
 
         obs = self.env.reset()
         episodic_reward = 0
@@ -120,14 +117,6 @@ class PPOProblemMultithreadBase(PPOProblemBase):
             # Select an action
             action, action_matrix, predicted_action = self.act_train(obs, obs_queue)
 
-            # TODO: no me termina de gustar esto de limitar las acciones aquí
-            # try:
-            #     if hasattr(self.env_test.action_space, 'low') and hasattr(self.env_test.action_space, 'high'):
-            #         action = np.clip(action, self.env_test.action_space.low, self.env_test.action_space.high)
-            #         action_matrix = np.clip(action_matrix, self.env_test.action_space.low, self.env_test.action_space.high)
-            # except:
-            #     print('Exception applying boundaries to the actions. ppo_problem_parallel_base.py, line 99.')
-
             # Agent act in the environment
             next_obs, reward, done, info = self.env.step(action)
             if discriminator is not None:
@@ -138,16 +127,16 @@ class PPOProblemMultithreadBase(PPOProblemBase):
 
             # Store the experience in episode memory
             next_obs, obs_next_queue, reward, done, epochs, mask = self.store_episode_experience(action,
-                                                                                                done,
-                                                                                                next_obs,
-                                                                                                obs,
-                                                                                                obs_next_queue,
-                                                                                                obs_queue,
-                                                                                                reward,
-                                                                                                skip_states,
-                                                                                                epochs,
-                                                                                                predicted_action,
-                                                                                                action_matrix)
+                                                                                                 done,
+                                                                                                 next_obs,
+                                                                                                 obs,
+                                                                                                 obs_next_queue,
+                                                                                                 obs_queue,
+                                                                                                 reward,
+                                                                                                 skip_states,
+                                                                                                 epochs,
+                                                                                                 predicted_action,
+                                                                                                 action_matrix)
 
             # copy next_obs to obs
             obs, obs_queue = self.copy_next_obs(next_obs, obs, obs_next_queue, obs_queue)
@@ -162,7 +151,8 @@ class PPOProblemMultithreadBase(PPOProblemBase):
         rew_mean = [np.mean(self.rew_mean_list[i]) for i in range(len(self.rew_mean_list))]
         # Print log on scream
         for i_print in range(self.n_threads):
-            self.histogram_metrics.append([self.total_episodes, episodic_reward[i_print], epochs, self.agent.epsilon, self.global_steps])
+            self.histogram_metrics.append(
+                [self.total_episodes, episodic_reward[i_print], epochs, self.agent.epsilon, self.global_steps])
             # rew_mean_list = [rew[i_print] for rew in self.rew_mean_list]
             self._feedback_print(self.total_episodes, episodic_reward[i_print], epochs, verbose, rew_mean)
             self.episode += 1
@@ -176,7 +166,6 @@ class PPOProblemMultithreadBase(PPOProblemBase):
             else:
                 raise Exception('Type of parameter save_live_histories must be string but ' +
                                 str(type(save_live_histories)) + ' has been received')
-
 
         if discriminator is not None and expert_traj is not None:
             if self.img_input:
@@ -223,10 +212,12 @@ class PPOProblemMultithreadBase(PPOProblemBase):
                 else:
                     raise Exception('Type of parameter save_live_histories must be string but ' +
                                     str(type(save_live_histories)) + ' has been received')
-        self.agent.remember(self.obs_batch, self.actions_batch, self.actions_probs_batch, self.rewards_batch, self.masks_batch)
+        self.agent.remember(self.obs_batch, self.actions_batch, self.actions_probs_batch, self.rewards_batch,
+                            self.masks_batch)
 
-    def store_episode_experience(self, action, done, next_obs, obs, obs_next_queue, obs_queue, reward, skip_states, epochs,
-                                predicted_action, action_matrix):
+    def store_episode_experience(self, action, done, next_obs, obs, obs_next_queue, obs_queue, reward, skip_states,
+                                 epochs,
+                                 predicted_action, action_matrix):
 
         done, next_obs, reward, epochs = self.frame_skipping(action, done, next_obs, reward, skip_states, epochs)
         # TODO: aplicar frame skiping con paralelización
@@ -291,10 +282,12 @@ class PPOProblemMultithreadBase(PPOProblemBase):
             next_obs = np.array([self.preprocess(o) for o in next_obs])
         return done, next_obs, reward, epochs
 
-    def test(self, n_iter=10, render=True, callback=None, verbose=1, smooth_rewards=2, discriminator=None, max_step_epi=None):
+    def test(self, n_iter=10, render=True, callback=None, verbose=1, smooth_rewards=2, discriminator=None,
+             max_step_epi=None):
         # Reasignamos el entorno de test al entorno principal para poder usar el método test del padre
         aux_env = self.env
         self.env = self.env_test
-        super().test(n_iter=n_iter, render=render, callback=callback, verbose=verbose, smooth_rewards=smooth_rewards, discriminator=discriminator,
+        super().test(n_iter=n_iter, render=render, callback=callback, verbose=verbose, smooth_rewards=smooth_rewards,
+                     discriminator=discriminator,
                      max_step_epi=max_step_epi)
         self.env = aux_env

@@ -40,7 +40,6 @@ class HM3DRLEnv(habitat.RLEnv):
 
     def __init__(self, config_paths="configs/RL/objectnav_hm3d_RL.yaml",
                  result_path=os.path.join("development", "images"),
-                 task=None,
                  render_on_screen=False,
                  save_video=False,
                  oracle_stop=False,
@@ -67,7 +66,7 @@ class HM3DRLEnv(habitat.RLEnv):
             'render.modes': ['rgb']
         }
         self.action_space = spaces.Discrete(len(self.config.TASK.POSSIBLE_ACTIONS))
-        self.action_list = range(len(self.config.TASK.POSSIBLE_ACTIONS))
+        self.action_list = list(range(len(self.config.TASK.POSSIBLE_ACTIONS)))
         self.observation_space = spaces.Box(low=0,
                                             high=255,
                                             shape=(self.config.SIMULATOR.RGB_SENSOR.HEIGHT,
@@ -75,7 +74,6 @@ class HM3DRLEnv(habitat.RLEnv):
                                                    3),
                                             dtype=np.uint8)
 
-        self._task = task
         self._generator = None
         self.first_reset = True
         self.render_on_screen = render_on_screen
@@ -118,8 +116,12 @@ class HM3DRLEnv(habitat.RLEnv):
         return observation
 
     def step(self, *args, **kwargs):
-        action = self.action_list[args[0]]
-        observation, reward, done, info = super().step(action, **kwargs)
+        if len(args) == 0:
+            action = self.action_list[kwargs['action']['action']]
+            observation, reward, done, info = super().step(action)
+        else:
+            action = self.action_list[args[0]]
+            observation, reward, done, info = super().step(action, **kwargs)
 
         # We save images to create a video later
         im = observation["rgb"]
