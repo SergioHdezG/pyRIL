@@ -85,7 +85,7 @@ class PPOProblem(PPOProblemMultithreadBase):
             obs = self.env.reset()
             episodic_reward = [0 for _ in range(self.n_threads)]
             steps = 0
-            done = False
+            finished = False
             self.reward = []
 
             obs = np.array([self.preprocess(o) for o in obs])
@@ -101,8 +101,6 @@ class PPOProblem(PPOProblemMultithreadBase):
                     for o, queue, next_queue in zip(obs, obs_queue, obs_next_queue):
                         queue.append(o)
                         next_queue.append(o)
-
-            finished = False
 
             while not finished:
                 if render or ((render_after is not None) and self.episode > render_after):
