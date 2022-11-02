@@ -14,6 +14,7 @@ names = {"dqn": "DQN",
          "ppo_discrete": "PPO_discrete",
          "ppo_discrete_habitat": "PPO_discrete_habitat",
          "ppo_discrete_multithread": "PPO_discrete_multithread",
+         "ppo_discrete_multithread_habitat": "PPO_discrete_multithread_habitat",
          "ppo_continuous_multithread": "PPO_continuous_multithread",
          "ppo_continuous_multithread_transformer": "PPO_continuous_multithread_transformer"}
 

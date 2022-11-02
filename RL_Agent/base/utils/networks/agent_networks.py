@@ -111,11 +111,11 @@ class PPONet(RLNetModel):
             The loss value of the current pass
         """
         return self._train_step(x, old_prediction, y, returns, advantages, stddev, loss_clipping,
-                   critic_discount, entropy_beta)
+                                critic_discount, entropy_beta)
 
     # @tf.function(experimental_relax_shapes=True)
     def _train_step(self, x, old_prediction, y, returns, advantages, stddev=None, loss_clipping=0.3,
-                   critic_discount=0.5, entropy_beta=0.001):
+                    critic_discount=0.5, entropy_beta=0.001):
         """
         Execute one training step (forward pass + backward pass)
         Args:
@@ -129,10 +129,13 @@ class PPONet(RLNetModel):
         with tf.GradientTape() as tape:
             values = self.critic_net(x, training=True)
             y_ = self.actor_net(x, training=True)
-            loss_actor, [act_comp_loss, critic_comp_loss, entropy_comp_loss] = self.loss_func_actor(y, y_, advantages, old_prediction,
-                                                                                  returns, values, stddev,
-                                                                                  loss_clipping,
-                                                                                  critic_discount, entropy_beta)
+            loss_actor, [act_comp_loss, critic_comp_loss, entropy_comp_loss] = self.loss_func_actor(y, y_, advantages,
+                                                                                                    old_prediction,
+                                                                                                    returns, values,
+                                                                                                    stddev,
+                                                                                                    loss_clipping,
+                                                                                                    critic_discount,
+                                                                                                    entropy_beta)
             loss_critic = self.loss_func_critic(returns, values)
 
         self.metrics.update_state(y, y_)
@@ -178,7 +181,6 @@ class PPONet(RLNetModel):
             ret, adv = self.calculate_advantages(values, b_m, b_r, gamma, lmbda)
             returns.extend(ret)
             advantages.extend(adv)
-
 
         dataset = tf.data.Dataset.from_tensor_slices((tf.cast(obs, tf.float32),
                                                       tf.cast(act_probs, tf.float32),
@@ -230,14 +232,18 @@ class PPONet(RLNetModel):
                 returns, \
                 advantages, \
                 [act_comp_loss, critic_comp_loss, entropy_comp_loss] = self.train_step(batch_obs,
-                                                                        batch_act_probs,
-                                                                        batch_actions,
-                                                                        batch_returns,
-                                                                        batch_advantages,
-                                                                        stddev=tf.cast(stddev, tf.float32),
-                                                                        loss_clipping=tf.cast(loss_clipping, tf.float32),
-                                                                        critic_discount=tf.cast(critic_discount, tf.float32),
-                                                                        entropy_beta=tf.cast(entropy_beta, tf.float32))
+                                                                                       batch_act_probs,
+                                                                                       batch_actions,
+                                                                                       batch_returns,
+                                                                                       batch_advantages,
+                                                                                       stddev=tf.cast(stddev,
+                                                                                                      tf.float32),
+                                                                                       loss_clipping=tf.cast(
+                                                                                           loss_clipping, tf.float32),
+                                                                                       critic_discount=tf.cast(
+                                                                                           critic_discount, tf.float32),
+                                                                                       entropy_beta=tf.cast(
+                                                                                           entropy_beta, tf.float32))
 
             if verbose:
                 print(
@@ -253,8 +259,8 @@ class PPONet(RLNetModel):
                                         act_comp_loss,
                                         critic_comp_loss,
                                         entropy_comp_loss,
-                                        critic_discount*critic_comp_loss,
-                                        entropy_beta*entropy_comp_loss],
+                                        critic_discount * critic_comp_loss,
+                                        entropy_beta * entropy_comp_loss],
                                        ['actor_model_loss (-a_l + c*c_l - b*e_l)',
                                         'critic_model_loss',
                                         'actor_component (a_l)',
@@ -262,7 +268,7 @@ class PPONet(RLNetModel):
                                         'entropy_component (e_l)',
                                         '(c*c_l)',
                                         '(b*e_l)'],
-                                        self.total_epochs)
+                                       self.total_epochs)
 
             self.total_epochs += 1
 
@@ -349,7 +355,7 @@ class PPONet(RLNetModel):
             "rl_loss_sumaries_code": rl_loss_sumaries_code,
             "rl_sumaries_globals": rl_sumaries_globals,
             "rl_sumaries_code": rl_sumaries_code,
-            }
+        }
 
         with open(os.path.join(path, 'model_data.json'), 'w') as f:
             json.dump(data, f)
@@ -400,7 +406,7 @@ class PPONet(RLNetModel):
             "rl_loss_sumaries_code": rl_loss_sumaries_code,
             "rl_sumaries_globals": rl_sumaries_globals,
             "rl_sumaries_code": rl_sumaries_code,
-            }
+        }
 
         with open(os.path.join(path, 'model_data.json'), 'w') as f:
             json.dump(data, f)
@@ -435,13 +441,13 @@ class PPONet(RLNetModel):
         rl_loss_sumaries_globals = dill.loads(rl_loss_sumaries_globals)
         rl_loss_sumaries_globals = self.process_globals(rl_loss_sumaries_globals)
         rl_loss_sumaries_code = marshal.loads(rl_loss_sumaries_code)
-        self.rl_loss_sumaries = types.FunctionType(rl_loss_sumaries_code, rl_loss_sumaries_globals, "rl_loss_sumaries_func")
+        self.rl_loss_sumaries = types.FunctionType(rl_loss_sumaries_code, rl_loss_sumaries_globals,
+                                                   "rl_loss_sumaries_func")
 
         rl_sumaries_globals = dill.loads(rl_sumaries_globals)
         rl_sumaries_globals = self.process_globals(rl_sumaries_globals)
         rl_sumaries_code = marshal.loads(rl_sumaries_code)
         self.rl_sumaries = types.FunctionType(rl_sumaries_code, rl_sumaries_globals, "rl_sumaries_func")
-
 
         self.total_epochs = data['total_epochs']
         self.train_log_dir = data['train_log_dir']
@@ -551,6 +557,7 @@ class PPONet(RLNetModel):
         print("Saved model to disk")
         print(datetime.datetime.now())
 
+
 class DQNNet(RLNetModel):
     def __init__(self, net, chckpoint_path=None, chckpoints_to_keep=10, tensorboard_dir=None):
         super().__init__(tensorboard_dir)
@@ -577,9 +584,9 @@ class DQNNet(RLNetModel):
         if chckpoint_path is not None:
             self.net_chkpoint = tf.train.Checkpoint(model=self.net)
             self.net_manager = tf.train.CheckpointManager(self.net_chkpoint,
-                                                       os.path.join(chckpoint_path, 'checkpoint'),
-                                                       checkpoint_name='actor',
-                                                       max_to_keep=chckpoints_to_keep)
+                                                          os.path.join(chckpoint_path, 'checkpoint'),
+                                                          checkpoint_name='actor',
+                                                          max_to_keep=chckpoints_to_keep)
 
     def compile(self, loss, optimizer, metrics=tf.keras.metrics.Accuracy()):
         self.loss_func = loss[0]
@@ -671,7 +678,7 @@ class DQNNet(RLNetModel):
                 with self.train_summary_writer.as_default():
                     self.loss_sumaries([loss], ['loss'], self.total_epochs)
                     self.rl_loss_sumaries([np.float32(np.expand_dims(actions, axis=-1))], ['actions'],
-                                     self.total_epochs)
+                                          self.total_epochs)
 
             self.total_epochs += 1
 
@@ -757,7 +764,7 @@ class DQNNet(RLNetModel):
             "rl_loss_sumaries_code": rl_loss_sumaries_code,
             "rl_sumaries_globals": rl_sumaries_globals,
             "rl_sumaries_code": rl_sumaries_code,
-            }
+        }
 
         with open(os.path.join(path, 'model_data.json'), 'w') as f:
             json.dump(data, f)
@@ -768,16 +775,15 @@ class DQNNet(RLNetModel):
             self.net_manager.save()
         else:
             net_chkpoint = tf.train.Checkpoint(model=self.net,
-                                                 optimizer=self.optimizer,
-                                                 # loss_func=self.loss_func,
-                                                 metrics=self.metrics,
-                                                 )
+                                               optimizer=self.optimizer,
+                                               # loss_func=self.loss_func,
+                                               metrics=self.metrics,
+                                               )
             net_manager = tf.train.CheckpointManager(net_chkpoint,
-                                                       os.path.join(path, 'net'),
-                                                       checkpoint_name='net',
-                                                       max_to_keep=1)
+                                                     os.path.join(path, 'net'),
+                                                     checkpoint_name='net',
+                                                     max_to_keep=1)
             net_manager.save()
-
 
     def restore(self, path):
         with open(os.path.join(path, 'model_data.json'), 'r') as f:
@@ -800,7 +806,8 @@ class DQNNet(RLNetModel):
         rl_loss_sumaries_globals = dill.loads(rl_loss_sumaries_globals)
         rl_loss_sumaries_globals = self.process_globals(rl_loss_sumaries_globals)
         rl_loss_sumaries_code = marshal.loads(rl_loss_sumaries_code)
-        self.rl_loss_sumaries = types.FunctionType(rl_loss_sumaries_code, rl_loss_sumaries_globals, "rl_loss_sumaries_func")
+        self.rl_loss_sumaries = types.FunctionType(rl_loss_sumaries_code, rl_loss_sumaries_globals,
+                                                   "rl_loss_sumaries_func")
 
         rl_sumaries_globals = dill.loads(rl_sumaries_globals)
         rl_sumaries_globals = self.process_globals(rl_sumaries_globals)
@@ -833,13 +840,13 @@ class DQNNet(RLNetModel):
                 chck = self.net_manager.checkpoints
         else:
             net_chkpoint = tf.train.Checkpoint(model=self.net,
-                                                 optimizer=self.optimizer,
-                                                 # loss_func_actor=self.loss_func_actor,
-                                                 metrics=self.metrics)
+                                               optimizer=self.optimizer,
+                                               # loss_func_actor=self.loss_func_actor,
+                                               metrics=self.metrics)
             net_manager = tf.train.CheckpointManager(net_chkpoint,
-                                                       os.path.join(path, 'net'),
-                                                       checkpoint_name='net',
-                                                       max_to_keep=1)
+                                                     os.path.join(path, 'net'),
+                                                     checkpoint_name='net',
+                                                     max_to_keep=1)
             net_chkpoint.restore(net_manager.latest_checkpoint)
 
     def get_weights(self):
@@ -901,7 +908,7 @@ class DDQNNet(DQNNet):
                 with self.train_summary_writer.as_default():
                     self.loss_sumaries([loss], ['loss'], self.total_epochs)
                     self.rl_loss_sumaries([np.float32(np.expand_dims(actions, axis=-1))], ['actions'],
-                                     self.total_epochs)
+                                          self.total_epochs)
             self.total_epochs += 1
 
             history.history['loss'].append(loss.numpy())
@@ -941,12 +948,11 @@ class DPGNet(RLNetModel):
         # self.rl_loss_sumaries = tensor_board_loss_functions.rl_loss_sumaries
         # self.rl_sumaries = tensor_board_loss_functions.rl_sumaries
         if chckpoint_path is not None:
-
             self.net_chkpoint = tf.train.Checkpoint(model=self.net)
             self.net_manager = tf.train.CheckpointManager(self.net_chkpoint,
-                                                       os.path.join(chckpoint_path, 'checkpoint'),
-                                                       checkpoint_name='actor',
-                                                       max_to_keep=chckpoints_to_keep)
+                                                          os.path.join(chckpoint_path, 'checkpoint'),
+                                                          checkpoint_name='actor',
+                                                          max_to_keep=chckpoints_to_keep)
 
     def compile(self, loss, optimizer, metrics=tf.keras.metrics.MeanSquaredError()):
         self.loss_func = loss[0]
@@ -1032,10 +1038,10 @@ class DPGNet(RLNetModel):
                 with self.train_summary_writer.as_default():
                     self.loss_sumaries([loss], ['loss'], self.total_epochs)
                     self.rl_loss_sumaries([np.float32(np.expand_dims(actions, axis=-1)),
-                                      np.float32(np.expand_dims(returns, axis=-1))],
-                                     ['actions',
-                                      'returns'],
-                                     self.total_epochs)
+                                           np.float32(np.expand_dims(returns, axis=-1))],
+                                          ['actions',
+                                           'returns'],
+                                          self.total_epochs)
             self.total_epochs += 1
 
             history.history['loss'].append(loss.numpy())
@@ -1119,7 +1125,7 @@ class DPGNet(RLNetModel):
             "rl_loss_sumaries_code": rl_loss_sumaries_code,
             "rl_sumaries_globals": rl_sumaries_globals,
             "rl_sumaries_code": rl_sumaries_code,
-            }
+        }
 
         with open(os.path.join(path, 'model_data.json'), 'w') as f:
             json.dump(data, f)
@@ -1130,14 +1136,14 @@ class DPGNet(RLNetModel):
             self.net_manager.save()
         else:
             net_chkpoint = tf.train.Checkpoint(model=self.net,
-                                                 optimizer=self.optimizer,
-                                                 # loss_func=self.loss_func,
-                                                 metrics=self.metrics,
-                                                 )
+                                               optimizer=self.optimizer,
+                                               # loss_func=self.loss_func,
+                                               metrics=self.metrics,
+                                               )
             net_manager = tf.train.CheckpointManager(net_chkpoint,
-                                                       os.path.join(path, 'net'),
-                                                       checkpoint_name='net',
-                                                       max_to_keep=1)
+                                                     os.path.join(path, 'net'),
+                                                     checkpoint_name='net',
+                                                     max_to_keep=1)
             net_manager.save()
 
     def restore(self, path):
@@ -1161,13 +1167,13 @@ class DPGNet(RLNetModel):
         rl_loss_sumaries_globals = dill.loads(rl_loss_sumaries_globals)
         rl_loss_sumaries_globals = self.process_globals(rl_loss_sumaries_globals)
         rl_loss_sumaries_code = marshal.loads(rl_loss_sumaries_code)
-        self.rl_loss_sumaries = types.FunctionType(rl_loss_sumaries_code, rl_loss_sumaries_globals, "rl_loss_sumaries_func")
+        self.rl_loss_sumaries = types.FunctionType(rl_loss_sumaries_code, rl_loss_sumaries_globals,
+                                                   "rl_loss_sumaries_func")
 
         rl_sumaries_globals = dill.loads(rl_sumaries_globals)
         rl_sumaries_globals = self.process_globals(rl_sumaries_globals)
         rl_sumaries_code = marshal.loads(rl_sumaries_code)
         self.rl_sumaries = types.FunctionType(rl_sumaries_code, rl_sumaries_globals, "rl_sumaries_func")
-
 
         self.total_epochs = data['total_epochs']
         self.train_log_dir = data['train_log_dir']
@@ -1195,13 +1201,13 @@ class DPGNet(RLNetModel):
                 chck = self.net_manager.checkpoints
         else:
             net_chkpoint = tf.train.Checkpoint(model=self.net,
-                                                 optimizer=self.optimizer,
-                                                 # loss_func_actor=self.loss_func_actor,
-                                                 metrics=self.metrics)
+                                               optimizer=self.optimizer,
+                                               # loss_func_actor=self.loss_func_actor,
+                                               metrics=self.metrics)
             net_manager = tf.train.CheckpointManager(net_chkpoint,
-                                                       os.path.join(path, 'net'),
-                                                       checkpoint_name='net',
-                                                       max_to_keep=1)
+                                                     os.path.join(path, 'net'),
+                                                     checkpoint_name='net',
+                                                     max_to_keep=1)
             net_chkpoint.restore(net_manager.latest_checkpoint)
 
     def get_weights(self):
@@ -1245,15 +1251,15 @@ class DDPGNet(RLNetModel):
         if chckpoint_path is not None:
             self.actor_chkpoint = tf.train.Checkpoint(model=self.actor_net)
             self.actor_manager = tf.train.CheckpointManager(self.actor_chkpoint,
-                                                       os.path.join(chckpoint_path, 'actor', 'checkpoint'),
-                                                       checkpoint_name='actor',
-                                                       max_to_keep=chckpoints_to_keep)
+                                                            os.path.join(chckpoint_path, 'actor', 'checkpoint'),
+                                                            checkpoint_name='actor',
+                                                            max_to_keep=chckpoints_to_keep)
 
             self.critic_chkpoint = tf.train.Checkpoint(model=self.critic_net)
             self.critic_manager = tf.train.CheckpointManager(self.critic_chkpoint,
-                                                        os.path.join(chckpoint_path, 'critic', 'checkpoint'),
-                                                        checkpoint_name='critic',
-                                                        max_to_keep=chckpoints_to_keep)
+                                                             os.path.join(chckpoint_path, 'critic', 'checkpoint'),
+                                                             checkpoint_name='critic',
+                                                             max_to_keep=chckpoints_to_keep)
 
     def compile(self, loss, optimizer, metrics=tf.keras.metrics.Accuracy()):
         self.loss_actor = loss[0]
@@ -1380,11 +1386,11 @@ class DDPGNet(RLNetModel):
                         batch_done) in enumerate(dataset.take(-1)):
 
                 loss, gradients, variables, loss_components = self.train_step(bach_obs,
-                                                             bach_actions,
-                                                             bach_next_obs,
-                                                             bach_rewards,
-                                                             batch_done,
-                                                             gamma)
+                                                                              bach_actions,
+                                                                              bach_next_obs,
+                                                                              bach_rewards,
+                                                                              batch_done,
+                                                                              gamma)
 
                 if batch % int(batch_size / 5) == 0 and verbose == 1:
                     print(
@@ -1397,8 +1403,8 @@ class DDPGNet(RLNetModel):
                     with self.train_summary_writer.as_default():
                         self.loss_sumaries([loss[0], loss[1]], ['loss actor', 'loss critic'], self.total_epochs)
                         self.rl_loss_sumaries([np.float32(np.expand_dims(actions, axis=-1))],
-                                         ['actions'],
-                                         self.total_epochs)
+                                              ['actions'],
+                                              self.total_epochs)
             self.total_epochs += 1
 
             history.history['loss'].append(loss[0].numpy())
@@ -1450,7 +1456,7 @@ class DDPGNet(RLNetModel):
             "rl_loss_sumaries_code": rl_loss_sumaries_code,
             "rl_sumaries_globals": rl_sumaries_globals,
             "rl_sumaries_code": rl_sumaries_code,
-            }
+        }
 
         with open(os.path.join(path, 'model_data.json'), 'w') as f:
             json.dump(data, f)
@@ -1537,13 +1543,13 @@ class DDPGNet(RLNetModel):
         rl_loss_sumaries_globals = dill.loads(rl_loss_sumaries_globals)
         rl_loss_sumaries_globals = self.process_globals(rl_loss_sumaries_globals)
         rl_loss_sumaries_code = marshal.loads(rl_loss_sumaries_code)
-        self.rl_loss_sumaries = types.FunctionType(rl_loss_sumaries_code, rl_loss_sumaries_globals, "rl_loss_sumaries_func")
+        self.rl_loss_sumaries = types.FunctionType(rl_loss_sumaries_code, rl_loss_sumaries_globals,
+                                                   "rl_loss_sumaries_func")
 
         rl_sumaries_globals = dill.loads(rl_sumaries_globals)
         rl_sumaries_globals = self.process_globals(rl_sumaries_globals)
         rl_sumaries_code = marshal.loads(rl_sumaries_code)
         self.rl_sumaries = types.FunctionType(rl_sumaries_code, rl_sumaries_globals, "rl_sumaries_func")
-
 
         self.total_epochs = data['total_epochs']
         self.train_log_dir = data['train_log_dir']
@@ -1702,7 +1708,6 @@ class A2CNetDiscrete(RLNetModel):
 
             loss_actor, [act_comp_loss, entropy_comp_loss] = self.loss_func_actor(log_prob, td, entropy_beta, entropy)
 
-
         self.metrics.update_state(y, y_)
 
         variables_actor = self.actor_net.trainable_variables
@@ -1760,9 +1765,9 @@ class A2CNetDiscrete(RLNetModel):
                 returns, \
                 [[act_comp_loss, entropy_comp_loss],
                  loss_components_critic] = self.train_step(batch_obs,
-                                                              batch_actions,
-                                                              batch_returns,
-                                                              entropy_beta=entropy_beta)
+                                                           batch_actions,
+                                                           batch_returns,
+                                                           entropy_beta=entropy_beta)
 
                 if batch % int(batch_size / 5) == 0 and verbose == 1:
                     print(
@@ -1777,17 +1782,17 @@ class A2CNetDiscrete(RLNetModel):
                                         loss[1],
                                         tf.math.reduce_mean(act_comp_loss),
                                         tf.math.reduce_mean(entropy_comp_loss),
-                                        tf.math.reduce_mean(entropy_beta*entropy_comp_loss)],
+                                        tf.math.reduce_mean(entropy_beta * entropy_comp_loss)],
                                        ['actor_model_loss (a_l + b*e_l)',
                                         'critic_model_loss (mse)',
                                         'actor_loss_component (a_l)',
                                         'entropy_loss_component (e_l)',
                                         '(b*el)'], self.total_epochs)
                     self.rl_loss_sumaries([np.float32(np.expand_dims(actions, axis=-1)),
-                                      np.float32(np.expand_dims(returns, axis=-1))],
-                                     ['actions',
-                                      'returns'],
-                                     self.total_epochs)
+                                           np.float32(np.expand_dims(returns, axis=-1))],
+                                          ['actions',
+                                           'returns'],
+                                          self.total_epochs)
             self.total_epochs += 1
 
             history_actor.history['loss'].append(loss[0].numpy())
@@ -1872,7 +1877,7 @@ class A2CNetDiscrete(RLNetModel):
             "rl_loss_sumaries_code": rl_loss_sumaries_code,
             "rl_sumaries_globals": rl_sumaries_globals,
             "rl_sumaries_code": rl_sumaries_code,
-            }
+        }
 
         with open(os.path.join(path, 'model_data.json'), 'w') as f:
             json.dump(data, f)
@@ -1907,7 +1912,8 @@ class A2CNetDiscrete(RLNetModel):
         rl_loss_sumaries_globals = dill.loads(rl_loss_sumaries_globals)
         rl_loss_sumaries_globals = self.process_globals(rl_loss_sumaries_globals)
         rl_loss_sumaries_code = marshal.loads(rl_loss_sumaries_code)
-        self.rl_loss_sumaries = types.FunctionType(rl_loss_sumaries_code, rl_loss_sumaries_globals, "rl_loss_sumaries_func")
+        self.rl_loss_sumaries = types.FunctionType(rl_loss_sumaries_code, rl_loss_sumaries_globals,
+                                                   "rl_loss_sumaries_func")
 
         rl_sumaries_globals = dill.loads(rl_sumaries_globals)
         rl_sumaries_globals = self.process_globals(rl_sumaries_globals)
@@ -1987,6 +1993,7 @@ class A2CNetDiscrete(RLNetModel):
                                                         max_to_keep=1)
             critic_chkpoint.restore(critic_manager.latest_checkpoint)
 
+
 class A2CNetContinuous(A2CNetDiscrete):
     def __init__(self, actor_net, critic_net, tensorboard_dir=None):
         super().__init__(actor_net, critic_net, tensorboard_dir)
@@ -2034,7 +2041,7 @@ class A2CNetContinuous(A2CNetDiscrete):
         return [loss_actor, loss_critic], \
                [gradients_actor, gradients_critic], \
                [variables_actor, variables_critic], \
-               returns,\
+               returns, \
                [[act_comp_loss, entropy_comp_loss, y_[0], y_[1]], loss_components_critic]
 
     def fit(self, obs, next_obs, actions, rewards, done, epochs, batch_size, validation_split=0.,
@@ -2079,9 +2086,9 @@ class A2CNetContinuous(A2CNetDiscrete):
                 returns, \
                 [[act_comp_loss, entropy_comp_loss, pred_act, pred_std],
                  loss_components_critic] = self.train_step(batch_obs,
-                                                          batch_actions,
-                                                          batch_returns,
-                                                          entropy_beta=entropy_beta)
+                                                           batch_actions,
+                                                           batch_returns,
+                                                           entropy_beta=entropy_beta)
 
                 if batch % int(batch_size / 5) == 0 and verbose == 1:
                     print(
@@ -2103,14 +2110,14 @@ class A2CNetContinuous(A2CNetDiscrete):
                                             'entropy_loss_component (e_l)',
                                             '(b*el)'], self.total_epochs)
                         self.rl_loss_sumaries([np.float32(np.expand_dims(actions, axis=-1)),
-                                          np.float32(np.expand_dims(returns, axis=-1)),
-                                          np.float32(np.expand_dims(pred_act, axis=-1)),
-                                          np.float32(np.expand_dims(pred_std, axis=-1))],
-                                         ['actions',
-                                          'returns',
-                                          'predicted action',
-                                          'predicted stddev'],
-                                         self.total_epochs)
+                                               np.float32(np.expand_dims(returns, axis=-1)),
+                                               np.float32(np.expand_dims(pred_act, axis=-1)),
+                                               np.float32(np.expand_dims(pred_std, axis=-1))],
+                                              ['actions',
+                                               'returns',
+                                               'predicted action',
+                                               'predicted stddev'],
+                                              self.total_epochs)
             self.total_epochs += 1
 
             history_actor.history['loss'].append(loss[0].numpy())
@@ -2218,9 +2225,9 @@ class A2CNetQueueDiscrete(A2CNetDiscrete):
                 returns, \
                 [[act_comp_loss, entropy_comp_loss],
                  loss_components_critic] = self.train_step(batch_obs,
-                                                          batch_actions,
-                                                          batch_returns,
-                                                          entropy_beta=entropy_beta)
+                                                           batch_actions,
+                                                           batch_returns,
+                                                           entropy_beta=entropy_beta)
 
                 if batch % int(batch_size / 5) == 0 and verbose == 1:
                     print(
@@ -2242,10 +2249,10 @@ class A2CNetQueueDiscrete(A2CNetDiscrete):
                                         'entropy_loss_component (e_l)',
                                         '(b*el)'], self.total_epochs)
                     self.rl_loss_sumaries([np.float32(np.expand_dims(actions, axis=-1)),
-                                      np.float32(np.expand_dims(returns, axis=-1))],
-                                     ['actions',
-                                      'returns'],
-                                     self.total_epochs)
+                                           np.float32(np.expand_dims(returns, axis=-1))],
+                                          ['actions',
+                                           'returns'],
+                                          self.total_epochs)
             self.total_epochs += 1
 
             history_actor.history['loss'].append(loss[0].numpy())
@@ -2255,6 +2262,7 @@ class A2CNetQueueDiscrete(A2CNetDiscrete):
                 for cb in callbacks:
                     cb.on_epoch_end(e)
         return history_actor, history_critic
+
 
 class A2CNetQueueContinuous(A2CNetContinuous):
     def fit(self, obs, next_obs, actions, rewards, done, epochs, batch_size, validation_split=0.,
@@ -2295,9 +2303,9 @@ class A2CNetQueueContinuous(A2CNetContinuous):
                 returns, \
                 [[act_comp_loss, entropy_comp_loss, pred_act, pred_std],
                  loss_components_critic] = self.train_step(batch_obs,
-                                                          batch_actions,
-                                                          batch_returns,
-                                                          entropy_beta=entropy_beta)
+                                                           batch_actions,
+                                                           batch_returns,
+                                                           entropy_beta=entropy_beta)
 
                 if batch % int(batch_size / 5) == 0 and verbose == 1:
                     print(
@@ -2319,14 +2327,14 @@ class A2CNetQueueContinuous(A2CNetContinuous):
                                         'entropy_loss_component (e_l)',
                                         '(b*el)'], self.total_epochs)
                     self.rl_loss_sumaries([np.float32(np.expand_dims(actions, axis=-1)),
-                                      np.float32(np.expand_dims(returns, axis=-1)),
-                                      np.float32(np.expand_dims(pred_act, axis=-1)),
-                                      np.float32(np.expand_dims(pred_std, axis=-1))],
-                                     ['actions',
-                                      'returns',
-                                      'predicted action',
-                                      'predicted stddev'],
-                                     self.total_epochs)
+                                           np.float32(np.expand_dims(returns, axis=-1)),
+                                           np.float32(np.expand_dims(pred_act, axis=-1)),
+                                           np.float32(np.expand_dims(pred_std, axis=-1))],
+                                          ['actions',
+                                           'returns',
+                                           'predicted action',
+                                           'predicted stddev'],
+                                          self.total_epochs)
             self.total_epochs += 1
 
             history_actor.history['loss'].append(loss[0].numpy())
@@ -2336,3 +2344,241 @@ class A2CNetQueueContinuous(A2CNetContinuous):
                 for cb in callbacks:
                     cb.on_epoch_end(e)
         return history_actor, history_critic
+
+
+class HabitatPPONet(PPONet):
+    """
+    Define Custom Net for habitat
+    """
+
+    def __init__(self, input_shape, actor_net, critic_net, tensorboard_dir=None):
+        super().__init__(actor_net(input_shape), critic_net(input_shape), tensorboard_dir=tensorboard_dir)
+
+    # TODO: [Sergio]: Standardize the inputs to _train_step(). We have two inputs (x[0]=rgb y x[1]=objectgoal) but in
+    #   a generic problem we may have a different number of inputs.
+    def predict(self, x):
+        y_ = self._predict(np.array(x[0]), np.array(x[1]))
+        return y_.numpy()
+
+    # @tf.function(experimental_relax_shapes=False)
+    def _predict(self, x1, x2):
+        """ Predict the output sentence for a given input sentence
+            Args:
+                test_source_text: input sentence (raw string)
+
+            Returns:
+                The encoder's attention vectors
+                The decoder's bottom attention vectors
+                The decoder's middle attention vectors
+                The input string array (input sentence split by ' ')
+                The output string array
+            """
+        # out = self.actor_net(tf.cast(np.array(x[0]), tf.float32), tf.cast(np.array(x[1]), tf.float32), training=False)
+        out = self.actor_net([x1, x2], training=False)
+
+        return out
+
+    # TODO: [Sergio]: Standardize the inputs to _train_step(). We have two inputs (x[0]=rgb y x[1]=objectgoal) but in
+    #   a generic problem we may have a different number of inputs.
+    def predict_values(self, x):
+        y_ = self._predict_values(np.array(x[0]), np.array(x[1]))
+        return y_.numpy()
+
+    @tf.function(experimental_relax_shapes=False)
+    def _predict_values(self, x1, x2):
+        out = self.critic_net([x1, x2], training=False)
+        return out
+
+    def fit(self, obs, next_obs, actions, rewards, done, epochs, batch_size, validation_split=0.,
+            shuffle=True, verbose=1, callbacks=None, kargs=[]):
+        act_probs = kargs[0]
+        mask = kargs[1]
+        stddev = kargs[2]
+        loss_clipping = kargs[3]
+        critic_discount = kargs[4]
+        entropy_beta = kargs[5]
+        gamma = kargs[6]
+        lmbda = kargs[7]
+
+        # Calculate returns and advantages
+        returns = []
+        advantages = []
+
+        # TODO: [CARLOS] check if this split makes sense at all (specially the +1). Maybe using a ceiling instead of
+        #   int in order to fit the rest of the observations.
+        batch_obs = np.array_split(obs[0], int(rewards.shape[0] / batch_size) + 1)
+        batch_target = np.array_split(obs[1], int(rewards.shape[0] / batch_size) + 1)
+        batch_rewards = np.array_split(rewards, int(rewards.shape[0] / batch_size) + 1)
+        batch_mask = np.array_split(mask, int(rewards.shape[0] / batch_size) + 1)
+
+        for b_o, b_t, b_r, b_m in zip(batch_obs, batch_target, batch_rewards, batch_mask):
+            values = self.predict_values([b_o, b_t])
+            ret, adv = self.calculate_advantages(values, b_m, b_r, gamma, lmbda)
+            returns.extend(ret)
+            advantages.extend(adv)
+
+        dataset = tf.data.Dataset.from_tensor_slices((tf.cast(obs[0], tf.float32),
+                                                      tf.cast(obs[1], tf.float32),
+                                                      tf.cast(act_probs, tf.float32),
+                                                      tf.cast(rewards, tf.float32),
+                                                      tf.cast(actions, tf.float32),
+                                                      tf.cast(mask, tf.float32),
+                                                      tf.cast(returns, tf.float32),
+                                                      tf.cast(advantages, tf.float32)))
+
+        if shuffle:
+            dataset = dataset.shuffle(len(obs[0]), reshuffle_each_iteration=True).batch(batch_size)
+        else:
+            dataset = dataset.batch(batch_size)
+
+        if self.train_summary_writer is not None:
+            with self.train_summary_writer.as_default():
+                self.rl_loss_sumaries([np.array(returns),
+                                       np.array(advantages),
+                                       actions,
+                                       act_probs,
+                                       stddev],
+                                      ['returns',
+                                       'advantages',
+                                       'actions',
+                                       'act_probabilities'
+                                       'stddev']
+                                      , self.total_epochs)
+
+        history_actor = TrainingHistory()
+        history_critic = TrainingHistory()
+
+        start_time = time.time()
+
+        for e in range(epochs):
+            loss = [0., 0.]
+            act_comp_loss = 0.
+            critic_comp_loss = 0.
+            entropy_comp_loss = 0.
+            for batch, (batch_obs,
+                        batch_target,
+                        batch_act_probs,
+                        batch_rewards,
+                        batch_actions,
+                        batch_mask,
+                        batch_returns,
+                        batch_advantages) in enumerate(dataset.take(-1)):
+                loss, \
+                gradients, \
+                variables, \
+                returns, \
+                advantages, \
+                [act_comp_loss, critic_comp_loss, entropy_comp_loss] = self.train_step(
+                    [tf.cast(batch_obs, tf.float32), tf.cast(batch_target, tf.float32)],
+                    tf.cast(batch_act_probs, tf.float32),
+                    tf.cast(batch_actions, tf.float32),
+                    tf.cast(batch_returns, tf.float32),
+                    tf.cast(batch_advantages, tf.float32),
+                    stddev=tf.cast(stddev,
+                                   tf.float32),
+                    loss_clipping=tf.cast(
+                        loss_clipping,
+                        tf.float32),
+                    critic_discount=tf.cast(
+                        critic_discount,
+                        tf.float32),
+                    entropy_beta=tf.cast(
+                        entropy_beta,
+                        tf.float32))
+
+            if verbose:
+                print(
+                    'Epoch {}\t Loss Actor\Critic {:.4f}\{:.4f} Acc {:.4f} Elapsed time {:.2f}s'.format(
+                        e + 1, loss[0].numpy(), loss[1].numpy(), self.metrics.result(),
+                        time.time() - start_time))
+                start_time = time.time()
+
+            if self.train_summary_writer is not None:
+                with self.train_summary_writer.as_default():
+                    self.loss_sumaries([loss[0],
+                                        loss[1],
+                                        act_comp_loss,
+                                        critic_comp_loss,
+                                        entropy_comp_loss,
+                                        critic_discount * critic_comp_loss,
+                                        entropy_beta * entropy_comp_loss],
+                                       ['actor_model_loss (-a_l + c*c_l - b*e_l)',
+                                        'critic_model_loss',
+                                        'actor_component (a_l)',
+                                        'critic_component (c_l)',
+                                        'entropy_component (e_l)',
+                                        '(c*c_l)',
+                                        '(b*e_l)'],
+                                       self.total_epochs)
+
+            self.total_epochs += 1
+
+            history_actor.history['loss'].append(loss[0].numpy())
+            history_critic.history['loss'].append(loss[1].numpy())
+
+            if callbacks is not None:
+                for cb in callbacks:
+                    cb.on_epoch_end(e)
+
+        return history_actor, history_critic
+
+    def train_step(self, x, old_prediction, y, returns, advantages, stddev=None, loss_clipping=0.3,
+                   critic_discount=0.5, entropy_beta=0.001):
+        """
+        Execute one training step (forward pass + backward pass)
+        Args:
+            source_seq: source sequences
+            target_seq_in: input target sequences (<start> + ...)
+            target_seq_out: output target sequences (... + <end>)
+
+        Returns:
+            The loss value of the current pass
+        """
+        # TODO: [Sergio]: Standardize the inputs to _train_step(). We have two inputs (x[0]=rgb y x[1]=objectgoal) but in
+        #   a generic problem we may have a different number of inputs.
+        return self._train_step(x[0], x[1], old_prediction, y, returns, advantages, stddev, loss_clipping,
+                                critic_discount, entropy_beta)
+
+    # TODO: [Sergio]: Standardize the inputs to _train_step(). We have two inputs (x[0]=rgb y x[1]=objectgoal) but in
+    #   a generic problem we may have a different number of inputs.
+    @tf.function(experimental_relax_shapes=True)
+    def _train_step(self, x_rgb, x_objgoal, old_prediction, y, returns, advantages, stddev=None, loss_clipping=0.3,
+                    critic_discount=0.5, entropy_beta=0.001):
+        """
+        Execute one training step (forward pass + backward pass)
+        Args:
+            source_seq: source sequences
+            target_seq_in: input target sequences (<start> + ...)
+            target_seq_out: output target sequences (... + <end>)
+
+        Returns:
+            The loss value of the current pass
+        """
+        with tf.GradientTape() as tape:
+            values = self.critic_net([x_rgb, x_objgoal], training=True)
+            y_ = self.actor_net([x_rgb, x_objgoal], training=True)
+            loss_actor, [act_comp_loss, critic_comp_loss, entropy_comp_loss] = self.loss_func_actor(y, y_,
+                                                                                                    advantages,
+                                                                                                    old_prediction,
+                                                                                                    returns, values,
+                                                                                                    stddev,
+                                                                                                    loss_clipping,
+                                                                                                    critic_discount,
+                                                                                                    entropy_beta)
+            loss_critic = self.loss_func_critic(returns, values)
+
+        self.metrics.update_state(y, y_)
+
+        variables_actor = self.actor_net.trainable_variables
+        variables_critic = self.critic_net.trainable_variables
+        gradients_actor, gradients_critic = tape.gradient([loss_actor, loss_critic],
+                                                          [variables_actor, variables_critic])
+        self.optimizer_actor.apply_gradients(zip(gradients_actor, variables_actor))
+        self.optimizer_critic.apply_gradients(zip(gradients_critic, variables_critic))
+
+        return [loss_actor, loss_critic], \
+               [gradients_actor, gradients_critic], \
+               [variables_actor, variables_critic], \
+               returns, \
+               advantages, \
+               [act_comp_loss, critic_comp_loss, entropy_comp_loss]

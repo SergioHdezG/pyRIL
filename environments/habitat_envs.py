@@ -12,6 +12,7 @@ from habitat.utils.visualizations.utils import images_to_video
 from utils.custom_networks import clip
 from gym.spaces import Box
 from gym.spaces import Dict as SpaceDict
+
 cv2 = try_cv2_import()
 
 
@@ -39,7 +40,6 @@ class HM3DRLEnv(habitat.RLEnv):
 
     def __init__(self, config_paths="configs/RL/objectnav_hm3d_RL.yaml",
                  result_path=os.path.join("development", "images"),
-                 task=None,
                  render_on_screen=False,
                  save_video=False,
                  oracle_stop=False,
@@ -66,7 +66,7 @@ class HM3DRLEnv(habitat.RLEnv):
             'render.modes': ['rgb']
         }
         self.action_space = spaces.Discrete(len(self.config.TASK.POSSIBLE_ACTIONS))
-        self.action_list = range(len(self.config.TASK.POSSIBLE_ACTIONS))
+        self.action_list = list(range(len(self.config.TASK.POSSIBLE_ACTIONS)))
         self.observation_space = spaces.Box(low=0,
                                             high=255,
                                             shape=(self.config.SIMULATOR.RGB_SENSOR.HEIGHT,
@@ -74,7 +74,6 @@ class HM3DRLEnv(habitat.RLEnv):
                                                    3),
                                             dtype=np.uint8)
 
-        self._task = task
         self._generator = None
         self.first_reset = True
         self.render_on_screen = render_on_screen
@@ -117,8 +116,12 @@ class HM3DRLEnv(habitat.RLEnv):
         return observation
 
     def step(self, *args, **kwargs):
-        action = self.action_list[args[0]]
-        observation, reward, done, info = super().step(action, **kwargs)
+        if len(args) == 0:
+            action = self.action_list[kwargs['action']['action']]
+            observation, reward, done, info = super().step(action)
+        else:
+            action = self.action_list[args[0]]
+            observation, reward, done, info = super().step(action, **kwargs)
 
         # We save images to create a video later
         im = observation["rgb"]
@@ -221,3 +224,27 @@ class HM3DRLEnv(habitat.RLEnv):
     #
     #     """
     #     self.__init__(config_paths=state['config_paths'], result_path=state['result_path'], task=state['task'])
+
+
+class HM3DRLVecEnv(habitat.VectorEnv):
+    """
+    Matterport annotated objects: ["wall", "objects", "door", "chair", "window", "ceiling", "picture", "floor", "misc",
+    "lighting", "cushion", "table", "cabinet", "curtain", "plant", "shelving", "sink", "mirror", "chest", "towel",
+    "stairs", "railing", "column", "counter", "stool", "bed", "sofa", "shower", "appliances", "toilet", "tv",
+    "seating", "clothes", "fireplace", "bathtub", "beam", "furniture", "gym equip", "blinds", "board"]
+
+    default configuration for reference: habitat/config/default.py
+    """
+
+    def __init__(self,
+                 make_env_fn,
+                 env_fn_args=None,
+                 auto_reset_done: bool = True,
+                 multiprocessing_start_method: str = "forkserver",
+                 workers_ignore_signals: bool = False):
+
+        super().__init__(make_env_fn=make_env_fn,
+                         env_fn_args=env_fn_args,
+                         auto_reset_done=auto_reset_done,
+                         multiprocessing_start_method=multiprocessing_start_method,
+                         workers_ignore_signals=workers_ignore_signals)

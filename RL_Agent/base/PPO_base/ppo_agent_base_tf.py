@@ -543,12 +543,32 @@ class PPOSuper(AgentSuper):
         return returns, (adv - np.mean(adv)) / (np.std(adv) + 1e-10)
 
     def _format_obs_act_multithread(self, obs):
+        """
+        Reshape the observations on multithread training to be fed into neural networks
+        @param obs: Observation (state) array of state shape x n_threads.
+        @return: obs with the correct shape and format
+        """
+        if self.is_habitat:  # and isinstance(obs, dict):
+            # TODO: [Sergio] Formatear y estandarizar correctamente los tipos de estradas para habitat
+            if self.n_stack > 1:
+                rgb = list()
+                goal = list()
+                for n in range(self.n_threads):
+                    rgb.append([o['rgb'].astype(np.float32) for o in obs[n]])
+                    goal.append(obs[n][0]['objectgoal'].astype(np.float32))
+                obs = [rgb, goal]
+            else:
+                obs = list()
+                for n in range(self.n_threads):
+                    # TODO: CARLOS -> format habitat inputs to the neural networks
+                    obs.append([obs[n]['rgb'].astype(np.float32), obs[n]['objectgoal'].astype(np.float32)])
+            return obs
+
         if self.img_input:
             if self.stack:
                 obs = np.array([np.dstack(o) for o in obs])
             else:
                 obs = obs
-
 
         elif self.stack:
             # obs = obs.reshape(-1, *self.state_size)

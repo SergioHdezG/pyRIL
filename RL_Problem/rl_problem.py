@@ -63,6 +63,10 @@ def Problem(environment, agent):
         from RL_Problem.base.PPO import ppo_problem_discrete_parallel
         problem = ppo_problem_discrete_parallel.PPOProblem(environment, agent)
 
+    elif agent.agent_name == agent_globals.names["ppo_discrete_multithread_habitat"]:
+        from RL_Problem.base.PPO import ppo_problem_discrete_parallel_habitat
+        problem = ppo_problem_discrete_parallel_habitat.PPOProblem(environment, agent)
+
     elif agent.agent_name == agent_globals.names["ppo_continuous_multithread"]:
         from RL_Problem.base.PPO import ppo_problem_continuous_parallel
         problem = ppo_problem_continuous_parallel.PPOProblem(environment, agent)

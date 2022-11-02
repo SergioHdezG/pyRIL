@@ -1,13 +1,17 @@
-from RL_Problem.base.PPO.ppo_problem_base import PPOProblemBase
-from RL_Problem.base.rl_problem_base import *
+from collections import deque
+
 import numpy as np
 
-class PPOProblem(PPOProblemBase):
+from RL_Agent.base.utils.history_utils import write_history
+from RL_Problem.base.PPO.ppo_problem_parallel_base import PPOProblemMultithreadBase
+
+
+class PPOProblem(PPOProblemMultithreadBase):
     """
     Proximal Policy Optimization.
     """
-    def __init__(self, environment, agent, n_stack=1, img_input=False, state_size=None, model_params=None,
-                 saving_model_params=None, net_architecture=None):
+
+    def __init__(self, environment, agent):
         """
         Attributes:
                 environment:    Environment selected for this problem
@@ -18,10 +22,11 @@ class PPOProblem(PPOProblemBase):
                                 or Tuple format will be useful when preprocessing change the input dimensions.
                 model_params:   Dictionary of params like learning rate, batch size, epsilon values, n step returns...
         """
+
         super().__init__(environment, agent, continuous=False)
 
     def _define_agent(self, n_actions, state_size, stack, action_bound=None):
-        self.agent.build_agent(state_size=state_size, n_actions=n_actions, stack=stack)
+        self.agent.build_agent(state_size, n_actions, stack=stack)
 
     def solve(self, episodes, render=True, render_after=None, max_step_epi=None, skip_states=1, verbose=1,
               discriminator=None, expert_traj=None, save_live_histogram=False, smooth_rewards=2):
@@ -60,10 +65,6 @@ class PPOProblem(PPOProblemBase):
 
             self.agent.save_tensorboar_rl_histogram(self.histogram_metrics)
 
-            if self.gradient_steps % self.agent.model.keep_chck_every_n_iter == 0:
-                self.agent.model.save_checkpoint()
-
-
     def collect_batch(self, render, render_after, max_step_epi, skip_states, verbose, discriminator=None,
                       expert_traj=None, save_live_histories=False):
         self.obs_batch = []
@@ -73,8 +74,8 @@ class PPOProblem(PPOProblemBase):
         self.masks_batch = []
         # Stacking inputs
         if self.n_stack is not None and self.n_stack > 1:
-            obs_queue = deque(maxlen=self.n_stack)
-            obs_next_queue = deque(maxlen=self.n_stack)
+            obs_queue = [deque(maxlen=self.n_stack) for i in range(self.n_threads)]
+            obs_next_queue = [deque(maxlen=self.n_stack) for i in range(self.n_threads)]
         else:
             obs_queue = None
             obs_next_queue = None
@@ -82,44 +83,55 @@ class PPOProblem(PPOProblemBase):
         while len(self.obs_batch) < self.memory_size:
 
             obs = self.env.reset()
-            episodic_reward = 0
-            epochs = 0
-            done = False
+            episodic_reward = [0 for _ in range(self.n_threads)]
+            steps = 0
+            finished = False
             self.reward = []
 
-            obs = self.preprocess(obs)
+            obs = np.array([self.preprocess(o) for o in obs])
 
             # Stacking inputs
             if self.n_stack is not None and self.n_stack > 1:
                 for i in range(self.n_stack):
-                    # obs_queue.append(np.zeros(obs.shape))
-                    # obs_next_queue.append(np.zeros(obs.shape))
-                    obs_queue.append(obs)
-                    obs_next_queue.append(obs)
+                    # zero_obs = np.zeros(obs[0].shape)
+                    # for o, queue, next_queue in zip(obs, obs_queue, obs_next_queue):
+                    #     [queue.append(zero_obs) for i in range(self.n_stack)]
+                    #     [next_queue.append(zero_obs) for i in range(self.n_stack)]
 
-                obs_queue.append(obs)
-                obs_next_queue.append(obs)
+                    for o, queue, next_queue in zip(obs, obs_queue, obs_next_queue):
+                        queue.append(o)
+                        next_queue.append(o)
 
-            while not done:  # and len(batch[0])+len(tmp_batch[0]) < self.buffer_size:
+            while not finished:
                 if render or ((render_after is not None) and self.episode > render_after):
                     self.env.render()
 
                 # Select an action
                 action, action_matrix, predicted_action = self.act_train(obs, obs_queue)
 
-                # Agent act in the environment
-                next_obs, reward, done, info = self.env.step(action)
+                # Agent act in the environments
+                step_result = self.env.step(action)
 
+                next_obs = list()
+                reward = list()
+                done = list()
+                info = list()
+
+                for result in step_result:
+                    next_obs.append(result[0])
+                    reward.append(result[1])
+                    done.append(result[2])
+                    info.append(result[3])
 
                 if discriminator is not None:
                     if discriminator.stack:
-                        reward = discriminator.get_reward(obs_queue, action)[0]
+                        reward = discriminator.get_reward(obs_queue, action, multithread=True)
                     else:
-                        reward = discriminator.get_reward(obs, action)[0]
+                        reward = discriminator.get_reward(obs, action, multithread=True)
 
                 # Store the experience in episode memory
                 # Here we apply the preprocess/formatting function
-                next_obs, obs_next_queue, reward, done, epochs, mask = self.store_episode_experience(action,
+                next_obs, obs_next_queue, reward, done, steps, mask = self.store_episode_experience(action,
                                                                                                     done,
                                                                                                     next_obs,
                                                                                                     obs,
@@ -127,29 +139,33 @@ class PPOProblem(PPOProblemBase):
                                                                                                     obs_queue,
                                                                                                     reward,
                                                                                                     skip_states,
-                                                                                                    epochs,
+                                                                                                    steps,
                                                                                                     predicted_action,
                                                                                                     action_matrix)
 
                 # copy next_obs to obs
                 obs, obs_queue = self.copy_next_obs(next_obs, obs, obs_next_queue, obs_queue)
 
-                episodic_reward += reward
-                epochs += 1
-                self.global_steps += 1
+                episodic_reward = [x + y for x, y in zip(episodic_reward, reward)]
+                steps += 3
+                self.global_steps += 3
+                finished = all(done)
 
             self.reduce_exploration_noise()
-            self.episode += 1
-            self.total_episodes += 1
+
             # Add reward to the list
-            self.rew_mean_list.append(episodic_reward)
-            # Save habitat metrics:
-            success = self.env.get_success()
-            spl = self.env.get_info(None)['spl']
-            self.histogram_metrics.append([self.total_episodes, episodic_reward, epochs, success,
-                                           spl, self.agent.epsilon, self.global_steps])
+            self.rew_mean_list.extend(episodic_reward)
+            rew_mean = [np.mean(self.rew_mean_list[i]) for i in range(len(self.rew_mean_list))]
 
-
+            for i_print in range(self.n_threads):
+                self.episode += 1
+                self.total_episodes += 1
+                # Save habitat metrics:
+                success = info[i_print]['success']
+                spl = info[i_print]['spl']
+                self.histogram_metrics.append([self.total_episodes, episodic_reward[i_print], steps, success,
+                                               spl, self.agent.epsilon, self.global_steps])
+                self._feedback_print(self.total_episodes, episodic_reward[i_print], steps, verbose, rew_mean)
 
             if save_live_histories:
                 if isinstance(save_live_histories, str):
@@ -157,9 +173,6 @@ class PPOProblem(PPOProblemBase):
                 else:
                     raise Exception('Type of parameter save_live_histories must be string but ' +
                                     str(type(save_live_histories)) + ' has been received')
-
-            # Print log on scream
-            self._feedback_print(self.total_episodes, episodic_reward, epochs, verbose, self.rew_mean_list)
 
         if discriminator is not None and expert_traj is not None:
 
@@ -182,14 +195,13 @@ class PPOProblem(PPOProblemBase):
                                       zip(self.obs_batch, self.actions_batch)]
                 if save_live_histories:
                     if isinstance(save_live_histories, str):
-                        write_history(il_hist=[train_loss, self.disc_loss, discriminator.global_epochs], monitor_path=save_live_histories)
+                        write_history(il_hist=[train_loss, self.disc_loss, discriminator.global_epochs],
+                                      monitor_path=save_live_histories)
                     else:
                         raise Exception('Type of parameter save_live_histories must be string but ' +
                                         str(type(save_live_histories)) + ' has been received')
             else:
                 self.disc_loss += 0.0025
-
-
 
         self.agent.remember(self.obs_batch, self.actions_batch, self.actions_probs_batch, self.rewards_batch,
                             self.masks_batch)
