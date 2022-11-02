@@ -17,7 +17,8 @@ from tensorflow.keras.layers import Dense, LSTM, Flatten
 
 
 class PPONet(RLNetModel):
-    def __init__(self, actor_net, critic_net, checkpoint_path=None, keep_chck_every_n_iter=1, tensorboard_dir=None):
+    def __init__(self, actor_net, critic_net, checkpoint_path=None, checkpoints_to_keep=10, save_every_iterations=1,
+                 tensorboard_dir=None):
         super().__init__(tensorboard_dir)
 
         self.actor_net = actor_net
@@ -39,24 +40,25 @@ class PPONet(RLNetModel):
         self.optimizer_critic = None
         self.metrics = None
         self.calculate_advantages = None
-        self.keep_chck_every_n_iter = keep_chck_every_n_iter
-        # self.loss_sumaries = tensor_board_loss_functions.loss_sumaries
-        # self.rl_loss_sumaries = tensor_board_loss_functions.rl_loss_sumaries
-        # self.rl_sumaries = tensor_board_loss_functions.rl_sumaries
-
+        self.save_every_iterations = save_every_iterations
+        current_time = datetime.datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
 
         if checkpoint_path is not None:
-            self.actor_chekpoint = tf.train.Checkpoint(model=self.actor_net)
-            self.actor_manager = tf.train.CheckpointManager(self.actor_chekpoint,
-                                                            os.path.join(checkpoint_path, 'actor', 'checkpoint'),
+            self.actor_checkpoint = tf.train.Checkpoint(model=self.actor_net)
+            self.actor_manager = tf.train.CheckpointManager(self.actor_checkpoint,
+                                                            os.path.join(checkpoint_path,
+                                                                         current_time + '_checkpoints', 'actor',
+                                                                         ),
                                                             checkpoint_name='actor',
-                                                            max_to_keep=None)
+                                                            max_to_keep=checkpoints_to_keep)
 
-            self.critic_chekpoint = tf.train.Checkpoint(model=self.critic_net)
-            self.critic_manager = tf.train.CheckpointManager(self.critic_chekpoint,
-                                                             os.path.join(checkpoint_path, 'critic', 'checkpoint'),
+            self.critic_checkpoint = tf.train.Checkpoint(model=self.critic_net)
+            self.critic_manager = tf.train.CheckpointManager(self.critic_checkpoint,
+                                                             os.path.join(checkpoint_path,
+                                                                          current_time + '_checkpoints', 'critic',
+                                                                          ),
                                                              checkpoint_name='critic',
-                                                             max_to_keep=None)
+                                                             max_to_keep=checkpoints_to_keep)
 
     def compile(self, loss, optimizer, metrics=tf.keras.metrics.MeanSquaredError()):
         self.loss_func_actor = loss[0]
@@ -502,8 +504,8 @@ class PPONet(RLNetModel):
     def load_checkpoint(self, path=None, checkpoint_to_restore='latest'):
         if path is None:
             if checkpoint_to_restore == 'latest':
-                self.actor_chekpoint.restore(self.actor_manager.latest_checkpoint)
-                self.critic_chekpoint.restore(self.critic_manager.latest_checkpoint)
+                self.actor_checkpoint.restore(self.actor_manager.latest_checkpoint)
+                self.critic_checkpoint.restore(self.critic_manager.latest_checkpoint)
             else:
                 chck = self.actor_manager.checkpoints
         else:
@@ -2351,8 +2353,11 @@ class HabitatPPONet(PPONet):
     Define Custom Net for habitat
     """
 
-    def __init__(self, input_shape, actor_net, critic_net, tensorboard_dir=None):
-        super().__init__(actor_net(input_shape), critic_net(input_shape), tensorboard_dir=tensorboard_dir)
+    def __init__(self, input_shape, actor_net, critic_net, tensorboard_dir=None, checkpoint_path=None,
+                 save_every_iterations=None, checkpoints_to_keep=None):
+        super().__init__(actor_net(input_shape), critic_net(input_shape), tensorboard_dir=tensorboard_dir,
+                         checkpoint_path=checkpoint_path, save_every_iterations=save_every_iterations,
+                         checkpoints_to_keep=checkpoints_to_keep)
 
     # TODO: [Sergio]: Standardize the inputs to _train_step(). We have two inputs (x[0]=rgb y x[1]=objectgoal) but in
     #   a generic problem we may have a different number of inputs.

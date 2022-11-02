@@ -76,7 +76,13 @@ else:
 
 
 def custom_model(input_shape):
-    return HabitatPPONet(input_shape, actor_model, critic_model, tensorboard_dir=tensorboard_path)
+    return HabitatPPONet(input_shape,
+                         actor_model,
+                         critic_model,
+                         tensorboard_dir=tensorboard_path,
+                         save_every_iterations=config['save_every'],
+                         checkpoints_to_keep=None,
+                         checkpoint_path=config['base_path'])
 
 
 net_architecture = networks.ppo_net(use_tf_custom_model=True,

@@ -18,7 +18,7 @@ critic_model: critic_model_clip_LSTM128_d128tanh_d128tanh_d1linear
 actor_lr: 1e-4 # float or tf.keras.optimizers.schedules
 critic_lr: 1e-4 # float or tf.keras.optimizers.schedules
 batch_size: 64 # int. Agent's training batch size
-memory_size: 5000 # int. PPO agent's experiences memory size for each thread.
+memory_size: 100 # int. PPO agent's experiences memory size for each thread.
 epsilon: 1.0 # float in [0, 1]. Initial exploration rate
 epsilon_decay: 0.97 # float. Exploration rate decay factor or scheduler from espermatozoides.training.utils.schedules.py.
 epsilon_min: 0.2 # float in [0, 1]. Minimum value the exploration rate can get.
@@ -44,6 +44,7 @@ preprocess: preprocess_clip_habitat6  # Fucntion from utils.preprocess.py
 ##############################################################
 
 # IL training parameters
-training_epochs: 1 # int. Number of complete iterations of the imitation learning algorithm.
+training_epochs: 6
+save_every: 3 # int. Number of complete iterations of the imitation learning algorithm.
 test_epochs: 20 # Number of test iteration for checking the learned policy after training.
 render_test: False

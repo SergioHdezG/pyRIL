@@ -60,7 +60,7 @@ class PPOProblem(PPOProblemBase):
 
             self.agent.save_tensorboar_rl_histogram(self.histogram_metrics)
 
-            if self.gradient_steps % self.agent.model.keep_chck_every_n_iter == 0:
+            if self.gradient_steps % self.agent.model.save_every_iterations == 0:
                 self.agent.model.save_checkpoint()
 
 
