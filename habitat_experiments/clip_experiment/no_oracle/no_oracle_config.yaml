@@ -1,6 +1,6 @@
-base_path: "habitat_experiments/clip_experiment/LSTM/"
+base_path: "habitat_experiments/clip_experiment/no_oracle/"
 
-habitat_config_path: "configs/RL/objectnav_hm3d_RL.yaml"
+habitat_config_path: "configs/RL/objectnav_hm3d_RL_no_oracle.yaml"
 habitat_result_path: "images"  # Concatenated with base_path.
 habitat_save_video: False
 habitat_oracle_stop: True
@@ -11,7 +11,7 @@ environment: "HM3DRLEnv" # "HM3DRLEnv"
 
 # select network from habitat_experiments.utils.neuralnets.py
 use_clip: True
-actor_model: actor_model_clip_LSTM128_d1218tanh_d128tanh_d5softmax
+actor_model: actor_model_clip_LSTM128_d1218tanh_d128tanh_d6softmax
 critic_model: critic_model_clip_LSTM128_d128tanh_d128tanh_d1linear
 
 # select agent params
@@ -44,7 +44,7 @@ preprocess: preprocess_clip_habitat6  # Fucntion from utils.preprocess.py
 ##############################################################
 
 # IL training parameters
-training_epochs: 6
+training_epochs: 100000
 save_every: 3 # int. Number of complete iterations of the imitation learning algorithm.
 test_epochs: 20 # Number of test iteration for checking the learned policy after training.
 render_test: False

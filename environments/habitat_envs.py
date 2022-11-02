@@ -38,7 +38,7 @@ class HM3DRLEnv(habitat.RLEnv):
     default configuration for reference: habitat/config/default.py
     """
 
-    def __init__(self, config_paths="configs/RL/objectnav_hm3d_RL.yaml",
+    def __init__(self, config_paths="configs/RL/objectnav_hm3d_RL_oracle.yaml",
                  result_path=os.path.join("development", "images"),
                  render_on_screen=False,
                  save_video=False,
