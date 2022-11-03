@@ -262,34 +262,34 @@ class PyMaze(MiniWorldEnv):
     #             setattr(deepcopy, k, copy.deepcopy(v, memo))
     #     return deepcopy
 
-    # def __getstate__(self):
-    #     """
-    #     See `Object.__getstate__.
-    #     Returns:
-    #         dict: The instance’s dictionary to be pickled.
-    #     """
-    #     return dict(num_rows=self.num_rows,
-    #                 num_cols=self.num_cols,
-    #                 room_size=self.room_size,
-    #                 max_steps=self.max_steps,
-    #                 forward_step=self.forward_step,
-    #                 turn_step=self.turn_step,
-    #                 use_clip=self.use_clip,
-    #                 domain_rand=self.domain_rand,
-    #                 sparse_reward=self.domain_rand)
-    #
-    # def __setstate__(self, state):
-    #     """
-    #     See `Object.__setstate__.
-    #     Args:
-    #         state (dict): Unpickled state of this object.
-    #     """
-    #     self.__init__(num_rows=state['num_rows'],
-    #                   num_cols=state['num_cols'],
-    #                   room_size=state['room_size'],
-    #                   max_steps=state['max_steps'],
-    #                   forward_step=state['forward_step'],
-    #                   turn_step=state['turn_step'],
-    #                   use_clip=state['use_clip'],
-    #                   domain_rand=state['domain_rand'],
-    #                   sparse_reward=state['domain_rand'])
+    def __getstate__(self):
+        """
+        See `Object.__getstate__.
+        Returns:
+            dict: The instance’s dictionary to be pickled.
+        """
+        return dict(num_rows=self.num_rows,
+                    num_cols=self.num_cols,
+                    room_size=self.room_size,
+                    max_steps=self.max_steps,
+                    forward_step=self.forward_step,
+                    turn_step=self.turn_step,
+                    use_clip=self.use_clip,
+                    domain_rand=self.domain_rand,
+                    sparse_reward=self.domain_rand)
+
+    def __setstate__(self, state):
+        """
+        See `Object.__setstate__.
+        Args:
+            state (dict): Unpickled state of this object.
+        """
+        self.__init__(num_rows=state['num_rows'],
+                      num_cols=state['num_cols'],
+                      room_size=state['room_size'],
+                      max_steps=state['max_steps'],
+                      forward_step=state['forward_step'],
+                      turn_step=state['turn_step'],
+                      use_clip=state['use_clip'],
+                      domain_rand=state['domain_rand'],
+                      sparse_reward=state['domain_rand'])
