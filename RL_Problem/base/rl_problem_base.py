@@ -370,7 +370,7 @@ class RLProblemSuper(object, metaclass=ABCMeta):
                 done, success = self._max_steps(done, steps, max_step_epi)
 
             rew_mean_list.append(episodic_reward)
-
+            self.histogram_metrics.append([self.total_episodes, episodic_reward, steps, success, self.agent.epsilon, self.global_steps])
             self._feedback_print(e, episodic_reward, steps, success, verbose, rew_mean_list, test=True)
 
         # print('Mean Reward ', epi_rew_mean / n_iter)

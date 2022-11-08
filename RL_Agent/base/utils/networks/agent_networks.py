@@ -509,7 +509,6 @@ class PPONet(RLNetModel):
                                                        os.path.join(path, 'actor'),
                                                        checkpoint_name='actor',
                                                        max_to_keep=1)
-            actor_checkpoint.restore(actor_manager.latest_checkpoint)
 
             critic_checkpoint = tf.train.Checkpoint(model=self.critic_net,
                                                     optimizer=self.optimizer_critic,
@@ -518,7 +517,14 @@ class PPONet(RLNetModel):
                                                         os.path.join(path, 'critic'),
                                                         checkpoint_name='critic',
                                                         max_to_keep=1)
-            critic_checkpoint.restore(critic_manager.latest_checkpoint)
+            if checkpoint_to_restore == 'latest':
+                actor_checkpoint.restore(actor_manager.latest_checkpoint)
+                critic_checkpoint.restore(critic_manager.latest_checkpoint)
+            elif type(checkpoint_to_restore) is int:
+                actor_checkpoint.restore(actor_manager.checkpoints[checkpoint_to_restore])
+                critic_checkpoint.restore(critic_manager.checkpoints[checkpoint_to_restore])
+            else:
+                raise TypeError('Checkpoints_to_restore variable has to be either str or int')
 
     def _save_network(self, path):
         """
