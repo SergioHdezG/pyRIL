@@ -48,5 +48,5 @@ TASK:
 DATASET:
   TYPE: ObjectNav-v1
   SPLIT: train
-  DATA_PATH: "data/datasets/objectnav/hm3d/v1/custom/one_scene_chair.json.gz"
+  DATA_PATH: "data/datasets/objectnav/hm3d/v1/custom/one_scene_full.json.gz"
   SCENES_DIR: "data/scene_datasets/"
