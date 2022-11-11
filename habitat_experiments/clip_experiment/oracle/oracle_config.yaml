@@ -18,7 +18,7 @@ critic_model: critic_model_clip_LSTM128_d128tanh_d128tanh_d1linear
 actor_lr: 1e-4 # float or tf.keras.optimizers.schedules
 critic_lr: 1e-4 # float or tf.keras.optimizers.schedules
 batch_size: 64 # int. Agent's training batch size
-memory_size: 100 # int. PPO agent's experiences memory size for each thread.
+memory_size: 5000 # int. PPO agent's experiences memory size for each thread.
 epsilon: 1.0 # float in [0, 1]. Initial exploration rate
 epsilon_decay: 0.97 # float. Exploration rate decay factor or scheduler from espermatozoides.training.utils.schedules.py.
 epsilon_min: 0.2 # float in [0, 1]. Minimum value the exploration rate can get.
@@ -27,7 +27,7 @@ lmbda: 0.9 # float in [0, 1]. Attenuate the importance of future returns in all 
 train_epochs: 10 # int. Trainstep of the agent for each iteration of PPO.
 is_habitat: True # bool. True when using a habitat env.
 img_input: False # bool. Tru if network's inputs are images.
-state_size: "[(1024,), (5,)]"
+state_size: "[(1024,), (6,)]"
 n_stack: 3 # int. Number of stacked states. Allows the aget to have temporal information.
 n_threads: 10 # Int or None. Number of agent threads. If is None, CPU default number of thread are selected.
 tensorboard_dir: "logs" # String or False. Path to store tensorboard logs.
