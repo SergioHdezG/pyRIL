@@ -16,8 +16,8 @@ n_stack: 10 # int. Number of stacked states. Allows the aget to have temporal in
 
 epsilon: 1.0 # float in [0, 1]. Initial exploration rate
 epsilon_decay: 0.97 # float. Exploration rate decay factor or scheduler from espermatozoides.training.utils.schedules.py.
-epsilon_min: 0.2 # float in [0, 1]. Minimum value the exploration rate can get.
-action_selection_options: greedy_action # Function from RL_Agent.base.utils.networks.action_selection_opti
+epsilon_min: 0. # float in [0, 1]. Minimum value the exploration rate can get.
+action_selection_options: greedy_random_choice # Function from RL_Agent.base.utils.networks.action_selection_opti
 
 
 environment: "PyMaze" # "HM3DRLEnv"
@@ -59,6 +59,6 @@ preprocess: None  # Fucntion from utils.preprocess.py
 
 # IL training parameters
 training_epochs: 100000 # int. Number of complete iterations of the imitation learning algorithm.
-test_epochs: 1 # Number of test iteration for checking the learned policy after training.
+test_epochs: 10 # Number of test iteration for checking the learned policy after training.
 render_test: False
 save_every: 10

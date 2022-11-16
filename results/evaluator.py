@@ -5,6 +5,7 @@ from matplotlib import pyplot as plt
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
+pd.set_option('display.float_format', lambda x: '%.2f' % x)
 
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
@@ -106,7 +107,7 @@ for i in range(10):
     # plt.show()
 
     problem = rl_problem.Problem(environment, agent)
-    agent.model.load_checkpoint(path='../maze_experiments/2/31-10-2022_13-45-56_checkpoints', checkpoint_to_restore=175)
+    agent.model.load_checkpoint(path='../../../resultados/MAZE_PAPER/S5/11/26-10-2022_19-47-59_checkpoints', checkpoint_to_restore='latest')
 
     problem.test(render=config["render_test"], n_iter=config["test_epochs"], max_step_epi=config['max_steps'])
     # #
