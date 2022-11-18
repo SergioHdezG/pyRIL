@@ -80,6 +80,7 @@ def preproces_car_racing(obs):
 
     return img.reshape(img.shape[0], img.shape[1], 1)
 
+
 def preprocess_habitat_clip(obs: dict):
     """
     Normalize rgb input and one hot objectgoal id
@@ -97,6 +98,7 @@ def preprocess_habitat_clip(obs: dict):
     one_hot_goal[object_goal] = 1.
 
     return {'rgb': rgb, 'objectgoal': one_hot_goal}
+
 
 def preprocess_habitat(obs: dict):
     """
@@ -116,6 +118,7 @@ def preprocess_habitat(obs: dict):
 
     return {'rgb': img, 'objectgoal': one_hot_goal}
 
+
 def preprocess_habitat6(obs: dict):
     """
     Normalize rgb input and one hot objectgoal id
@@ -134,6 +137,7 @@ def preprocess_habitat6(obs: dict):
 
     return {'rgb': img, 'objectgoal': one_hot_goal}
 
+
 def preprocess_clip_habitat6(obs: dict):
     """
     Normalize rgb input and one hot objectgoal id
@@ -151,6 +155,7 @@ def preprocess_clip_habitat6(obs: dict):
 
     return {'rgb': rgb, 'objectgoal': one_hot_goal}
 
+
 def preprocess_clip_habitat5(obs: dict):
     """
     Normalize rgb input and one hot objectgoal id
@@ -163,7 +168,7 @@ def preprocess_clip_habitat5(obs: dict):
 
     # ObjectGoal input to onehot
     object_goal = obs['objectgoal']
-    one_hot_goal = np.zeros((5))
+    one_hot_goal = np.zeros((6))
     one_hot_goal[object_goal] = 1.
 
     return {'rgb': rgb, 'objectgoal': one_hot_goal}
