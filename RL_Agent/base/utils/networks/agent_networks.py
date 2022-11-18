@@ -501,33 +501,33 @@ class PPONet(RLNetModel):
                                                         max_to_keep=1)
             critic_manager.save()
 
-    def load_checkpoint(self, path=None, checkpoint_to_restore='latest'):
-        if path is None:
-            if checkpoint_to_restore == 'latest':
-                self.actor_checkpoint.restore(self.actor_manager.latest_checkpoint)
-                self.critic_checkpoint.restore(self.critic_manager.latest_checkpoint)
-            else:
-                chck = self.actor_manager.checkpoints
+    def load_checkpoint(self, path=None, checkpoint_name=None, checkpoint_to_restore='latest'):
+        """
+        :param path: None or dict like {"actor": <path>, "critic": <path>}. Paths to actor and critic checkpoints folder.
+        :param checkpoint_name: None or dict like {"actor": <name>, "critic": <name>}. Name of actor and critic
+                                checkpoints. Usually: {"actor": "actor", "critic": "critic"}
+        :param checkpoint_to_restore: String or int. To restore the latest checkpoint: checkpoint_to_restore='latest',
+                                      to restore any other the number should be specified: checkpoint_to_restore=10.
+        """
+        if path is None and checkpoint_to_restore == 'latest':
+                self.actor_checkpoint.restore(self.actor_manager.latest_checkpoint).assert_consumed()
+                self.critic_checkpoint.restore(self.critic_manager.latest_checkpoint).assert_consumed()
         else:
-            actor_chkpoint = tf.train.Checkpoint(model=self.actor_net,
-                                                 optimizer=self.optimizer_actor,
-                                                 # loss_func_actor=self.loss_func_actor,
-                                                 metrics=self.metrics)
-            actor_manager = tf.train.CheckpointManager(actor_chkpoint,
-                                                       os.path.join(path, 'actor'),
-                                                       checkpoint_name='actor',
-                                                       max_to_keep=1)
-            actor_chkpoint.restore(actor_manager.latest_checkpoint)
+            actor_manager = tf.train.CheckpointManager(self.actor_checkpoint,
+                                                       os.path.join(path["actor"]),
+                                                       checkpoint_name=checkpoint_name["actor"],
+                                                       max_to_keep=None)
+            critic_manager = tf.train.CheckpointManager(self.critic_checkpoint,
+                                                        os.path.join(path["critic"]),
+                                                        checkpoint_name=checkpoint_name["critic"],
+                                                        max_to_keep=None)
 
-            critic_chkpoint = tf.train.Checkpoint(model=self.critic_net,
-                                                  optimizer=self.optimizer_critic,
-                                                  # loss_func_critic=self.loss_func_critic
-                                                  )
-            critic_manager = tf.train.CheckpointManager(critic_chkpoint,
-                                                        os.path.join(path, 'critic'),
-                                                        checkpoint_name='critic',
-                                                        max_to_keep=1)
-            critic_chkpoint.restore(critic_manager.latest_checkpoint)
+            if checkpoint_to_restore == 'latest':
+                self.actor_checkpoint.restore(actor_manager.latest_checkpoint).assert_consumed()
+                self.critic_checkpoint.restore(critic_manager.latest_checkpoint).assert_consumed()
+            else:
+                self.actor_checkpoint.restore(actor_manager.checkpoints[checkpoint_to_restore-1]).assert_consumed()
+                self.critic_checkpoint.restore(critic_manager.checkpoints[checkpoint_to_restore-1]).assert_consumed()
 
     def _save_network(self, path):
         """
@@ -602,7 +602,7 @@ class DQNNet(RLNetModel):
         y_ = self._predict(x)
         return y_.numpy()
 
-    @tf.function(experimental_relax_shapes=True)
+    # @tf.function(experimental_relax_shapes=True)
     def _predict(self, x):
         """ Predict the output sentence for a given input sentence
             Args:
@@ -2365,7 +2365,7 @@ class HabitatPPONet(PPONet):
         y_ = self._predict(np.array(x[0]), np.array(x[1]))
         return y_.numpy()
 
-    # @tf.function(experimental_relax_shapes=False)
+    @tf.function(experimental_relax_shapes=False)
     def _predict(self, x1, x2):
         """ Predict the output sentence for a given input sentence
             Args:
@@ -2587,3 +2587,17 @@ class HabitatPPONet(PPONet):
                returns, \
                advantages, \
                [act_comp_loss, critic_comp_loss, entropy_comp_loss]
+
+class HabitatPPOEmbodiedCLIPNet(HabitatPPONet):
+    def __init__(self, input_shape, actor_net, critic_net, n_stack, tensorboard_dir=None, checkpoint_path=None,
+                 save_every_iterations=None, checkpoints_to_keep=None):
+        super().__init__(input_shape, actor_net, critic_net, tensorboard_dir=tensorboard_dir,
+                         checkpoint_path=checkpoint_path, save_every_iterations=save_every_iterations,
+                         checkpoints_to_keep=checkpoints_to_keep)
+        self.n_stack = n_stack
+
+    def predict(self, x):
+        x2 = np.expand_dims(np.argmax(np.array(x[1]), axis=-1), axis=-1)
+        x2 = np.repeat(x2, self.n_stack, axis=1)
+        y_ = self._predict(np.array(x[0]), x2)
+        return y_.numpy()

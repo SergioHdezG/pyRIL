@@ -374,6 +374,76 @@ class RLProblemSuper(object, metaclass=ABCMeta):
         # print('Mean Reward ', epi_rew_mean / n_iter)
         self.env.close()
 
+    def test_recording(self, n_iter=10, render=True, verbose=1, callback=None, smooth_rewards=10, discriminator=None, max_step_epi=None):
+        """ Test a trained agent using only exploitation mode on the environment.
+
+        :param n_iter: (int) number of test iterations.
+        :param render: (bool) If True, the environment will show the user interface during the training process.
+        :param verbose: (int) in range [0, 3]. If 0 no training information will be displayed, if 1 lots of
+           information will be displayed, if 2 fewer information will be displayed and 3 a minimum of information will
+           be displayed.
+        :param callback: A extern function that receives a tuple (prev_obs, obs, action, reward, done, info)
+        """
+        epi_rew_mean = 0
+        rew_mean_list = deque(maxlen=smooth_rewards)
+
+        # Stacking inputs
+        if self.n_stack is not None and self.n_stack > 1:
+            obs_queue = deque(maxlen=self.n_stack)
+        else:
+            obs_queue = None
+
+        # For each episode do
+        for e in range(n_iter):
+            done = False
+            episodic_reward = 0
+            steps = 0
+            obs, img = self.env.reset(test_mode=True)
+            obs = self.preprocess(obs)
+
+            # stacking inputs
+            if self.n_stack is not None and self.n_stack > 1:
+                for i in range(self.n_stack):
+                    obs_queue.append(obs)
+                obs_queue.append(obs)
+
+            while not done:
+                if render:
+                    self.env.render()
+
+                # Select action
+                action = self.act(obs, obs_queue)
+
+                prev_img = img
+                prev_obs = obs
+
+                obs, reward, done, [info, img] = self.env.step(action)
+                obs = self.preprocess(obs)
+
+                if discriminator is not None:
+                    if discriminator.stack:
+                        reward = discriminator.get_reward(obs_queue, action, multithread=False)[0]
+                    else:
+                        reward = discriminator.get_reward(obs, action, multithread=False)[0]
+
+                if callback is not None:
+                    callback(prev_obs, obs, action, reward, done, info, prev_img, img)
+
+                episodic_reward += reward
+                steps += 1
+
+                if self.n_stack is not None and self.n_stack > 1:
+                    obs_queue.append(obs)
+
+            done, success = self._max_steps(done, steps, max_step_epi)
+
+            rew_mean_list.append(episodic_reward)
+            self.histogram_metrics.append([self.total_episodes, episodic_reward, steps, success, self.agent.epsilon, self.global_steps])
+            self._feedback_print(e, episodic_reward, steps, success, verbose, rew_mean_list, test=True)
+
+        # print('Mean Reward ', epi_rew_mean / n_iter)
+        self.env.close()
+
     def _preprocess(self, obs):
         """
         Preprocessing function by default does nothing to the observation.
@@ -388,7 +458,7 @@ class RLProblemSuper(object, metaclass=ABCMeta):
         """
         return rew
 
-    def _max_steps(self, done, epochs, max_steps):
+    def _max_steps(self, done, steps, max_steps):
         """
         Return True if number of epochs pass a selected number of steps. This allow to set a maximum number of
         iterations for each RL epoch.
@@ -397,21 +467,22 @@ class RLProblemSuper(object, metaclass=ABCMeta):
         :param max_steps: (int) Maximum number of episode epochs. When it is reached param done is set to True.
         """
         if max_steps is not None:
-            return epochs >= max_steps or done
-        return done
+            if done and steps < max_steps:
+                return done, 1
+        return done, 0
 
-    def _feedback_print(self, episode, episodic_reward, steps, verbose, epi_rew_list, test=False):
+    def _feedback_print(self, episode, episodic_reward, steps, success, verbose, epi_rew_list, test=False):
         """
-        Print on terminal information about the training process.
-        :param episode: (int) Current episode.
-        :param episodic_reward: (float) Cumulative reward of the last episode.
-        :param steps: (int) Episode steps counter.
-        :param verbose: (int) in range [0, 3]. If 0 no training information will be displayed, if 1 lots of
-           information will be displayed, if 2 fewer information will be displayed and 3 a minimum of information will
-           be displayed.
-        :param epi_rew_list: ([float]) List of reward of the last episode.
-        :param test: (bool) Flag for select test mode. True = test mode, False = train mode.
-        """
+                Print on terminal information about the training process.
+                :param episode: (int) Current episode.
+                :param episodic_reward: (float) Cumulative reward of the last episode.
+                :param steps: (int) Episode steps counter.
+                :param verbose: (int) in range [0, 3]. If 0 no training information will be displayed, if 1 lots of
+                   information will be displayed, if 2 fewer information will be displayed and 3 a minimum of information will
+                   be displayed.
+                :param epi_rew_list: ([float]) List of reward of the last episode.
+                :param test: (bool) Flag for select test mode. True = test mode, False = train mode.
+                """
         rew_mean = np.sum(epi_rew_list) / len(epi_rew_list)
 
         if test:
@@ -437,6 +508,7 @@ class RLProblemSuper(object, metaclass=ABCMeta):
                 else:
                     print(episode_str, episode,
                           '| Steps: ', steps,
+                          '| Success: ', success,
                           '| Reward: {:.1f}'.format(episodic_reward),
                           '| Smooth Reward: {:.1f}'.format(rew_mean),
                           '| Epsilon: {:.4f}'.format(self.agent.epsilon))

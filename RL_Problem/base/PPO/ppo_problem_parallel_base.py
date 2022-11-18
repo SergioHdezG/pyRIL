@@ -291,3 +291,14 @@ class PPOProblemMultithreadBase(PPOProblemBase):
                      discriminator=discriminator,
                      max_step_epi=max_step_epi)
         self.env = aux_env
+
+    def test_recording(self, n_iter=10, render=True, callback=None, verbose=1, smooth_rewards=2, discriminator=None,
+             max_step_epi=None):
+        # Reasignamos el entorno de test al entorno principal para poder usar el método test del padre
+        aux_env = self.env
+        self.env = self.env_test
+        super().test_recording(n_iter=n_iter, render=render, callback=callback, verbose=verbose,
+                               smooth_rewards=smooth_rewards,
+                               discriminator=discriminator,
+                               max_step_epi=max_step_epi)
+        self.env = aux_env

@@ -159,7 +159,7 @@ class PPOProblem(PPOProblemBase):
                                     str(type(save_live_histories)) + ' has been received')
 
             # Print log on scream
-            self._feedback_print(self.total_episodes, episodic_reward, epochs, verbose, self.rew_mean_list)
+            self._feedback_print(self.total_episodes, episodic_reward, epochs, success, verbose, self.rew_mean_list)
 
         if discriminator is not None and expert_traj is not None:
 

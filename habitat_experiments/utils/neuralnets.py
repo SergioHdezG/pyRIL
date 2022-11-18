@@ -117,17 +117,17 @@ def critic_model_clip_LSTM128_d128tanh_d128tanh_d1linear(input_shape):
     return critic_model
 
 
-def actor_model_clip_lstm128_d1218tanh_d128tanh_d5softmax(input_shape):
-    input_clip = tf.keras.Input((input_shape[0], *input_shape[1][0]))
-    input_goal = tf.keras.Input(input_shape[1][1])
-    lstm = tf.keras.layers.LSTM(128)(input_clip)
-    hidden = tf.keras.layers.Concatenate(axis=-1)([lstm, input_goal])
-    hidden = tf.keras.layers.Dense(128, activation='tanh')(hidden)
-    hidden = tf.keras.layers.Dense(128, activation='tanh')(hidden)
-    out = tf.keras.layers.Dense(5, activation='softmax')(hidden)
-
-    actor_model = tf.keras.models.Model(inputs=[input_clip, input_goal], outputs=out)
-    return actor_model
+# def actor_model_clip_LSTM128_d1218tanh_d128tanh_d5softmax(input_shape):
+#     input_clip = tf.keras.Input((input_shape[0], *input_shape[1][0]))
+#     input_goal = tf.keras.Input(input_shape[1][1])
+#     lstm = tf.keras.layers.LSTM(128)(input_clip)
+#     hidden = tf.keras.layers.Concatenate(axis=-1)([lstm, input_goal])
+#     hidden = tf.keras.layers.Dense(128, activation='tanh')(hidden)
+#     hidden = tf.keras.layers.Dense(128, activation='tanh')(hidden)
+#     out = tf.keras.layers.Dense(5, activation='softmax')(hidden)
+#
+#     actor_model = tf.keras.models.Model(inputs=[input_clip, input_goal], outputs=out)
+#     return actor_model
 
 def actor_model_clip_LSTM128_d1218tanh_d128tanh_d6softmax(input_shape):
     input_clip = tf.keras.Input((input_shape[0], *input_shape[1][0]))
@@ -140,3 +140,21 @@ def actor_model_clip_LSTM128_d1218tanh_d128tanh_d6softmax(input_shape):
 
     actor_model = tf.keras.models.Model(inputs=[input_clip, input_goal], outputs=out)
     return actor_model
+
+def actor_model_emboided_clip_GRU_d5softmax(input_shape):
+    input_clip = tf.keras.Input((input_shape[0], *input_shape[1][0]))
+    input_goal = tf.keras.Input((10,))
+    goal_embbeding = tf.keras.layers.Embedding(*input_shape[1][1], 32)
+    goal = goal_embbeding(input_goal)
+    clip_goal = tf.keras.layers.Concatenate(axis=-1)([input_clip, goal])
+    # # prev_action_embbeding = tf.nn.embedding_lookup(action_size + 1, 32)
+    # # prev_action = prev_action_embbeding(input_clip[-1])
+    # prev_action_embbeding = tf.keras.layers.Embedding(1, 32, input_length=1)
+    # prev_action = prev_action_embbeding(input_clip[-1])
+    # concat = tf.keras.layers.Concatenate(axis=-1)([input_clip, prev_action])
+    gru = tf.keras.layers.GRU(512)(clip_goal)
+    out = tf.keras.layers.Dense(5, activation='softmax')(gru)
+
+    actor_model = tf.keras.models.Model(inputs=[input_clip, input_goal], outputs=out)
+    return actor_model
+

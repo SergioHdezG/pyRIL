@@ -43,7 +43,8 @@ class HM3DRLEnv(habitat.RLEnv):
                  render_on_screen=False,
                  save_video=False,
                  oracle_stop=False,
-                 use_clip=False):
+                 use_clip=False,
+                 clip_pooling='avgpool'):
         print(f"{bcolors.OKBLUE}Creating new env.{bcolors.ENDC}")
 
         if not os.path.exists(result_path) and save_video:
@@ -55,7 +56,6 @@ class HM3DRLEnv(habitat.RLEnv):
         config.defrost()
         config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
         config.freeze()
-
         super().__init__(config=config)
         self.episode_counter = 0
         self.episode_results_path = self.result_path
@@ -82,11 +82,11 @@ class HM3DRLEnv(habitat.RLEnv):
         self.use_clip = use_clip
         if self.use_clip:
             obs_dict = {"rgb": self.observation_space}
-            self.clipResNet = clip.ResNetCLIPEncoder(SpaceDict(obs_dict))
+            self.clipResNet = clip.ResNetCLIPEncoder(SpaceDict(obs_dict), pooling=clip_pooling)
         self._reward_measure_name = self.config.TASK.REWARD_MEASURE
         self._success_measure_name = self.config.TASK.SUCCESS_MEASURE
 
-    def reset(self):
+    def reset(self, test_mode=False):
         self.close()
         if len(self.episode_images) > 0 and self.save_video:
             images_to_video(self.episode_images, self.episode_results_path, "trajectory", verbose=False)
@@ -112,7 +112,11 @@ class HM3DRLEnv(habitat.RLEnv):
                 shutil.rmtree(self.episode_results_path)
             os.makedirs(self.episode_results_path)
         if self.use_clip:
+            im = np.copy(observation['rgb'])
             observation['rgb'] = self.clipResNet.forward(observation)
+            if test_mode:
+                return [observation, im]
+
         return observation
 
     def step(self, *args, **kwargs):
@@ -130,10 +134,11 @@ class HM3DRLEnv(habitat.RLEnv):
         self.episode_images.append(output_im)
         if self.use_clip:
             observation['rgb'] = self.clipResNet.forward(observation)
-        return observation, reward, done, info
+        return observation, reward, done, [info, im]
 
     def render(self, mode: str = "rgb"):
         image = super().render(mode=mode)
+        # images_to_video(images, dirname, "trajectory")
 
         if self.render_on_screen:
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
