@@ -129,14 +129,41 @@ class PPOSuper(AgentSuper):
             if self.n_stack > 1:
                 rgb = []
                 target_encoding = []
+                actions = []
                 for stack_obs in obs:
                     rgb.append([o['rgb'].astype(np.float32) for o in stack_obs])
-                    target_encoding.append(stack_obs[0]['objectgoal'].astype(np.float32))
+                    target_encoding.append([o['objectgoal'].astype(np.float32) for o in stack_obs])
+                    if "action" in stack_obs[0]:
+                        actions.append([o['action'].astype(np.float32) for o in stack_obs])
+                obs = [rgb, target_encoding]
+                if "action" in stack_obs[0]:
+                    obs.append(actions)
+                # # rgb = []
+                # # target_encoding = []
+                # # action = []
+                # new_obs_list = []
+                # for stack_obs in obs:
+                #     rgb = [o['rgb'].astype(np.float32) for o in stack_obs]
+                #     target_encoding = np.array([[o['objectgoal'][0].astype(np.float32) for o in stack_obs]])
+                #     if "action" in stack_obs[0]:
+                #         action = np.array([[o['action'][0].astype(np.float32) for o in stack_obs]])
+                #         # target_encoding = np.array([[o['objectgoal'][0].astype(np.float32) for o in stack_obs]])
+                #         # if 'action' in stack_obs[0]:
+                #         #     action = np.array([[o['action'][0].astype(np.float32) for o in stack_obs]])
+                #         new_obs_list.append([rgb, target_encoding, action])
+                #     else:
+                #         # TODO: CARLOS -> add rgb and target encoding as an observation
+                #         new_obs_list.append([rgb, target_encoding])
+                # obs = new_obs_list
             else:
                 rgb = [ob['rgb'] for ob in obs]
                 target_encoding = [ob['objectgoal'] for ob in obs]
-            # TODO: CARLOS -> add rgb and target encoding as an observation
-            obs = [rgb, target_encoding]
+                if "action" in obs:
+                    actions = [ob['action'] for ob in obs]
+                # TODO: CARLOS -> add rgb and target encoding as an observation
+                obs = [rgb, target_encoding]
+                if "action" in obs:
+                    obs.append(actions)
         else:
             obs = np.array(obs)
         action = np.array(action)

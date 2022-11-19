@@ -144,6 +144,7 @@ def actor_model_clip_LSTM128_d1218tanh_d128tanh_d6softmax(input_shape):
 def actor_model_emboided_clip_GRU_d5softmax(input_shape):
     input_clip = tf.keras.Input((input_shape[0], *input_shape[1][0]))
     input_goal = tf.keras.Input((10,))
+    input_action = tf.keras.Input((10,))
     goal_embbeding = tf.keras.layers.Embedding(*input_shape[1][1], 32)
     goal = goal_embbeding(input_goal)
     clip_goal = tf.keras.layers.Concatenate(axis=-1)([input_clip, goal])
@@ -155,6 +156,24 @@ def actor_model_emboided_clip_GRU_d5softmax(input_shape):
     gru = tf.keras.layers.GRU(512)(clip_goal)
     out = tf.keras.layers.Dense(5, activation='softmax')(gru)
 
-    actor_model = tf.keras.models.Model(inputs=[input_clip, input_goal], outputs=out)
+    actor_model = tf.keras.models.Model(inputs=[input_clip, input_goal, input_action], outputs=out)
+    return actor_model
+
+def critic_model_emboided_clip_GRU(input_shape):
+    input_clip = tf.keras.Input((input_shape[0], *input_shape[1][0]))
+    input_goal = tf.keras.Input((10,))
+    input_action = tf.keras.Input((10,))
+    goal_embbeding = tf.keras.layers.Embedding(*input_shape[1][1], 32)
+    goal = goal_embbeding(input_goal)
+    clip_goal = tf.keras.layers.Concatenate(axis=-1)([input_clip, goal])
+    # # prev_action_embbeding = tf.nn.embedding_lookup(action_size + 1, 32)
+    # # prev_action = prev_action_embbeding(input_clip[-1])
+    # prev_action_embbeding = tf.keras.layers.Embedding(1, 32, input_length=1)
+    # prev_action = prev_action_embbeding(input_clip[-1])
+    # concat = tf.keras.layers.Concatenate(axis=-1)([input_clip, prev_action])
+    gru = tf.keras.layers.GRU(512)(clip_goal)
+    out = tf.keras.layers.Dense(1, activation='linear')(gru)
+
+    actor_model = tf.keras.models.Model(inputs=[input_clip, input_goal, input_action], outputs=out)
     return actor_model
 

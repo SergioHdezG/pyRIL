@@ -234,12 +234,19 @@ class AgentSuper(AgentInterface):
         if self.is_habitat:  # and isinstance(obs, dict):
             # TODO: [Sergio] Formatear y estandarizar correctamente los tipos de estradas para habitat
             if self.n_stack > 1:
-                rgb = [[o['rgb'].astype(np.float32) for o in obs]]
-                goal = [obs[0]['objectgoal'].astype(np.float32)]
-                obs = [rgb, goal]
+                rgb = np.array([[o['rgb'].astype(np.float32) for o in obs]])
+                goal = np.array([[o['objectgoal'][0].astype(np.float32) for o in obs]])
+                if 'action' in obs[0]:
+                    action = np.array([[o['action'][0].astype(np.float32)for o in obs]])
+                    obs = [rgb, goal, action]
+                else:
+                    obs = [rgb, goal]
             else:
                 # TODO: CARLOS -> format habitat inputs to the neural networks
-                obs = [[obs['rgb'].astype(np.float32)], [obs['objectgoal'].astype(np.float32)]]
+                if 'action' in obs:
+                    obs = [np.array([obs['rgb']]), np.array([obs['objectgoal']]), np.array([obs['action']]).astype(np.float32)]
+                else:
+                    obs = [np.array([obs['rgb']]), np.array([obs['objectgoal']])]
             return obs
 
         elif self.img_input:

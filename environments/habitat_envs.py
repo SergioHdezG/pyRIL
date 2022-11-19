@@ -116,7 +116,7 @@ class HM3DRLEnv(habitat.RLEnv):
             observation['rgb'] = self.clipResNet.forward(observation)
             if test_mode:
                 return [observation, im]
-
+        observation['action'] = np.array([0])
         return observation
 
     def step(self, *args, **kwargs):
@@ -134,6 +134,7 @@ class HM3DRLEnv(habitat.RLEnv):
         self.episode_images.append(output_im)
         if self.use_clip:
             observation['rgb'] = self.clipResNet.forward(observation)
+        observation['action'] = np.array([action])
         return observation, reward, done, [info, im]
 
     def render(self, mode: str = "rgb"):
