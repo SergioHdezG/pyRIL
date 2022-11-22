@@ -91,7 +91,7 @@ agent = ppo_agent_discrete.Agent(actor_lr=float(config["actor_lr"]),
 
 data = pd.DataFrame(columns=['Total_Episodes', 'Reward', 'Steps', 'Success', 'Epsilon', 'Global_Steps'])
 
-for i in range(10):
+for i in range(100):
 
     exec('environment = ' + config["environment"])
     environment = environment(forward_step=config['forward_step'],
@@ -107,7 +107,7 @@ for i in range(10):
     # plt.show()
 
     problem = rl_problem.Problem(environment, agent)
-    agent.model.load_checkpoint(path='../../../resultados/MAZE_PAPER/S5/11/26-10-2022_19-47-59_checkpoints', checkpoint_to_restore='latest')
+    # agent.model.load_checkpoint(path='../../../resultados/MAZE_PAPER/S5/11/26-10-2022_19-47-59_checkpoints', checkpoint_to_restore='latest')
 
     problem.test(render=config["render_test"], n_iter=config["test_epochs"], max_step_epi=config['max_steps'])
     # #
