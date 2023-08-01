@@ -11,7 +11,7 @@ We provide the complete list of packages in requirements.txt. Install it within 
 pip install -r requirements.txt
 ```
 
-### TensorFlow CPU
+### TensorFlow GPU
 
 A requirements.txt file is provide with the minimum required dependencies.
 complete_requirements.txt include an extended list of dependencies in case that requirements.txt where not enough.
